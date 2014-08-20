@@ -11,10 +11,10 @@ import org.apache.commons.codec.binary.{Hex, Base64}
 object CookieUtils {
 
   private def serializeAuthenticatedUser(authUser: AuthenticatedUser): String =
-    s"firstName=${authUser.user.firstName}" +
+      s"firstName=${authUser.user.firstName}" +
       s"&lastName=${authUser.user.lastName}" +
       s"&email=${authUser.user.email}" +
-      s"&avatarUrl=${authUser.user.avatarUrl}" +
+      authUser.user.avatarUrl.map(a => s"&avatarUrl=${a}").getOrElse("") +
       s"&system=${authUser.authenticatingSystem}" +
       s"&authedIn=${authUser.authenticatedIn.mkString(",")}" +
       s"&expires=${authUser.expires}" +

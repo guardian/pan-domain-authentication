@@ -97,7 +97,10 @@ trait AuthActions extends PanDomainAuth {
         try {
           val authedUser = CookieUtils.parseCookieData(c.value, settings.secret)
 
-          if(authedUser.authenticatedIn(system)) {
+          if(authedUser.isExpired) {
+            Logger.debug(s"user ${authedUser.user.email} login expired, sending to re-auth")
+            sendForAuth(request)
+          } else if(authedUser.authenticatedIn(system)) {
             block(new UserRequest(authedUser.user, request))
           } else if(validateUser(authedUser)) {
 
