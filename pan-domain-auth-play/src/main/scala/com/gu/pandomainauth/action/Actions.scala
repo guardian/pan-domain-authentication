@@ -15,10 +15,25 @@ class UserRequest[A](val user: User, request: Request[A]) extends WrappedRequest
 
 trait AuthActions extends PanDomainAuth {
 
+  /**
+   * Returns true if the authed user is valid in the implementing system (meets your multifactor requirements, you recognise the email etc.).
+   * 
+   * If your implementing application needs to audit logins / register new users etc then this ia also the place to do it.
+   * 
+   * @param authedUser
+   * @return true if the user is valid in your app
+   */
   def validateUser(authedUser: AuthenticatedUser): Boolean
-  def redirectUrl: String
 
-  val GoogleAuth = new GoogleAuth(settings.googleAuthSettings, system, redirectUrl)
+  /**
+   * The auth callback url. This is where google will send the user after authentication. This action on this url should
+   * invoke processGoogleCallback
+   * 
+   * @return
+   */
+  def authCallbackUrl: String
+
+  val GoogleAuth = new GoogleAuth(settings.googleAuthSettings, system, authCallbackUrl)
 
   val multifactorChecker = settings.google2FAGroupSettings.map(new Google2FAGroupChecker(_))
   /**
@@ -38,10 +53,25 @@ trait AuthActions extends PanDomainAuth {
       val originUrl = request.uri
       res.withSession { request.session + (ANTI_FORGERY_KEY -> antiForgeryToken) + (LOGIN_ORIGIN_KEY -> originUrl) }
     }
-
   }
 
   def checkMultifactor(authedUser: AuthenticatedUser) = multifactorChecker.map(_.checkMultifactor(authedUser)).getOrElse(false)
+
+  /**
+   * invoked when the user is not logged in a can't be authed - this may be when the user is not valid in yur system
+   * or when they have exoplicitly logged out.
+   *
+   * Override this to add a logged out screen and display maeesages for your app. The default implementation is
+   * to ust return a 403 response
+   *
+   * @param message
+   * @param request
+   * @return
+   */
+  def showUnauthedMessage(message: String)(implicit request: RequestHeader): Result = {
+    Logger.info(message)
+    Forbidden
+  }
 
   def processGoogleCallback()(implicit request: RequestHeader) = {
     val token = request.session.get(ANTI_FORGERY_KEY).getOrElse( throw new GoogleAuthException("missing anti forgery token"))
@@ -78,10 +108,15 @@ trait AuthActions extends PanDomainAuth {
 
         Redirect(originalUrl).withCookies(updatedCookie).withSession(session = request.session - ANTI_FORGERY_KEY - LOGIN_ORIGIN_KEY)
       } else {
-        Logger.info(s"user ${claimedAuth.user.email} not authed for $system. 403'ing")
-        Forbidden
+        showUnauthedMessage(s"user ${claimedAuth.user.email} not authed for $system")
       }
     }
+  }
+
+  def logout(implicit request: RequestHeader) = {
+    showUnauthedMessage("logged out").discardingCookies( // remove the auth cookie
+      DiscardingCookie(name = settings.cookieName, domain = Some(domain), secure = true)
+    )
   }
 
   /**
@@ -116,8 +151,7 @@ trait AuthActions extends PanDomainAuth {
             Logger.debug(s"user ${authedUser.user.email} from other system valid: adding validity in $system.")
             block(new UserRequest(authedUser.user, request)).map(_.withCookies(updatedCookie))
           } else {
-            Logger.info(s"user ${authedUser.user.email} not authed for $system. 403'ing")
-            Future(Forbidden)
+            Future(showUnauthedMessage(s"user ${authedUser.user.email} not authed for $system")(request))
           }
         } catch {
           case e: Exception => {

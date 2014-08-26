@@ -13,7 +13,7 @@ trait ExampleAuthActions extends AuthActions {
     (authedUser.user.email endsWith ("@guardian.co.uk")) && authedUser.multiFactor
   }
 
-  override def redirectUrl: String = config.getString("host").get + "/oathCallback"
+  override def authCallbackUrl: String = config.getString("host").get + "/oathCallback"
 
   override lazy val domain: String = "local.dev-gutools.co.uk"
   override lazy val awsSecretAccessKey: String = config.getString("aws.secret").get
