@@ -113,7 +113,7 @@ trait AuthActions extends PanDomainAuth {
     }
   }
 
-  def logout(implicit request: RequestHeader) = {
+  def processLogout(implicit request: RequestHeader) = {
     showUnauthedMessage("logged out").discardingCookies( // remove the auth cookie
       DiscardingCookie(name = settings.cookieName, domain = Some(domain), secure = true)
     )
@@ -121,6 +121,11 @@ trait AuthActions extends PanDomainAuth {
 
   /**
    * Action that ensures the user is logged in and validated.
+   *
+   * This action is for page load type requests where it is possible to send the user for auth
+   * and for them to interact with the auth provider. For API / XHR type requests use the APIAuthAction
+   *
+   * if the user is not authed or the auth has expired they are sent for authentication
    */
   object AuthAction extends ActionBuilder[UserRequest] {
 
@@ -165,6 +170,64 @@ trait AuthActions extends PanDomainAuth {
       }.getOrElse{
         Logger.debug(s"user not authed against $domain, authing")
         sendForAuth(request)
+      }
+    }
+  }
+
+  /**
+   * Action that ensures the user is logged in and validated.
+   *
+   * This action is for API / XHR type requests where the user can't be sent to the auth provider for auth. In the
+   * cases where the auth is not valid repsonce codes are sent to the requesting app and the javascript that initiated
+   * the request should handle these appropriately
+   *
+   * If the user is not authed then a 401 response is sent, if the auth has expired then a 419 response is sent, if
+   * the user is authed but not allowed to perform the action a 403 is sent
+   */
+  object APIAuthAction extends ActionBuilder[UserRequest] {
+
+    override def invokeBlock[A](request: Request[A], block: (UserRequest[A]) => Future[Result]): Future[Result] = {
+
+      val cookie = request.cookies.get(settings.cookieName)
+
+      cookie.map{c =>
+        try {
+          val authedUser = CookieUtils.parseCookieData(c.value, settings.secret)
+
+          if(authedUser.isExpired) {
+            Logger.debug(s"user ${authedUser.user.email} login expired, sending to re-auth")
+            Future(new Status(419))
+          } else if(authedUser.authenticatedIn(system)) {
+            block(new UserRequest(authedUser.user, request))
+          } else if(validateUser(authedUser)) {
+
+            val updatedAuth = authedUser.copy(authenticatedIn = authedUser.authenticatedIn + system)
+            val updatedCookie = Cookie(
+              name = settings.cookieName,
+              value = CookieUtils.generateCookieData(updatedAuth, settings.secret),
+              domain = Some(domain),
+              secure = true,
+              httpOnly = true
+            )
+
+            Logger.debug(s"user ${authedUser.user.email} from other system valid: adding validity in $system.")
+            block(new UserRequest(authedUser.user, request)).map(_.withCookies(updatedCookie))
+          } else {
+            Logger.debug(s"user ${authedUser.user.email} not authed for $system")
+            Future(Forbidden)
+          }
+        } catch {
+          case e: Exception => {
+            Logger.warn("error checking user's auth, re-authing", e)
+            Future(Unauthorized).map(_.discardingCookies( // remove the invalid cookie data
+              DiscardingCookie(name = settings.cookieName, domain = Some(domain), secure = true))
+            )
+          }
+        }
+
+      }.getOrElse{
+        Logger.debug(s"user not authed against $domain, authing")
+        Future(Unauthorized)
       }
     }
   }

@@ -16,9 +16,28 @@ trait PanDomainAuth {
 
   lazy val actorSystem = ActorSystem()
 
+  /**
+   * the domain you are authin agains
+   * @return
+   */
   def domain: String
+
+  /**
+   * the identifier for your app, typically the same as the subdomain your app runs on
+   * @return
+   */
   def system: String
+
+  /**
+   * the aws key id used to access the configuration bucket
+   * @return
+   */
   def awsKeyId: String
+
+  /**
+   * the aws secret access key used to access te configuration bucket
+   * @return
+   */
   def awsSecretAccessKey: String
 
   lazy val bucket = new S3Bucket(awsKeyId, awsSecretAccessKey)

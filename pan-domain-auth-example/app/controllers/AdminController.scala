@@ -1,11 +1,6 @@
 package controllers
 
-import com.gu.pandomainauth.PanDomainAuth
-import com.gu.pandomainauth.model.{User, AuthenticatedUser}
-import com.gu.pandomainauth.service.CookieUtils
-import models.BannedUsers
-import org.joda.time.DateTime
-import play.api.mvc.{Cookie, Action, Controller}
+import play.api.mvc.{ Action, Controller}
 import play.api.Play.configuration
 import play.api.Play.current
 
