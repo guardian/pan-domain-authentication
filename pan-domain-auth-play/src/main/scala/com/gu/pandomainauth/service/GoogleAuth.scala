@@ -43,7 +43,7 @@ class GoogleAuth(config: GoogleAuthSettings, system: String, redirectUrl: String
     }
   }
 
-  def redirectToGoogle(antiForgeryToken: String)
+  def redirectToGoogle(antiForgeryToken: String, email: Option[String] = None)
                       (implicit context: ExecutionContext, application: Application, request: RequestHeader): Future[Result] = {
     val queryString: Map[String, Seq[String]] = Map(
       "client_id" -> Seq(config.googleAuthClient),
@@ -51,7 +51,7 @@ class GoogleAuth(config: GoogleAuthSettings, system: String, redirectUrl: String
       "scope" -> Seq("openid email profile"),
       "redirect_uri" -> Seq(redirectUrl),
       "state" -> Seq(antiForgeryToken)
-    )
+    ) ++ email.map("login_hint" -> Seq(_))
 
     discoveryDocument.map(dd => Redirect(s"${dd.authorization_endpoint}", queryString))
   }

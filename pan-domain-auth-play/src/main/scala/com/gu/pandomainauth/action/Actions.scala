@@ -47,9 +47,9 @@ trait AuthActions extends PanDomainAuth {
    * starts the authentication process for a user. By default this just sends the user off to google for auth
    * but if you want to show welcome page with a button on it then override.
    */
-  def sendForAuth[A](implicit request: RequestHeader) = {
+  def sendForAuth[A](implicit request: RequestHeader, email: Option[String] = None) = {
     val antiForgeryToken = GoogleAuth.generateAntiForgeryToken()
-    GoogleAuth.redirectToGoogle(antiForgeryToken).map { res =>
+    GoogleAuth.redirectToGoogle(antiForgeryToken, email).map { res =>
       val originUrl = request.uri
       res.withSession { request.session + (ANTI_FORGERY_KEY -> antiForgeryToken) + (LOGIN_ORIGIN_KEY -> originUrl) }
     }
@@ -139,7 +139,7 @@ trait AuthActions extends PanDomainAuth {
 
           if(authedUser.isExpired) {
             Logger.debug(s"user ${authedUser.user.email} login expired, sending to re-auth")
-            sendForAuth(request)
+            sendForAuth(request, Some(authedUser.user.email))
           } else if(authedUser.authenticatedIn(system)) {
             block(new UserRequest(authedUser.user, request))
           } else if(validateUser(authedUser)) {
