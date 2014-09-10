@@ -57,16 +57,7 @@ object PanDomainAuthenticationBuild extends Build {
       crossScalaVersions := Seq("2.10.4", "2.11.1"),
       organization := "com.gu",
       version      := "0.1-SNAPSHOT",
-      publishArtifact := false,
-      publishTo <<= (version) { version: String =>
-        val publishType = if (version.endsWith("SNAPSHOT")) "snapshots" else "releases"
-        Some(
-          Resolver.file(
-            "guardian github " + publishType,
-            file(System.getProperty("user.home") + "/guardian.github.com/maven/repo-" + publishType)
-          )
-        )
-      }
+      publishArtifact := false
     )
 
   def project(path: String): Project =
