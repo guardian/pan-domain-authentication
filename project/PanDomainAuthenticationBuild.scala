@@ -20,16 +20,7 @@ object PanDomainAuthenticationBuild extends Build {
       fork in Test := false,
       resolvers ++= Seq("Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"),
       scalacOptions ++= Seq("-feature", "-deprecation", "-language:higherKinds", "-Xfatal-warnings"),
-      publishArtifact := false,
-      publishTo <<= (version) { version: String =>
-        val publishType = if (version.endsWith("SNAPSHOT")) "snapshots" else "releases"
-        Some(
-          Resolver.file(
-            "guardian github " + publishType,
-            file(System.getProperty("user.home") + "/guardian.github.com/maven/repo-" + publishType)
-          )
-        )
-      }
+      publishArtifact := false
     )
 
   lazy val panDomainAuthCore = project("pan-domain-auth-core")
