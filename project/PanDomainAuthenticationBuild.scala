@@ -10,6 +10,7 @@ import sbtrelease._
 import sbtrelease.ReleasePlugin._
 import ReleaseStateTransformations._
 import xerial.sbt.Sonatype.SonatypeKeys
+import xerial.sbt.Sonatype._
 import com.typesafe.sbt.pgp.PgpKeys
 
 
@@ -28,7 +29,7 @@ object PanDomainAuthenticationBuild extends Build {
     )
 
   val sonatypeReleaseSettings =
-    releaseSettings ++ Seq(
+    releaseSettings ++ sonatypeSettings ++ Seq(
       licenses := Seq("Apache V2" -> url("http://www.apache.org/licenses/LICENSE-2.0.html")),
       scmInfo := Some(ScmInfo(
         url("https://github.com/guardian/pan-domain-authentication"),
