@@ -55,12 +55,12 @@ object PanDomainAuthenticationBuild extends Build {
         commitReleaseVersion,
         tagRelease,
         ReleaseStep(
-          action = state => Project.extract(state).runTask(PgpKeys.publishSigned, state)._1,
+          action = state => Project.extract(state).runAggregated(PgpKeys.publishSigned, state),
           enableCrossBuild = true
         ),
         setNextVersion,
         commitNextVersion,
-        ReleaseStep(state => Project.extract(state).runTask(SonatypeKeys.sonatypeReleaseAll, state)._1),
+        ReleaseStep(state => Project.extract(state).runAggregated(SonatypeKeys.sonatypeReleaseAll, state)),
         pushChanges
       )
     )
@@ -100,7 +100,7 @@ object PanDomainAuthenticationBuild extends Build {
 
   def playProject(path: String): Project =
     Project(path, file(path)).enablePlugins(play.PlayScala)
-      .settings(commonSettings ++ playArtifactDistSettings ++ playArtifactSettings: _*)
+      .settings(commonSettings ++ sonatypeReleaseSettings ++ playArtifactDistSettings ++ playArtifactSettings: _*)
       .settings(libraryDependencies += ws)
       .settings(magentaPackageName := path)
 
