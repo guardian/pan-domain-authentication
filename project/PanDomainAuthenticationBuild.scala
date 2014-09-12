@@ -55,12 +55,25 @@ object PanDomainAuthenticationBuild extends Build {
         commitReleaseVersion,
         tagRelease,
         ReleaseStep(
-          action = state => Project.extract(state).runAggregated(PgpKeys.publishSigned, state),
+          action = { state =>
+            val extracted = Project.extract(state)
+            val ref = extracted.get(Keys.thisProjectRef)
+
+            extracted.runAggregated(PgpKeys.publishSigned in Global in ref, state)
+          },
           enableCrossBuild = true
         ),
         setNextVersion,
         commitNextVersion,
-        ReleaseStep(state => Project.extract(state).runAggregated(SonatypeKeys.sonatypeReleaseAll, state)),
+        ReleaseStep(
+          action = { state =>
+            val extracted = Project.extract(state)
+            val ref = extracted.get(Keys.thisProjectRef)
+
+            extracted.runAggregated(SonatypeKeys.sonatypeReleaseAll in Global in ref, state)
+          },
+          enableCrossBuild = true
+        ),
         pushChanges
       )
     )
