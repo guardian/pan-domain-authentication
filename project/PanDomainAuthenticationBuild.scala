@@ -6,6 +6,11 @@ import PlayKeys._
 import sbtassembly.Plugin.{AssemblyKeys, MergeStrategy}
 import AssemblyKeys._
 import Dependencies._
+import sbtrelease._
+import sbtrelease.ReleasePlugin._
+import ReleaseStateTransformations._
+import xerial.sbt.Sonatype.SonatypeKeys
+import com.typesafe.sbt.pgp.PgpKeys
 
 
 object PanDomainAuthenticationBuild extends Build {
@@ -16,20 +21,59 @@ object PanDomainAuthenticationBuild extends Build {
       scalaVersion in ThisBuild := "2.11.1",
       crossScalaVersions := Seq("2.10.4", "2.11.1"),
       organization := "com.gu",
-      version      := "0.1-SNAPSHOT",
       fork in Test := false,
       resolvers ++= Seq("Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"),
       scalacOptions ++= Seq("-feature", "-deprecation", "-language:higherKinds", "-Xfatal-warnings"),
       publishArtifact := false
     )
 
+  val sonatypeReleaseSettings =
+    releaseSettings ++ Seq(
+      licenses := Seq("Apache V2" -> url("http://www.apache.org/licenses/LICENSE-2.0.html")),
+      scmInfo := Some(ScmInfo(
+        url("https://github.com/guardian/pan-domain-authentication"),
+        "scm:git:git@github.com:guardian/pan-domain-authentication.git"
+      )),
+      pomExtra := {
+        <url>https://github.com/guardian/an-domain-authentication</url>
+          <developers>
+            <developer>
+              <id>steppenwells</id>
+              <name>Stephen Wells</name>
+              <url>https://github.com/steppenwells</url>
+            </developer>
+          </developers>
+      },
+      ReleaseKeys.crossBuild := true,
+      ReleaseKeys.releaseProcess := Seq[ReleaseStep](
+        checkSnapshotDependencies,
+        inquireVersions,
+        runClean,
+        runTest,
+        setReleaseVersion,
+        commitReleaseVersion,
+        tagRelease,
+        ReleaseStep(
+          action = state => Project.extract(state).runTask(PgpKeys.publishSigned, state)._1,
+          enableCrossBuild = true
+        ),
+        setNextVersion,
+        commitNextVersion,
+        ReleaseStep(state => Project.extract(state).runTask(SonatypeKeys.sonatypeReleaseAll, state)._1),
+        pushChanges
+      )
+    )
+
+
   lazy val panDomainAuthCore = project("pan-domain-auth-core")
+    .settings(sonatypeReleaseSettings: _*)
     .settings(
       libraryDependencies ++= akkaDependencies ++ awsDependencies ++ gdataDependencies,
       publishArtifact := true
     )
 
   lazy val panDomainAuthPlay = project("pan-domain-auth-play")
+    .settings(sonatypeReleaseSettings: _*)
     .settings(
       libraryDependencies ++= playLibs,
       publishArtifact := true
@@ -44,10 +88,9 @@ object PanDomainAuthenticationBuild extends Build {
     panDomainAuthCore,
     panDomainAuthPlay,
     exampleApp
-  ).settings(
+  ).settings(sonatypeReleaseSettings: _*).settings(
       crossScalaVersions := Seq("2.10.4", "2.11.1"),
       organization := "com.gu",
-      version      := "0.1-SNAPSHOT",
       publishArtifact := false
     )
 

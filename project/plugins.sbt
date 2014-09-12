@@ -12,3 +12,9 @@ addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.9.2")
 addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "0.6.2")
 
 addSbtPlugin("com.gu" % "sbt-version-info-plugin" % "2.8")
+
+addSbtPlugin("com.github.gseitz" % "sbt-release" % "0.8.3")
+
+addSbtPlugin("com.typesafe.sbt" % "sbt-pgp" % "0.8.2")
+
+addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "0.2.1")
