@@ -73,6 +73,15 @@ trait AuthActions extends PanDomainAuth {
     Forbidden
   }
 
+  /**
+   * Generates the message shown to the user when user validation fails. override this to add a custom error message
+   *
+   * @param claimedAuth
+   * @return
+   */
+  def invalidUserMessage(claimedAuth: AuthenticatedUser) = s"user ${claimedAuth.user.email} not valid for $system"
+
+
   def processGoogleCallback()(implicit request: RequestHeader) = {
     val token = request.session.get(ANTI_FORGERY_KEY).getOrElse( throw new GoogleAuthException("missing anti forgery token"))
     val originalUrl = request.session.get(LOGIN_ORIGIN_KEY).getOrElse( throw new GoogleAuthException("missing original url"))
@@ -108,7 +117,7 @@ trait AuthActions extends PanDomainAuth {
 
         Redirect(originalUrl).withCookies(updatedCookie).withSession(session = request.session - ANTI_FORGERY_KEY - LOGIN_ORIGIN_KEY)
       } else {
-        showUnauthedMessage(s"user ${claimedAuth.user.email} not authed for $system")
+        showUnauthedMessage(invalidUserMessage(claimedAuth))
       }
     }
   }
@@ -156,7 +165,7 @@ trait AuthActions extends PanDomainAuth {
             Logger.debug(s"user ${authedUser.user.email} from other system valid: adding validity in $system.")
             block(new UserRequest(authedUser.user, request)).map(_.withCookies(updatedCookie))
           } else {
-            Future(showUnauthedMessage(s"user ${authedUser.user.email} not authed for $system")(request))
+            Future(showUnauthedMessage(invalidUserMessage(authedUser))(request))
           }
         } catch {
           case e: Exception => {
@@ -213,7 +222,7 @@ trait AuthActions extends PanDomainAuth {
             Logger.debug(s"user ${authedUser.user.email} from other system valid: adding validity in $system.")
             block(new UserRequest(authedUser.user, request)).map(_.withCookies(updatedCookie))
           } else {
-            Logger.debug(s"user ${authedUser.user.email} not authed for $system")
+            Logger.debug(invalidUserMessage(authedUser))
             Future(Forbidden)
           }
         } catch {
