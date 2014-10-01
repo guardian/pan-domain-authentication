@@ -7,7 +7,7 @@ import akka.actor.{ActorRef, Props, Actor, ActorSystem}
 import akka.agent.Agent
 import akka.event.Logging
 import com.gu.pandomainauth.model.PanDomainAuthSettings
-import com.gu.pandomainauth.service.S3Bucket
+import com.gu.pandomainauth.service.{ProxyConfiguration, S3Bucket}
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -40,7 +40,13 @@ trait PanDomainAuth {
    */
   def awsSecretAccessKey: String
 
-  lazy val bucket = new S3Bucket(awsKeyId, awsSecretAccessKey)
+  /**
+   * the proxy configuration to use when connecting to aws
+   * @return
+   */
+  def proxyConfiguration: Option[ProxyConfiguration] = None
+
+  lazy val bucket = new S3Bucket(awsKeyId, awsSecretAccessKey, proxyConfiguration)
 
   lazy val settingsMap = bucket.readDomainSettings(domain)
   lazy val authSettings: Agent[PanDomainAuthSettings] = Agent(PanDomainAuthSettings(settingsMap))
