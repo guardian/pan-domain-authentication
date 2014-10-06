@@ -4,4 +4,6 @@ case class User(firstName: String, lastName: String, email: String, avatarUrl: O
   def toJson = {
     s"""{"firstName": "$firstName", "lastName": "$lastName", "email": "$email" ${avatarUrl.map( u => s""", "avatarUrl": "$u" """).getOrElse("")} }"""
   }
+
+  def emailDomain = email.split("@").last
 }
