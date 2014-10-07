@@ -196,7 +196,7 @@ trait AuthActions extends PanDomainAuth {
           sendForAuth(request)
 
         case InvalidCookie(e) =>
-          Logger.warn("error checking user's auth, re-authing", e)
+          Logger.warn("error checking user's auth, clear cookie and re-auth", e)
           // remove the invalid cookie data
           sendForAuth(request).map(flushCookie)
 
@@ -205,6 +205,7 @@ trait AuthActions extends PanDomainAuth {
           sendForAuth(request, Some(authedUser.user.email))
 
         case NotAuthorized(authedUser) =>
+          Logger.debug(s"user not authorized, show error")
           Future(showUnauthedMessage(invalidUserMessage(authedUser))(request))
 
         case Authenticated(authedUser) =>
@@ -234,11 +235,11 @@ trait AuthActions extends PanDomainAuth {
     override def invokeBlock[A](request: Request[A], block: (UserRequest[A]) => Future[Result]): Future[Result] = {
       extractAuth(request) match {
         case NotAuthenticated =>
-          Logger.debug(s"user not authed against $domain, authing")
+          Logger.debug(s"user not authed against $domain, return 401")
           Future(Unauthorized)
 
         case InvalidCookie(e) =>
-          Logger.warn("error checking user's auth, re-authing", e)
+          Logger.warn("error checking user's auth, clear cookie and return 401", e)
           // remove the invalid cookie data
           Future(Unauthorized).map(flushCookie)
 
@@ -247,6 +248,7 @@ trait AuthActions extends PanDomainAuth {
           Future(new Status(419))
 
         case NotAuthorized(authedUser) =>
+          Logger.debug(s"user not authorized, return 403")
           Logger.debug(invalidUserMessage(authedUser))
           Future(Forbidden)
 
