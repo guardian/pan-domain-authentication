@@ -141,6 +141,33 @@ trait AuthActions extends PanDomainAuth {
     secure = true
   )
 
+  // Represents the status of the attempted authentication
+  sealed trait AuthenticationStatus
+  case class Expired(authedUser: AuthenticatedUser) extends AuthenticationStatus
+  case class Authenticated(authedUser: AuthenticatedUser) extends AuthenticationStatus
+  case class NotAuthorized(authedUser: AuthenticatedUser) extends AuthenticationStatus
+  case class InvalidCookie(exception: Exception) extends AuthenticationStatus
+  case object NotAuthenticated extends AuthenticationStatus
+
+  /**
+   * Extract the authentication status from the request.
+   */
+  def extractAuth[A](request: Request[A]): AuthenticationStatus = try {
+    readAuthenticatedUser(request) map { authedUser =>
+      if (authedUser.isExpired) {
+        Expired(authedUser)
+      } else if (validateUser(authedUser)) {
+        Authenticated(authedUser)
+      } else {
+        NotAuthorized(authedUser)
+      }
+    } getOrElse {
+      NotAuthenticated
+    }
+  } catch {
+    case e: Exception => InvalidCookie(e)
+  }
+
 
   /**
    * Action that ensures the user is logged in and validated.
@@ -153,35 +180,33 @@ trait AuthActions extends PanDomainAuth {
   object AuthAction extends ActionBuilder[UserRequest] {
 
     override def invokeBlock[A](request: Request[A], block: (UserRequest[A]) => Future[Result]): Future[Result] = {
-
-      try {
-        readAuthenticatedUser(request) map { authedUser =>
-
-          if(authedUser.isExpired) {
-            Logger.debug(s"user ${authedUser.user.email} login expired, sending to re-auth")
-            sendForAuth(request, Some(authedUser.user.email))
-          } else if(authedUser.authenticatedIn(system)) {
-            block(new UserRequest(authedUser.user, request))
-          } else if(validateUser(authedUser)) {
-
-            val updatedAuth = authedUser.copy(authenticatedIn = authedUser.authenticatedIn + system)
-            val updatedCookie = generateCookie(updatedAuth)
-
-            Logger.debug(s"user ${authedUser.user.email} from other system valid: adding validity in $system.")
-            block(new UserRequest(authedUser.user, request)).map(_.withCookies(updatedCookie))
-          } else {
-            Future(showUnauthedMessage(invalidUserMessage(authedUser))(request))
-          }
-        } getOrElse {
+      extractAuth(request) match {
+        case NotAuthenticated =>
           Logger.debug(s"user not authed against $domain, authing")
           sendForAuth(request)
-        }
-      } catch {
-        case e: Exception => {
+
+        case InvalidCookie(e) =>
           Logger.warn("error checking user's auth, re-authing", e)
           // remove the invalid cookie data
           sendForAuth(request).map(_.discardingCookies(flushCookie))
-        }
+
+        case Expired(authedUser) =>
+          Logger.debug(s"user ${authedUser.user.email} login expired, sending to re-auth")
+          sendForAuth(request, Some(authedUser.user.email))
+
+        case NotAuthorized(authedUser) =>
+          Future(showUnauthedMessage(invalidUserMessage(authedUser))(request))
+
+        case Authenticated(authedUser) =>
+          val response = block(new UserRequest(authedUser.user, request))
+          if (authedUser.authenticatedIn(system)) {
+            response
+          } else {
+            Logger.debug(s"user ${authedUser.user.email} from other system valid: adding validity in $system.")
+            val updatedAuth = authedUser.copy(authenticatedIn = authedUser.authenticatedIn + system)
+            val updatedCookie = generateCookie(updatedAuth)
+            response.map(_.withCookies(updatedCookie))
+          }
       }
     }
   }
@@ -199,38 +224,35 @@ trait AuthActions extends PanDomainAuth {
   object APIAuthAction extends ActionBuilder[UserRequest] {
 
     override def invokeBlock[A](request: Request[A], block: (UserRequest[A]) => Future[Result]): Future[Result] = {
-
-      try {
-        readAuthenticatedUser(request) map { authedUser =>
-
-          if(authedUser.isExpired) {
-            Logger.debug(s"user ${authedUser.user.email} login expired, sending to re-auth")
-            Future(new Status(419))
-          } else if(authedUser.authenticatedIn(system)) {
-            block(new UserRequest(authedUser.user, request))
-          } else if(validateUser(authedUser)) {
-
-            val updatedAuth = authedUser.copy(authenticatedIn = authedUser.authenticatedIn + system)
-            val updatedCookie = generateCookie(updatedAuth)
-
-            Logger.debug(s"user ${authedUser.user.email} from other system valid: adding validity in $system.")
-            block(new UserRequest(authedUser.user, request)).map(_.withCookies(updatedCookie))
-          } else {
-            Logger.debug(invalidUserMessage(authedUser))
-            Future(Forbidden)
-          }
-        } getOrElse {
+      extractAuth(request) match {
+        case NotAuthenticated =>
           Logger.debug(s"user not authed against $domain, authing")
           Future(Unauthorized)
-        }
-      } catch {
-        case e: Exception => {
+
+        case InvalidCookie(e) =>
           Logger.warn("error checking user's auth, re-authing", e)
           // remove the invalid cookie data
           Future(Unauthorized).map(_.discardingCookies(flushCookie))
-        }
-      }
 
+        case Expired(authedUser) =>
+          Logger.debug(s"user ${authedUser.user.email} login expired, return 419")
+          Future(new Status(419))
+
+        case NotAuthorized(authedUser) =>
+          Logger.debug(invalidUserMessage(authedUser))
+          Future(Forbidden)
+
+        case Authenticated(authedUser) =>
+          val response = block(new UserRequest(authedUser.user, request))
+          if (authedUser.authenticatedIn(system)) {
+            response
+          } else {
+            Logger.debug(s"user ${authedUser.user.email} from other system valid: adding validity in $system.")
+            val updatedAuth = authedUser.copy(authenticatedIn = authedUser.authenticatedIn + system)
+            val updatedCookie = generateCookie(updatedAuth)
+            response.map(_.withCookies(updatedCookie))
+          }
+      }
     }
   }
 }
