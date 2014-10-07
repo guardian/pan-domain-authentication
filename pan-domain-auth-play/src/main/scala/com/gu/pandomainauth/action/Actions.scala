@@ -107,14 +107,7 @@ trait AuthActions extends PanDomainAuth {
       }
 
       if (validateUser(authedUserData)) {
-        val updatedCookie = Cookie(
-          name = settings.cookieName,
-          value = CookieUtils.generateCookieData(authedUserData, settings.secret),
-          domain = Some(domain),
-          secure = true,
-          httpOnly = true
-        )
-
+        val updatedCookie = generateCookie(authedUserData)
         Redirect(originalUrl).withCookies(updatedCookie).withSession(session = request.session - ANTI_FORGERY_KEY - LOGIN_ORIGIN_KEY)
       } else {
         showUnauthedMessage(invalidUserMessage(claimedAuth))
@@ -123,10 +116,31 @@ trait AuthActions extends PanDomainAuth {
   }
 
   def processLogout(implicit request: RequestHeader) = {
-    showUnauthedMessage("logged out").discardingCookies( // remove the auth cookie
-      DiscardingCookie(name = settings.cookieName, domain = Some(domain), secure = true)
-    )
+    showUnauthedMessage("logged out").discardingCookies(flushCookie)
   }
+
+
+  def readAuthenticatedUser(request: RequestHeader): Option[AuthenticatedUser] = readCookie(request) map { cookie =>
+    CookieUtils.parseCookieData(cookie.value, settings.secret)
+  }
+
+
+  def readCookie(request: RequestHeader): Option[Cookie] = request.cookies.get(settings.cookieName)
+
+  def generateCookie(authedUser: AuthenticatedUser): Cookie = Cookie(
+    name     = settings.cookieName,
+    value    = CookieUtils.generateCookieData(authedUser, settings.secret),
+    domain   = Some(domain),
+    secure   = true,
+    httpOnly = true
+  )
+
+  def flushCookie: DiscardingCookie = DiscardingCookie(
+    name = settings.cookieName,
+    domain = Some(domain),
+    secure = true
+  )
+
 
   /**
    * Action that ensures the user is logged in and validated.
@@ -140,11 +154,8 @@ trait AuthActions extends PanDomainAuth {
 
     override def invokeBlock[A](request: Request[A], block: (UserRequest[A]) => Future[Result]): Future[Result] = {
 
-      val cookie = request.cookies.get(settings.cookieName)
-
-      cookie.map{c =>
-        try {
-          val authedUser = CookieUtils.parseCookieData(c.value, settings.secret)
+      try {
+        readAuthenticatedUser(request) map { authedUser =>
 
           if(authedUser.isExpired) {
             Logger.debug(s"user ${authedUser.user.email} login expired, sending to re-auth")
@@ -154,31 +165,23 @@ trait AuthActions extends PanDomainAuth {
           } else if(validateUser(authedUser)) {
 
             val updatedAuth = authedUser.copy(authenticatedIn = authedUser.authenticatedIn + system)
-            val updatedCookie = Cookie(
-              name = settings.cookieName,
-              value = CookieUtils.generateCookieData(updatedAuth, settings.secret),
-              domain = Some(domain),
-              secure = true,
-              httpOnly = true
-            )
+            val updatedCookie = generateCookie(updatedAuth)
 
             Logger.debug(s"user ${authedUser.user.email} from other system valid: adding validity in $system.")
             block(new UserRequest(authedUser.user, request)).map(_.withCookies(updatedCookie))
           } else {
             Future(showUnauthedMessage(invalidUserMessage(authedUser))(request))
           }
-        } catch {
-          case e: Exception => {
-            Logger.warn("error checking user's auth, re-authing", e)
-            sendForAuth(request).map(_.discardingCookies( // remove the invalid cookie data
-              DiscardingCookie(name = settings.cookieName, domain = Some(domain), secure = true))
-            )
-          }
+        } getOrElse {
+          Logger.debug(s"user not authed against $domain, authing")
+          sendForAuth(request)
         }
-
-      }.getOrElse{
-        Logger.debug(s"user not authed against $domain, authing")
-        sendForAuth(request)
+      } catch {
+        case e: Exception => {
+          Logger.warn("error checking user's auth, re-authing", e)
+          // remove the invalid cookie data
+          sendForAuth(request).map(_.discardingCookies(flushCookie))
+        }
       }
     }
   }
@@ -197,11 +200,8 @@ trait AuthActions extends PanDomainAuth {
 
     override def invokeBlock[A](request: Request[A], block: (UserRequest[A]) => Future[Result]): Future[Result] = {
 
-      val cookie = request.cookies.get(settings.cookieName)
-
-      cookie.map{c =>
-        try {
-          val authedUser = CookieUtils.parseCookieData(c.value, settings.secret)
+      try {
+        readAuthenticatedUser(request) map { authedUser =>
 
           if(authedUser.isExpired) {
             Logger.debug(s"user ${authedUser.user.email} login expired, sending to re-auth")
@@ -211,13 +211,7 @@ trait AuthActions extends PanDomainAuth {
           } else if(validateUser(authedUser)) {
 
             val updatedAuth = authedUser.copy(authenticatedIn = authedUser.authenticatedIn + system)
-            val updatedCookie = Cookie(
-              name = settings.cookieName,
-              value = CookieUtils.generateCookieData(updatedAuth, settings.secret),
-              domain = Some(domain),
-              secure = true,
-              httpOnly = true
-            )
+            val updatedCookie = generateCookie(updatedAuth)
 
             Logger.debug(s"user ${authedUser.user.email} from other system valid: adding validity in $system.")
             block(new UserRequest(authedUser.user, request)).map(_.withCookies(updatedCookie))
@@ -225,19 +219,18 @@ trait AuthActions extends PanDomainAuth {
             Logger.debug(invalidUserMessage(authedUser))
             Future(Forbidden)
           }
-        } catch {
-          case e: Exception => {
-            Logger.warn("error checking user's auth, re-authing", e)
-            Future(Unauthorized).map(_.discardingCookies( // remove the invalid cookie data
-              DiscardingCookie(name = settings.cookieName, domain = Some(domain), secure = true))
-            )
-          }
+        } getOrElse {
+          Logger.debug(s"user not authed against $domain, authing")
+          Future(Unauthorized)
         }
-
-      }.getOrElse{
-        Logger.debug(s"user not authed against $domain, authing")
-        Future(Unauthorized)
+      } catch {
+        case e: Exception => {
+          Logger.warn("error checking user's auth, re-authing", e)
+          // remove the invalid cookie data
+          Future(Unauthorized).map(_.discardingCookies(flushCookie))
+        }
       }
+
     }
   }
 }
