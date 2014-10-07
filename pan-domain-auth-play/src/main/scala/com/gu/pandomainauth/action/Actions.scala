@@ -162,7 +162,7 @@ trait AuthActions extends PanDomainAuth {
   /**
    * Extract the authentication status from the request.
    */
-  def extractAuth[A](request: Request[A]): AuthenticationStatus = try {
+  def extractAuth(request: RequestHeader): AuthenticationStatus = try {
     readAuthenticatedUser(request) map { authedUser =>
       if (authedUser.isExpired) {
         Expired(authedUser)
