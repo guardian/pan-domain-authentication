@@ -116,7 +116,7 @@ trait AuthActions extends PanDomainAuth {
   }
 
   def processLogout(implicit request: RequestHeader) = {
-    showUnauthedMessage("logged out").discardingCookies(flushCookie)
+    flushCookie(showUnauthedMessage("logged out"))
   }
 
 
@@ -135,11 +135,21 @@ trait AuthActions extends PanDomainAuth {
     httpOnly = true
   )
 
-  def flushCookie: DiscardingCookie = DiscardingCookie(
-    name = settings.cookieName,
-    domain = Some(domain),
-    secure = true
-  )
+  def includeSystemInCookie(authedUser: AuthenticatedUser)(result: Result): Result = {
+    val updatedAuth = authedUser.copy(authenticatedIn = authedUser.authenticatedIn + system)
+    val updatedCookie = generateCookie(updatedAuth)
+    result.withCookies(updatedCookie)
+  }
+
+  def flushCookie(result: Result): Result = {
+    val clearCookie = DiscardingCookie(
+      name = settings.cookieName,
+      domain = Some(domain),
+      secure = true
+    )
+    result.discardingCookies(clearCookie)
+  }
+
 
   // Represents the status of the attempted authentication
   sealed trait AuthenticationStatus
@@ -188,7 +198,7 @@ trait AuthActions extends PanDomainAuth {
         case InvalidCookie(e) =>
           Logger.warn("error checking user's auth, re-authing", e)
           // remove the invalid cookie data
-          sendForAuth(request).map(_.discardingCookies(flushCookie))
+          sendForAuth(request).map(flushCookie)
 
         case Expired(authedUser) =>
           Logger.debug(s"user ${authedUser.user.email} login expired, sending to re-auth")
@@ -203,9 +213,7 @@ trait AuthActions extends PanDomainAuth {
             response
           } else {
             Logger.debug(s"user ${authedUser.user.email} from other system valid: adding validity in $system.")
-            val updatedAuth = authedUser.copy(authenticatedIn = authedUser.authenticatedIn + system)
-            val updatedCookie = generateCookie(updatedAuth)
-            response.map(_.withCookies(updatedCookie))
+            response.map(includeSystemInCookie(authedUser))
           }
       }
     }
@@ -232,7 +240,7 @@ trait AuthActions extends PanDomainAuth {
         case InvalidCookie(e) =>
           Logger.warn("error checking user's auth, re-authing", e)
           // remove the invalid cookie data
-          Future(Unauthorized).map(_.discardingCookies(flushCookie))
+          Future(Unauthorized).map(flushCookie)
 
         case Expired(authedUser) =>
           Logger.debug(s"user ${authedUser.user.email} login expired, return 419")
@@ -248,9 +256,7 @@ trait AuthActions extends PanDomainAuth {
             response
           } else {
             Logger.debug(s"user ${authedUser.user.email} from other system valid: adding validity in $system.")
-            val updatedAuth = authedUser.copy(authenticatedIn = authedUser.authenticatedIn + system)
-            val updatedCookie = generateCookie(updatedAuth)
-            response.map(_.withCookies(updatedCookie))
+            response.map(includeSystemInCookie(authedUser))
           }
       }
     }
