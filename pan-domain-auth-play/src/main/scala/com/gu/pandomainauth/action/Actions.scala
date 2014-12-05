@@ -166,7 +166,7 @@ trait AuthActions extends PanDomainAuth {
     readAuthenticatedUser(request) map { authedUser =>
       if (authedUser.isExpired) {
         Expired(authedUser)
-      } else if (validateUser(authedUser)) {
+      } else if (authedUser.authenticatedIn(system) || validateUser(authedUser)) {
         Authenticated(authedUser)
       } else {
         NotAuthorized(authedUser)
