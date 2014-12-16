@@ -2,19 +2,21 @@ package com.gu.pandomainauth.service
 
 import java.util.Properties
 import com.amazonaws.ClientConfiguration
+import com.amazonaws.internal.StaticCredentialsProvider
+import com.amazonaws.regions.{Regions, Region}
 
 import scala.collection.JavaConversions._
-import com.amazonaws.auth.BasicAWSCredentials
+import com.amazonaws.auth.AWSCredentials
 import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.model.GetObjectRequest
 
-import scala.io.Source
 
 
-class S3Bucket(keyId: String, secretAccessKey: String, proxyConfiguration: Option[ProxyConfiguration] = None) {
+class S3Bucket(credentials: Option[AWSCredentials] = None, regionOption: Option[Region] = None, proxyConfiguration: Option[ProxyConfiguration] = None) {
 
-  val awsCreds = new BasicAWSCredentials(keyId, secretAccessKey)
-  val s3Client = new AmazonS3Client(awsCreds, awsClientConfiguration)
+  val credentialsProvider = credentials.map(new StaticCredentialsProvider(_)).getOrElse(null)
+  val region = regionOption getOrElse(Region getRegion(Regions.EU_WEST_1))
+  val s3Client = region.createClient(classOf[AmazonS3Client], credentialsProvider, awsClientConfiguration)
 
   val bucketName = "pan-domain-auth-settings"
 

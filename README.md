@@ -49,13 +49,13 @@ The ```pan-domain-auth-core``` and ```pan-domain-auth-play``` libraries are avai
 2.10.4 and 2.11.1. to include them via sbt:
  
 ```
-"com.gu" %% "pan-domain-auth-core" % "0.1.8"
+"com.gu" %% "pan-domain-auth-core" % "0.2.1"
 ```
 
 or
 
 ```
-"com.gu" %% "pan-domain-auth-play" % "0.1.8"
+"com.gu" %% "pan-domain-auth-play" % "0.2.1"
 ```
 
 
@@ -138,8 +138,11 @@ from google
       override def authCallbackUrl: String = config.getString("host").get + "/oauthCallback"
     
       override lazy val domain: String = config.getString("pandomain.domain").get
-      override lazy val awsSecretAccessKey: String = config.getString("pandomain.aws.secret").get
-      override lazy val awsKeyId: String = config.getString("pandomain.aws.keyId").get
+      
+      lazy val awsSecretAccessKey: String = config.getString("pandomain.aws.secret")
+      lazy val awsKeyId: String = config.getString("pandomain.aws.keyId")
+      override lazy val awscredentials = for(key <- awsKeyId; secret <- awsSecretAccessKey) yield {new BasicAWSCredentials(key, secret)}
+      
       override lazy val system: String = "workflow"
     }
     
@@ -214,6 +217,19 @@ implementation of the google oauth integration. Have a look at how this is done 
 your framework and http client etc.
 
 More examples and framework clients may be added in the future as they become available.
+
+### configuring access to the S3 bucket
+
+Access to the s3 bucket is controlled by overriding the ```awsCredentials``` and ```awsRegion``` options in the ```PanDomainAuth``` trait (or the 
+```AuthActions``` sub trait in the play implementation).
+ 
+* **awsCredentials** defaults to None - this means that the instance profile of your app running in EC2 will be used. You can configure access to the bucket
+in your cloud formation script. For apps tha are not running in EC2 (such as developer environments) you can supply ```BasicAWSCredentials``` with a key and secret
+for a user that will grant access to the bucket.
+
+* **awsRegion** defaults to eu-west-1 - This is where the guardian runs the majority of it's aws estate so is a useful default for us.
+
+
 
 ### The user object
 
