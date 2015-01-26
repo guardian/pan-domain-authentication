@@ -1,3 +1,4 @@
 GET     /                                   controllers.AdminController.index
 GET     /showUser                           controllers.AdminController.showUser
 GET     /oathCallback                       controllers.AdminController.oathCallback
+GET     /logout                             controllers.AdminController.logout

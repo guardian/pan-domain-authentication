@@ -35,7 +35,7 @@ trait AuthActions extends PanDomainAuth {
 
   val GoogleAuth = new GoogleAuth(settings.googleAuthSettings, system, authCallbackUrl)
 
-  val multifactorChecker = settings.google2FAGroupSettings.map(new Google2FAGroupChecker(_))
+  val multifactorChecker = settings.google2FAGroupSettings.map(new Google2FAGroupChecker(_, bucket))
   /**
    * A Play session key that stores the target URL that was being accessed when redirected for authentication
    */
