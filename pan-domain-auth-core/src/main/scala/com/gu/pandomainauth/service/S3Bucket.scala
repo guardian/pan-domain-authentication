@@ -30,6 +30,11 @@ class S3Bucket(credentials: Option[AWSCredentials] = None, regionOption: Option[
 
   }
 
+  def getObjectInputStream(objectPath: String) = {
+    val s3File = s3Client.getObject(new GetObjectRequest(bucketName, objectPath))
+    s3File.getObjectContent
+  }
+
   lazy val awsClientConfiguration: ClientConfiguration = {
     proxyConfiguration.map { c =>
       val awsClientConf = new ClientConfiguration()

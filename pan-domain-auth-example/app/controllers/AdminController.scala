@@ -16,4 +16,9 @@ object AdminController extends Controller with ExampleAuthActions {
   def oathCallback = Action.async { implicit request =>
     processGoogleCallback()
   }
+
+  def logout = Action { implicit request =>
+    processLogout(request)
+  }
+
 }

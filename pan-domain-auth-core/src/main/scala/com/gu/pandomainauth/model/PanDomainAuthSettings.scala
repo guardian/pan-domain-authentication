@@ -15,9 +15,9 @@ case class GoogleAuthSettings(
 )
 
 case class Google2FAGroupSettings(
-  googleUser: String,
-  googlePassword: String,
-  googleAppDomain: String,
+  serviceAccountId: String,
+  serviceAccountCert: String,
+  adminUserEmail: String,
   multifactorGroupId: String
 )
 
@@ -28,12 +28,12 @@ object PanDomainAuthSettings{
     val googleAuthSettings = GoogleAuthSettings(settingMap("googleAuthClientId"), settingMap("googleAuthSecret"))
 
     val google2faSettings = for(
-      clientId <- settingMap.get("google2faUser");
-      secret   <- settingMap.get("google2faPassword");
-      domain   <- settingMap.get("google2faAppDomain");
-      group    <- settingMap.get("multifactorGroupId")
+      serviceAccountId   <- settingMap.get("googleServiceAccountId");
+      serviceAccountCert <- settingMap.get("googleServiceAccountCert");
+      adminUser          <- settingMap.get("google2faUser");
+      group              <- settingMap.get("multifactorGroupId")
     ) yield {
-      Google2FAGroupSettings(clientId, secret, domain, group)
+      Google2FAGroupSettings(serviceAccountId, serviceAccountCert, adminUser, group)
     }
 
     PanDomainAuthSettings(settingMap("secret"), settingMap("cookieName"), googleAuthSettings, google2faSettings)

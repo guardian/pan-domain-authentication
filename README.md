@@ -91,9 +91,9 @@ domain the file would be called example.com.settings. The contents of the file w
     googleAuthClientId=example_google_client
     googleAuthSecret=example_google_secret
     
-    google2faUser=2fa_admin_user@example.com
-    google2faPassword=2fa_admin_password
-    google2faAppDomain=example.com
+    googleServiceAccountId=serviceAccount@developer.gserviceaccount.com
+    googleServiceAccountCert=name_of_cert_in_bucket.p12
+    google2faUser=an.admin@example.com
     multifactorGroupId=group@2fa_admin_user
 
 
@@ -105,7 +105,7 @@ domain the file would be called example.com.settings. The contents of the file w
 
 * **googleAuthSecret** - this is the secret for the google app you autheniticate with - this is obtained from the google [Google Developer Console](https://console.developers.google.com)
 
-* **google2faUser, google2faPassword, google2faAppDomain and multifactorGroupId** - these are optional parameters for using a group based 2 factor auth verification, see explanation below
+* **googleServiceAccountId, googleServiceAccountCert, google2faUser and multifactorGroupId** - these are optional parameters for using a group based 2 factor auth verification, see explanation below
 
 
 ## Integrating with your app
@@ -265,12 +265,14 @@ from the standard callback this is checked by asserting that the user is in a go
 by google themselves when we asked about checking 2fa). Since the group is likely set up within an apps for domains setup and not accessible to everyone
 checking the 2fa group uses different google credentials from the main auth.
 
-To configure multifactor checking fill in all the following properties in the domain's property file. If you do not wish to use this feature just omit the
+To configure multifactor checking you will need to create a service account that can access the google directory api,
+see [directory API docs](https://developers.google.com/admin-sdk/directory/v1/guides/delegation). once this is configured fill in all the following properties
+in the domain's property file and upload the service accounts cert to the s3bucket. If you do not wish to use this feature just omit the
 properties:
 
-* **google2faUser** - the user to connect to the apps for domains api as
-* **google2faPassword** - the password to connect to the apps for domians api with
-* **google2faAppDomain** - the domain to use for the apps for domains api
+* **googleServiceAccountId** - the service account email that is set up to allow access to the directory API
+* **googleServiceAccountCert** - the name within the bucket of the certificate used to validate the service account
+* **google2faUser** - the admin user to connect to the directory api as, this is not the service account user but a user in your org who is authorised to access group information
 * **multifactorGroupId** - the name of the group that indicates and enforces that 2fa is turned on
 
 
