@@ -118,7 +118,7 @@ Create a pan domain auth actions trait that extends the ```AuthActions``` trait 
 provide the config needed to connect to the aws bucket and the domain and app you are using. You will also need to
 add a method here to ensure that any authenticated user is valid in your specific app (and this could be used to create
 users in you app's datastore). You should also provide the full url of the endpoint that will handle the oauth callback
-from google 
+from google.
 
 
     package controllers
@@ -134,6 +134,8 @@ from google
       override def validateUser(authedUser: AuthenticatedUser): Boolean = {
         (authedUser.user.email endsWith ("@guardian.co.uk")) && authedUser.multiFactor
       }
+      
+      override def cacheValidation = true
     
       override def authCallbackUrl: String = config.getString("host").get + "/oauthCallback"
     
@@ -145,7 +147,10 @@ from google
       
       override lazy val system: String = "workflow"
     }
-    
+
+By default the user validation method is called every request. If your validation method has side effects or is expensive then you
+can set ```cacheValidation``` to true, this will mean that ```validateUser``` is only called once per system per google auth (i.e 
+validation will only reoccur when the google session is refreshed)
 
 Create a controller that will handle the oauth callback and logout actions, add these actions to the routes file.
 
@@ -252,7 +257,7 @@ The fields are:
 
 * **user** - the user object
 * **authenticatingSystem** - the app name of the app that authenticated the user
-* **authenticatedIn** - the set of app names that this user is known to be valid, this prevents revalidation
+* **authenticatedIn** - the set of app names that this user is known to be valid, this prevents revalidation if cacheValidation is set to true
 * **expires** - the authentication session expiry time in milliseconds, after this has passed then the session is invalid and the user will need to 
                 be reauthenticated with google. There is a handy method to check if the authentication is expired ```def isExpired = expires < new Date().getTime```
 * **multiFactor** - true if the user's authentication used a 2 factor type login. This defaults to false                
