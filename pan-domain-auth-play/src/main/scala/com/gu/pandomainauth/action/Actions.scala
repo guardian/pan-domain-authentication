@@ -109,7 +109,7 @@ trait AuthActions extends PanDomainAuth {
           claimedAuth.copy(
             authenticatingSystem = system,
             authenticatedIn = Set(system),
-            multiFactor = existingAuth.multiFactor
+            multiFactor = checkMultifactor(claimedAuth)
           )
         }
         case None => {
