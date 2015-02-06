@@ -49,13 +49,13 @@ The ```pan-domain-auth-core``` and ```pan-domain-auth-play``` libraries are avai
 2.10.4 and 2.11.1. to include them via sbt:
  
 ```
-"com.gu" %% "pan-domain-auth-core" % "0.2.1"
+"com.gu" %% "pan-domain-auth-core" % "0.2.3"
 ```
 
 or
 
 ```
-"com.gu" %% "pan-domain-auth-play" % "0.2.1"
+"com.gu" %% "pan-domain-auth-play" % "0.2.3"
 ```
 
 
