@@ -4,6 +4,7 @@ import com.amazonaws.auth.{BasicAWSCredentials, AWSCredentials}
 import com.amazonaws.regions.Region
 import com.gu.pandomainauth.action.AuthActions
 import com.gu.pandomainauth.model.AuthenticatedUser
+import play.api.Logger
 
 trait ExampleAuthActions extends AuthActions {
 
@@ -11,9 +12,11 @@ trait ExampleAuthActions extends AuthActions {
   lazy val config = play.api.Play.configuration
 
   override def validateUser(authedUser: AuthenticatedUser): Boolean = {
-    println(authedUser.toString)
+    Logger.info(s"validating user $authedUser")
     (authedUser.user.email endsWith ("@guardian.co.uk")) && authedUser.multiFactor
   }
+
+  override def cacheValidation = false
 
   override def authCallbackUrl: String = config.getString("host").get + "/oathCallback"
 
