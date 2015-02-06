@@ -31,14 +31,12 @@ class Google2FAGroupChecker(config: Google2FAGroupSettings, bucket: S3Bucket) {
   def checkMultifactor(authenticatedUser: AuthenticatedUser) = {
 
     val query = directory.groups().list().setUserKey(authenticatedUser.user.email)
-
     has2FAGroup(query)
   }
 
   private def has2FAGroup(query: Directory#Groups#List): Boolean = {
     val groupsResponse = query.execute()
-    val hasGroupOnPage = groupsResponse.getGroups.asScala.exists(_.getEmail == config.multifactorGroupId)
-
+    val hasGroupOnPage = Option(groupsResponse.getGroups()).map(_.asScala.exists(_.getEmail == config.multifactorGroupId)).getOrElse(false)
     hasGroupOnPage || (if(hasMoreGroups(groupsResponse)) has2FAGroup( query.setPageToken(groupsResponse.getNextPageToken()) ) else false)
   }
 
