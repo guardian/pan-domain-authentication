@@ -18,12 +18,24 @@ trait AuthActions extends PanDomainAuth {
   /**
    * Returns true if the authed user is valid in the implementing system (meets your multifactor requirements, you recognise the email etc.).
    * 
-   * If your implementing application needs to audit logins / register new users etc then this ia also the place to do it.
+   * If your implementing application needs to audit logins / register new users etc then this ia also the place to do it (although in this case
+   * you should strongly consider setting cacheValidation to true).
    * 
    * @param authedUser
    * @return true if the user is valid in your app
    */
   def validateUser(authedUser: AuthenticatedUser): Boolean
+
+
+  /**
+   * By default the validity of the user is checked every request. If your validateUser implementation is expensive or has side effects you
+   * can override this to true and validity will only be checked the first time the user visits your app after their login is established.
+   *
+   * Note the the cache is invalidated after the user's session is re-established with google.
+   *
+   * @return true if you want to only check the validity of the user once for the lifetime of the user's auth session
+   */
+  def cacheValidation: Boolean = false
 
   /**
    * The auth callback url. This is where google will send the user after authentication. This action on this url should
@@ -96,7 +108,7 @@ trait AuthActions extends PanDomainAuth {
 
           claimedAuth.copy(
             authenticatingSystem = system,
-            authenticatedIn = existingAuth.authenticatedIn + system,
+            authenticatedIn = Set(system),
             multiFactor = existingAuth.multiFactor
           )
         }
@@ -166,7 +178,10 @@ trait AuthActions extends PanDomainAuth {
     readAuthenticatedUser(request) map { authedUser =>
       if (authedUser.isExpired) {
         Expired(authedUser)
-      } else if (authedUser.authenticatedIn(system) || validateUser(authedUser)) {
+      } else if (
+        (cacheValidation && authedUser.authenticatedIn(system))
+          || validateUser(authedUser)
+      ) {
         Authenticated(authedUser)
       } else {
         NotAuthorized(authedUser)
