@@ -47,7 +47,7 @@ trait AuthActions extends PanDomainAuth {
    *
    * @return the amount of delay between App and API expiry in milliseconds
    */
-  def apiExpiryExtension: Long = 1.hour.toMillis
+  def apiGracePeriod: Long = 1.hour.toMillis
 
 
   /**
@@ -179,7 +179,7 @@ trait AuthActions extends PanDomainAuth {
   // Represents the status of the attempted authentication
   sealed trait AuthenticationStatus
   case class Expired(authedUser: AuthenticatedUser) extends AuthenticationStatus
-  case class ExpiredWithExtension(authedUser: AuthenticatedUser) extends AuthenticationStatus
+  case class GracePeriod(authedUser: AuthenticatedUser) extends AuthenticationStatus
   case class Authenticated(authedUser: AuthenticatedUser) extends AuthenticationStatus
   case class NotAuthorized(authedUser: AuthenticatedUser) extends AuthenticationStatus
   case class InvalidCookie(exception: Exception) extends AuthenticationStatus
@@ -191,8 +191,8 @@ trait AuthActions extends PanDomainAuth {
   def extractAuth(request: RequestHeader): AuthenticationStatus = try {
     readAuthenticatedUser(request) map { authedUser =>
       if (authedUser.isExpired) {
-        if(authedUser.hasExpiryExtension(apiExpiryExtension)) {
-          ExpiredWithExtension(authedUser)
+        if(authedUser.isInGracePeriod(apiGracePeriod)) {
+          GracePeriod(authedUser)
         } else {
           Expired(authedUser)
         }
@@ -237,8 +237,8 @@ trait AuthActions extends PanDomainAuth {
           Logger.debug(s"user ${authedUser.user.email} login expired, sending to re-auth")
           sendForAuth(request, Some(authedUser.user.email))
 
-        case ExpiredWithExtension(authedUser) =>
-          Logger.debug(s"user ${authedUser.user.email} login expired, sending to re-auth")
+        case GracePeriod(authedUser) =>
+          Logger.debug(s"user ${authedUser.user.email} login expired, in grace period, sending to re-auth")
           sendForAuth(request, Some(authedUser.user.email))
 
         case NotAuthorized(authedUser) =>
@@ -287,8 +287,8 @@ trait AuthActions extends PanDomainAuth {
           Logger.debug(s"user ${authedUser.user.email} login expired, return 419")
           Future(new Status(419))
 
-        case ExpiredWithExtension(authedUser) =>
-          Logger.debug(s"user ${authedUser.user.email} login expired but has expiry extension.")
+        case GracePeriod(authedUser) =>
+          Logger.debug(s"user ${authedUser.user.email} login expired but is in grace period.")
           val response = block(new UserRequest(authedUser.user, request))
           responseWithSystemCookie(response, authedUser)
 
