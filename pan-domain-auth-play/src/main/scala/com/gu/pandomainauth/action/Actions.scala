@@ -227,6 +227,10 @@ trait AuthActions extends PanDomainAuth {
           Logger.debug(s"user ${authedUser.user.email} login expired, sending to re-auth")
           sendForAuth(request, Some(authedUser.user.email))
 
+        case ExpiredWithExtension(authedUser) =>
+          Logger.debug(s"user ${authedUser.user.email} login expired, sending to re-auth")
+          sendForAuth(request, Some(authedUser.user.email))
+
         case NotAuthorized(authedUser) =>
           Logger.debug(s"user not authorized, show error")
           Future(showUnauthedMessage(invalidUserMessage(authedUser))(request))
@@ -247,11 +251,14 @@ trait AuthActions extends PanDomainAuth {
    * Action that ensures the user is logged in and validated.
    *
    * This action is for API / XHR type requests where the user can't be sent to the auth provider for auth. In the
-   * cases where the auth is not valid repsonce codes are sent to the requesting app and the javascript that initiated
+   * cases where the auth is not valid response codes are sent to the requesting app and the javascript that initiated
    * the request should handle these appropriately
    *
    * If the user is not authed then a 401 response is sent, if the auth has expired then a 419 response is sent, if
    * the user is authed but not allowed to perform the action a 403 is sent
+   *
+   * If the user is authed or has an expiry extension, a 200 is sent
+   *
    */
   object APIAuthAction extends ActionBuilder[UserRequest] {
 
@@ -270,6 +277,11 @@ trait AuthActions extends PanDomainAuth {
           Logger.debug(s"user ${authedUser.user.email} login expired, return 419")
           Future(new Status(419))
 
+        case ExpiredWithExtension(authedUser) =>
+          Logger.debug(s"user ${authedUser.user.email} login expired but has expiry extension.")
+          val response = block(new UserRequest(authedUser.user, request))
+          responseWithSystemCookie(response, authedUser)
+
         case NotAuthorized(authedUser) =>
           Logger.debug(s"user not authorized, return 403")
           Logger.debug(invalidUserMessage(authedUser))
@@ -277,13 +289,16 @@ trait AuthActions extends PanDomainAuth {
 
         case Authenticated(authedUser) =>
           val response = block(new UserRequest(authedUser.user, request))
-          if (authedUser.authenticatedIn(system)) {
-            response
-          } else {
-            Logger.debug(s"user ${authedUser.user.email} from other system valid: adding validity in $system.")
-            response.map(includeSystemInCookie(authedUser))
-          }
+          responseWithSystemCookie(response, authedUser)
       }
     }
+
+    def responseWithSystemCookie(response: Future[Result], authedUser: AuthenticatedUser): Future[Result] =
+      if (authedUser.authenticatedIn(system)) {
+        response
+      } else {
+        Logger.debug(s"user ${authedUser.user.email} from other system valid: adding validity in $system.")
+        response.map(includeSystemInCookie(authedUser))
+      }
   }
 }
