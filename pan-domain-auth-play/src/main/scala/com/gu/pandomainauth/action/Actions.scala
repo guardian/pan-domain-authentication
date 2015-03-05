@@ -43,11 +43,13 @@ trait AuthActions extends PanDomainAuth {
    * Adding an expiry extension to `APIAuthAction`s allows for a delay between an applications authentication and their
    * respective API XHR calls expiring.
    *
+   * By default this is 0 and thus disabled.
+   *
    * This is particularly useful for SPAs where users have third party cookies disabled.
    *
    * @return the amount of delay between App and API expiry in milliseconds
    */
-  def apiGracePeriod: Long = 1.hour.toMillis
+  def apiGracePeriod: Long = 0
 
 
   /**
