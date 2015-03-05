@@ -38,7 +38,17 @@ trait AuthActions extends PanDomainAuth {
    */
   def cacheValidation: Boolean = false
 
+
+  /**
+   * Adding an expiry extension to `APIAuthAction`s allows for a delay between an applications authentication and their
+   * respective API XHR calls expiring.
+   *
+   * This is particularly useful for SPAs where users have third party cookies disabled.
+   *
+   * @return the amount of delay between App and API expiry in milliseconds
+   */
   def apiExpiryExtension: Long = 1.hour.toMillis
+
 
   /**
    * The auth callback url. This is where google will send the user after authentication. This action on this url should
