@@ -9,6 +9,7 @@ import play.api.{Application, Logger}
 import play.api.Play.current
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.DurationInt
 
 
 class UserRequest[A](val user: User, request: Request[A]) extends WrappedRequest[A](request)
@@ -36,6 +37,8 @@ trait AuthActions extends PanDomainAuth {
    * @return true if you want to only check the validity of the user once for the lifetime of the user's auth session
    */
   def cacheValidation: Boolean = false
+
+  def apiExpiryExtension: Long = 1.hour.toMillis
 
   /**
    * The auth callback url. This is where google will send the user after authentication. This action on this url should
@@ -166,6 +169,7 @@ trait AuthActions extends PanDomainAuth {
   // Represents the status of the attempted authentication
   sealed trait AuthenticationStatus
   case class Expired(authedUser: AuthenticatedUser) extends AuthenticationStatus
+  case class ExpiredWithExtension(authedUser: AuthenticatedUser) extends AuthenticationStatus
   case class Authenticated(authedUser: AuthenticatedUser) extends AuthenticationStatus
   case class NotAuthorized(authedUser: AuthenticatedUser) extends AuthenticationStatus
   case class InvalidCookie(exception: Exception) extends AuthenticationStatus
@@ -177,7 +181,11 @@ trait AuthActions extends PanDomainAuth {
   def extractAuth(request: RequestHeader): AuthenticationStatus = try {
     readAuthenticatedUser(request) map { authedUser =>
       if (authedUser.isExpired) {
-        Expired(authedUser)
+        if(authedUser.hasExpiryExtension(apiExpiryExtension)) {
+          ExpiredWithExtension(authedUser)
+        } else {
+          Expired(authedUser)
+        }
       } else if (
         (cacheValidation && authedUser.authenticatedIn(system))
           || validateUser(authedUser)
