@@ -201,7 +201,14 @@ Add the ```AuthAction``` or ```ApiAuthAction``` to any endpoints you with to req
   
 * ```ApiAuthAction``` is used for api ajax / xhr style requests and will not redirect to google for auth. This action will either process
   the action or return an error code that can be processed by your client javascript (see section on handling expired logins in a single
-  page webapp). The response codes are:
+  page webapp).
+
+  A grace period on expiry can be set by adding a ```apiGracePeriod```. This is useful for when browsers have third party cookies disabled
+  and reauthenticaiton solutions like [pandular](https://github.com/guardian/pandular) break due to cookies being blocked on ```window.open```
+  or ```iframe``` requests. During this period we are hopeful of the user refreshing or revisiting the application through a standard browser
+  request thus triggering off a reauthentication.
+
+  The response codes are:
   
     * **401** - user not authenticated - probably tricky to get this response as presumably the user has already loaded a page that would have
             logged them in

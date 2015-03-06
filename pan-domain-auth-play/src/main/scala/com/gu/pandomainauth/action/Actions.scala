@@ -49,7 +49,7 @@ trait AuthActions extends PanDomainAuth {
    *
    * @return the amount of delay between App and API expiry in milliseconds
    */
-  def apiGracePeriod: Long = 0
+  def apiGracePeriod: Long = 0 // ms
 
 
   /**
