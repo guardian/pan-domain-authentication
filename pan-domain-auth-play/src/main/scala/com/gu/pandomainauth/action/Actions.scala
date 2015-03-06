@@ -9,6 +9,7 @@ import play.api.{Application, Logger}
 import play.api.Play.current
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.DurationInt
 
 
 class UserRequest[A](val user: User, request: Request[A]) extends WrappedRequest[A](request)
@@ -36,6 +37,20 @@ trait AuthActions extends PanDomainAuth {
    * @return true if you want to only check the validity of the user once for the lifetime of the user's auth session
    */
   def cacheValidation: Boolean = false
+
+
+  /**
+   * Adding an expiry extension to `APIAuthAction`s allows for a delay between an applications authentication and their
+   * respective API XHR calls expiring.
+   *
+   * By default this is 0 and thus disabled.
+   *
+   * This is particularly useful for SPAs where users have third party cookies disabled.
+   *
+   * @return the amount of delay between App and API expiry in milliseconds
+   */
+  def apiGracePeriod: Long = 0 // ms
+
 
   /**
    * The auth callback url. This is where google will send the user after authentication. This action on this url should
@@ -166,6 +181,7 @@ trait AuthActions extends PanDomainAuth {
   // Represents the status of the attempted authentication
   sealed trait AuthenticationStatus
   case class Expired(authedUser: AuthenticatedUser) extends AuthenticationStatus
+  case class GracePeriod(authedUser: AuthenticatedUser) extends AuthenticationStatus
   case class Authenticated(authedUser: AuthenticatedUser) extends AuthenticationStatus
   case class NotAuthorized(authedUser: AuthenticatedUser) extends AuthenticationStatus
   case class InvalidCookie(exception: Exception) extends AuthenticationStatus
@@ -177,7 +193,11 @@ trait AuthActions extends PanDomainAuth {
   def extractAuth(request: RequestHeader): AuthenticationStatus = try {
     readAuthenticatedUser(request) map { authedUser =>
       if (authedUser.isExpired) {
-        Expired(authedUser)
+        if(authedUser.isInGracePeriod(apiGracePeriod)) {
+          GracePeriod(authedUser)
+        } else {
+          Expired(authedUser)
+        }
       } else if (
         (cacheValidation && authedUser.authenticatedIn(system))
           || validateUser(authedUser)
@@ -219,6 +239,10 @@ trait AuthActions extends PanDomainAuth {
           Logger.debug(s"user ${authedUser.user.email} login expired, sending to re-auth")
           sendForAuth(request, Some(authedUser.user.email))
 
+        case GracePeriod(authedUser) =>
+          Logger.debug(s"user ${authedUser.user.email} login expired, in grace period, sending to re-auth")
+          sendForAuth(request, Some(authedUser.user.email))
+
         case NotAuthorized(authedUser) =>
           Logger.debug(s"user not authorized, show error")
           Future(showUnauthedMessage(invalidUserMessage(authedUser))(request))
@@ -239,11 +263,14 @@ trait AuthActions extends PanDomainAuth {
    * Action that ensures the user is logged in and validated.
    *
    * This action is for API / XHR type requests where the user can't be sent to the auth provider for auth. In the
-   * cases where the auth is not valid repsonce codes are sent to the requesting app and the javascript that initiated
+   * cases where the auth is not valid response codes are sent to the requesting app and the javascript that initiated
    * the request should handle these appropriately
    *
    * If the user is not authed then a 401 response is sent, if the auth has expired then a 419 response is sent, if
    * the user is authed but not allowed to perform the action a 403 is sent
+   *
+   * If the user is authed or has an expiry extension, a 200 is sent
+   *
    */
   object APIAuthAction extends ActionBuilder[UserRequest] {
 
@@ -262,6 +289,11 @@ trait AuthActions extends PanDomainAuth {
           Logger.debug(s"user ${authedUser.user.email} login expired, return 419")
           Future(new Status(419))
 
+        case GracePeriod(authedUser) =>
+          Logger.debug(s"user ${authedUser.user.email} login expired but is in grace period.")
+          val response = block(new UserRequest(authedUser.user, request))
+          responseWithSystemCookie(response, authedUser)
+
         case NotAuthorized(authedUser) =>
           Logger.debug(s"user not authorized, return 403")
           Logger.debug(invalidUserMessage(authedUser))
@@ -269,13 +301,16 @@ trait AuthActions extends PanDomainAuth {
 
         case Authenticated(authedUser) =>
           val response = block(new UserRequest(authedUser.user, request))
-          if (authedUser.authenticatedIn(system)) {
-            response
-          } else {
-            Logger.debug(s"user ${authedUser.user.email} from other system valid: adding validity in $system.")
-            response.map(includeSystemInCookie(authedUser))
-          }
+          responseWithSystemCookie(response, authedUser)
       }
     }
+
+    def responseWithSystemCookie(response: Future[Result], authedUser: AuthenticatedUser): Future[Result] =
+      if (authedUser.authenticatedIn(system)) {
+        response
+      } else {
+        Logger.debug(s"user ${authedUser.user.email} from other system valid: adding validity in $system.")
+        response.map(includeSystemInCookie(authedUser))
+      }
   }
 }

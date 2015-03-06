@@ -5,9 +5,7 @@ case class PanDomainAuthSettings(
   cookieName: String,
   googleAuthSettings: GoogleAuthSettings,
   google2FAGroupSettings: Option[Google2FAGroupSettings]
-) {
-
-}
+)
 
 case class GoogleAuthSettings(
   googleAuthClient: String,
