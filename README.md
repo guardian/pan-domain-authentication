@@ -121,32 +121,34 @@ users in you app's datastore). You should also provide the full url of the endpo
 from Google.
 
 
-    package controllers
+``` scala
+package controllers
 
-    import com.gu.pandomainauth.action.AuthActions
-    import com.gu.pandomainauth.model.AuthenticatedUser
+import com.gu.pandomainauth.action.AuthActions
+import com.gu.pandomainauth.model.AuthenticatedUser
 
-    trait PanDomainAuthActions extends AuthActions {
+trait PanDomainAuthActions extends AuthActions {
 
-      import play.api.Play.current
-      lazy val config = play.api.Play.configuration
+  import play.api.Play.current
+  lazy val config = play.api.Play.configuration
 
-      override def validateUser(authedUser: AuthenticatedUser): Boolean = {
-        (authedUser.user.email endsWith ("@guardian.co.uk")) && authedUser.multiFactor
-      }
+  override def validateUser(authedUser: AuthenticatedUser): Boolean = {
+    (authedUser.user.email endsWith ("@guardian.co.uk")) && authedUser.multiFactor
+  }
 
-      override def cacheValidation = true
+  override def cacheValidation = true
 
-      override def authCallbackUrl: String = config.getString("host").get + "/oauthCallback"
+  override def authCallbackUrl: String = config.getString("host").get + "/oauthCallback"
 
-      override lazy val domain: String = config.getString("pandomain.domain").get
+  override lazy val domain: String = config.getString("pandomain.domain").get
 
-      lazy val awsSecretAccessKey: String = config.getString("pandomain.aws.secret")
-      lazy val awsKeyId: String = config.getString("pandomain.aws.keyId")
-      override lazy val awscredentials = for(key <- awsKeyId; secret <- awsSecretAccessKey) yield {new BasicAWSCredentials(key, secret)}
+  lazy val awsSecretAccessKey: String = config.getString("pandomain.aws.secret")
+  lazy val awsKeyId: String = config.getString("pandomain.aws.keyId")
+  override lazy val awscredentials = for(key <- awsKeyId; secret <- awsSecretAccessKey) yield {new BasicAWSCredentials(key, secret)}
 
-      override lazy val system: String = "workflow"
-    }
+  override lazy val system: String = "workflow"
+}
+```
 
 By default the user validation method is called every request. If your validation method has side effects or is expensive then you
 can set ```cacheValidation``` to true, this will mean that ```validateUser``` is only called once per system per Google auth (i.e
@@ -154,47 +156,49 @@ validation will only reoccur when the Google session is refreshed)
 
 Create a controller that will handle the oauth callback and logout actions, add these actions to the routes file.
 
-    package controllers
+``` scala
+package controllers
 
-    import play.api.mvc._
-    import scala.concurrent.Future
-    import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.mvc._
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
-    object Login extends Controller with PanDomainAuthActions {
+object Login extends Controller with PanDomainAuthActions {
 
-      def oauthCallback = Action.async { implicit request =>
-        processGoogleCallback()
-      }
+  def oauthCallback = Action.async { implicit request =>
+    processGoogleCallback()
+  }
 
-      def logout = Action.async { implicit request =>
-        Future(processLogout)
-      }
-    }
-
+  def logout = Action.async { implicit request =>
+    Future(processLogout)
+  }
+}
+```
 
 Add the ```AuthAction``` or ```ApiAuthAction``` to any endpoints you with to require an authenticated user for.
 
-    package controllers
+``` scala
+package controllers
 
-    import scala.concurrent.ExecutionContext.Implicits.global
-    import lib._
-    import play.api.mvc._
+import scala.concurrent.ExecutionContext.Implicits.global
+import lib._
+import play.api.mvc._
 
 
-    object Application extends Controller with PanDomainAuthActions {
+object Application extends Controller with PanDomainAuthActions {
 
-      def loginStatus = AuthAction { request =>
-        val user = request.user
-        Ok(views.html.loginStatus(user.toJson))
-      }
+  def loginStatus = AuthAction { request =>
+    val user = request.user
+    Ok(views.html.loginStatus(user.toJson))
+  }
 
-      def getItems = APIAuthAction { implicit req =>
-        ...
-      }
+  def getItems = APIAuthAction { implicit req =>
+    ...
+  }
 
-      ...
-    }
-
+  ...
+}
+```
 
 * ```AuthAction``` is used for endpoints that the user requests and will redirect unauthenticated users to Google for authentication.
   Use this for standard page loads etc.
@@ -249,7 +253,9 @@ for a user that will grant access to the bucket.
 
 The user object is defined as:
 
-    case class User(firstName: String, lastName: String, email: String, avatarUrl: Option[String])
+``` scala
+case class User(firstName: String, lastName: String, email: String, avatarUrl: Option[String])
+```
 
 Hopefully the fields are clear as to what they are. There is a budget toJson method on it that will give a json string representation of
 the user which can be consumed by your javascript, this method does no use any json libraries so should work for any framework and library
@@ -260,7 +266,9 @@ choices you've made in you implementing app.
 As different apps may have different requirements on user validity each individual app should provide a user validation mechanism. The validation
 method takes in an ```AuthenticatedUser``` object which contains the user object and metadata about the authentication.
 
-    case class AuthenticatedUser(user: User, authenticatingSystem: String, authenticatedIn: Set[String], expires: Long, multiFactor: Boolean)
+``` scala
+case class AuthenticatedUser(user: User, authenticatingSystem: String, authenticatedIn: Set[String], expires: Long, multiFactor: Boolean)
+```
 
 The fields are:
 
