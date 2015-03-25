@@ -271,22 +271,39 @@ trait AuthActions extends PanDomainAuth {
    * If the user is authed or has an expiry extension, a 200 is sent
    *
    */
-  object APIAuthAction extends ActionBuilder[UserRequest] {
+  object APIAuthAction extends AbstractApiAuthAction with PlainErrorResponses
+
+  trait PlainErrorResponses {
+    val notAuthenticatedResult = Unauthorized
+    val invalidCookieResult    = Unauthorized
+    val expiredResult          = new Status(419)
+    val notAuthorizedResult    = Forbidden
+  }
+
+  /**
+   * Abstraction for API auth actions allowing to mix in custom results for each of the different error scenarios.
+   */
+  trait AbstractApiAuthAction extends ActionBuilder[UserRequest] {
+
+    val notAuthenticatedResult: Result
+    val invalidCookieResult: Result
+    val expiredResult: Result
+    val notAuthorizedResult: Result
 
     override def invokeBlock[A](request: Request[A], block: (UserRequest[A]) => Future[Result]): Future[Result] = {
       extractAuth(request) match {
         case NotAuthenticated =>
           Logger.debug(s"user not authed against $domain, return 401")
-          Future(Unauthorized)
+          Future(notAuthenticatedResult)
 
         case InvalidCookie(e) =>
           Logger.warn("error checking user's auth, clear cookie and return 401", e)
           // remove the invalid cookie data
-          Future(Unauthorized).map(flushCookie)
+          Future(invalidCookieResult).map(flushCookie)
 
         case Expired(authedUser) =>
           Logger.debug(s"user ${authedUser.user.email} login expired, return 419")
-          Future(new Status(419))
+          Future(expiredResult)
 
         case GracePeriod(authedUser) =>
           Logger.debug(s"user ${authedUser.user.email} login expired but is in grace period.")
@@ -296,7 +313,7 @@ trait AuthActions extends PanDomainAuth {
         case NotAuthorized(authedUser) =>
           Logger.debug(s"user not authorized, return 403")
           Logger.debug(invalidUserMessage(authedUser))
-          Future(Forbidden)
+          Future(notAuthorizedResult)
 
         case Authenticated(authedUser) =>
           val response = block(new UserRequest(authedUser.user, request))
