@@ -312,11 +312,11 @@ properties:
 
 ## Dealing with auth expiry in a single page webapp
 
-In a single page webapp there will typically be an initial page load and then all communication with the server will be initiated by javascript.
+In a single page webapp there will typically be an initial page load and then all communication with the server will be initiated by JavaScript.
 This causes problems when the auth session expires as you can't redirect the request to google to reauthenticate the request. To work around this
-all ajax type requests should return 419 responses on auth session expiry and this should be handled by the javascript layer.
+all ajax type requests should return 419 responses on auth session expiry and this should be handled by the JavaScript layer.
 
-*example javascript reauthentication code coming soon*
+See also the helper [panda-session](https://github.com/guardian/panda-session) JavaScript library.
 
 
 ## A note for guardian developers
