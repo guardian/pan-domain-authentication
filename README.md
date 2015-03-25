@@ -144,7 +144,9 @@ trait PanDomainAuthActions extends AuthActions {
 
   lazy val awsSecretAccessKey: String = config.getString("pandomain.aws.secret")
   lazy val awsKeyId: String = config.getString("pandomain.aws.keyId")
-  override lazy val awscredentials = for(key <- awsKeyId; secret <- awsSecretAccessKey) yield {new BasicAWSCredentials(key, secret)}
+  override lazy val awscredentials =
+    for (key <- awsKeyId; secret <- awsSecretAccessKey)
+    yield new BasicAWSCredentials(key, secret)
 
   override lazy val system: String = "workflow"
 }
@@ -254,7 +256,12 @@ for a user that will grant access to the bucket.
 The user object is defined as:
 
 ``` scala
-case class User(firstName: String, lastName: String, email: String, avatarUrl: Option[String])
+case class User(
+  firstName: String,
+  lastName: String,
+  email: String,
+  avatarUrl: Option[String]
+)
 ```
 
 Hopefully the fields are clear as to what they are. There is a budget toJson method on it that will give a json string representation of
@@ -267,7 +274,13 @@ As different apps may have different requirements on user validity each individu
 method takes in an ```AuthenticatedUser``` object which contains the user object and metadata about the authentication.
 
 ``` scala
-case class AuthenticatedUser(user: User, authenticatingSystem: String, authenticatedIn: Set[String], expires: Long, multiFactor: Boolean)
+case class AuthenticatedUser(
+  user: User,
+  authenticatingSystem: String,
+  authenticatedIn: Set[String],
+  expires: Long,
+  multiFactor: Boolean
+)
 ```
 
 The fields are:
