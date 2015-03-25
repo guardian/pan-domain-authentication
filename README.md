@@ -11,11 +11,11 @@ interactions (e.g javascript CORS or jsonp requests) can be easily secured.
 ## How it works
 
 Each application in the domain is configured with the domain, an application name and an AWS key. The AWS key allows the
-application to connect to an S3 bucket (```pan-domain-auth-settings```)and download the domain the settings (in a 
+application to connect to an S3 bucket (```pan-domain-auth-settings```)and download the domain the settings (in a
 ```<domain>.settings``` file). The downloaded settings configure the shared secret used to sign the cookie and the credentials
 needed to authenticate with google.
 
-Each authenticated request that an application receives is checked to see if there is a auth cookie. 
+Each authenticated request that an application receives is checked to see if there is a auth cookie.
 
 * If the cookie is not present then the user is sent to google for authentication. Upon returning from google the use information is
 checked and if the user is allowed in the app then the shared cookie is set marking the user as valid in the application.
@@ -30,7 +30,7 @@ On returning from google the existing cookie is updated with the new expiry time
 
 ## What's provided
 
-Pan domain auth is split into 3 modules. 
+Pan domain auth is split into 3 modules.
 
 The ```pan-domain-auth-core``` library provides the core utilities to load the domain settings, create and validate the cookie and
 check if the user has mutlifactor auth turned on (see below). Note this does not include the google oath dance code or cookie setting
@@ -47,7 +47,7 @@ apps locally as if they were all on the same domain (also useful for testing)
 
 The ```pan-domain-auth-core``` and ```pan-domain-auth-play``` libraries are available on maven central cross compiled for scala
 2.10.4 and 2.11.1. to include them via sbt:
- 
+
 ```
 "com.gu" %% "pan-domain-auth-core" % "0.2.3"
 ```
@@ -76,7 +76,7 @@ To use pan domain authentication you will need:
     * get a set of API credentials for your app from the [Google Developer Console](https://console.developers.google.com)
     * ensure that you have switched on access to the `Google+ API` for your credentials
     * configure all the oath callbacks used by your apps
-    
+
 * A configuartion file in the S3 bucket named ```<domain>.settings```
 
 
@@ -87,10 +87,10 @@ domain the file would be called example.com.settings. The contents of the file w
 
     secret=example_secret
     cookieName=exampleAuth
-    
+
     googleAuthClientId=example_google_client
     googleAuthSecret=example_google_secret
-    
+
     googleServiceAccountId=serviceAccount@developer.gserviceaccount.com
     googleServiceAccountCert=name_of_cert_in_bucket.p12
     google2faUser=an.admin@example.com
@@ -122,83 +122,83 @@ from google.
 
 
     package controllers
-    
+
     import com.gu.pandomainauth.action.AuthActions
     import com.gu.pandomainauth.model.AuthenticatedUser
-    
+
     trait PanDomainAuthActions extends AuthActions {
-    
+
       import play.api.Play.current
       lazy val config = play.api.Play.configuration
-    
+
       override def validateUser(authedUser: AuthenticatedUser): Boolean = {
         (authedUser.user.email endsWith ("@guardian.co.uk")) && authedUser.multiFactor
       }
-      
+
       override def cacheValidation = true
-    
+
       override def authCallbackUrl: String = config.getString("host").get + "/oauthCallback"
-    
+
       override lazy val domain: String = config.getString("pandomain.domain").get
-      
+
       lazy val awsSecretAccessKey: String = config.getString("pandomain.aws.secret")
       lazy val awsKeyId: String = config.getString("pandomain.aws.keyId")
       override lazy val awscredentials = for(key <- awsKeyId; secret <- awsSecretAccessKey) yield {new BasicAWSCredentials(key, secret)}
-      
+
       override lazy val system: String = "workflow"
     }
 
 By default the user validation method is called every request. If your validation method has side effects or is expensive then you
-can set ```cacheValidation``` to true, this will mean that ```validateUser``` is only called once per system per google auth (i.e 
+can set ```cacheValidation``` to true, this will mean that ```validateUser``` is only called once per system per google auth (i.e
 validation will only reoccur when the google session is refreshed)
 
 Create a controller that will handle the oauth callback and logout actions, add these actions to the routes file.
 
     package controllers
-    
+
     import play.api.mvc._
     import scala.concurrent.Future
     import scala.concurrent.ExecutionContext.Implicits.global
-    
+
     object Login extends Controller with PanDomainAuthActions {
-    
+
       def oauthCallback = Action.async { implicit request =>
         processGoogleCallback()
       }
-    
+
       def logout = Action.async { implicit request =>
         Future(processLogout)
       }
     }
-    
+
 
 Add the ```AuthAction``` or ```ApiAuthAction``` to any endpoints you with to require an authenticated user for.
 
     package controllers
-    
+
     import scala.concurrent.ExecutionContext.Implicits.global
     import lib._
     import play.api.mvc._
-    
-    
+
+
     object Application extends Controller with PanDomainAuthActions {
-    
+
       def loginStatus = AuthAction { request =>
         val user = request.user
         Ok(views.html.loginStatus(user.toJson))
       }
-      
+
       def getItems = APIAuthAction { implicit req =>
         ...
       }
-    
+
       ...
     }
 
 
 * ```AuthAction``` is used for endpoints that the user requests and will redirect unauthenticated users to google for authentication.
   Use this for standard page loads etc.
-  
+
 * ```ApiAuthAction``` is used for api ajax / xhr style requests and will not redirect to google for auth. This action will either process
   the action or return an error code that can be processed by your client javascript (see section on handling expired logins in a single
   page webapp).
@@ -209,17 +209,17 @@ Add the ```AuthAction``` or ```ApiAuthAction``` to any endpoints you with to req
   request thus triggering off a reauthentication.
 
   The response codes are:
-  
+
     * **401** - user not authenticated - probably tricky to get this response as presumably the user has already loaded a page that would have
             logged them in
-            
+
     * **403** - not authorised - occurs then the user is authenticated but not valid in this app, this can happen when making cross app CORS
             requests
-            
+
     * **419** - authorisation expired - occurs when the authorisation with google has expired (after 1 hour), you will need to re auth with
             google to reestablish the session, this can typically be done transparently on the next page load request.
 
-Both the actions add the current user to the request, this is available as ```request.user``` 
+Both the actions add the current user to the request, this is available as ```request.user```
 
 ### Using pan domain auth with another framework
 
@@ -232,9 +232,9 @@ More examples and framework clients may be added in the future as they become av
 
 ### configuring access to the S3 bucket
 
-Access to the s3 bucket is controlled by overriding the ```awsCredentials``` and ```awsRegion``` options in the ```PanDomainAuth``` trait (or the 
+Access to the s3 bucket is controlled by overriding the ```awsCredentials``` and ```awsRegion``` options in the ```PanDomainAuth``` trait (or the
 ```AuthActions``` sub trait in the play implementation).
- 
+
 * **awsCredentials** defaults to None - this means that the instance profile of your app running in EC2 will be used. You can configure access to the bucket
 in your cloud formation script. For apps tha are not running in EC2 (such as developer environments) you can supply ```BasicAWSCredentials``` with a key and secret
 for a user that will grant access to the bucket.
@@ -248,7 +248,7 @@ for a user that will grant access to the bucket.
 The user object is defined as:
 
     case class User(firstName: String, lastName: String, email: String, avatarUrl: Option[String])
-    
+
 Hopefully the fields are clear as to what they are. There is a budget toJson method on it that will give a json string representation of
 the user which can be consumed by your javascript, this method does no use any json libraries so should work for any framework and library
 choices you've made in you implementing app.
@@ -259,15 +259,15 @@ As different apps may have different requirements on user validity each individu
 method takes in an ```AuthenticatedUser``` object which contains the user object and metadata about the authentication.
 
     case class AuthenticatedUser(user: User, authenticatingSystem: String, authenticatedIn: Set[String], expires: Long, multiFactor: Boolean)
-    
+
 The fields are:
 
 * **user** - the user object
 * **authenticatingSystem** - the app name of the app that authenticated the user
 * **authenticatedIn** - the set of app names that this user is known to be valid, this prevents revalidation if cacheValidation is set to true
-* **expires** - the authentication session expiry time in milliseconds, after this has passed then the session is invalid and the user will need to 
+* **expires** - the authentication session expiry time in milliseconds, after this has passed then the session is invalid and the user will need to
                 be reauthenticated with google. There is a handy method to check if the authentication is expired ```def isExpired = expires < new Date().getTime```
-* **multiFactor** - true if the user's authentication used a 2 factor type login. This defaults to false                
+* **multiFactor** - true if the user's authentication used a 2 factor type login. This defaults to false
 
 
 ## Using Google group based 2 factor authentication validation
