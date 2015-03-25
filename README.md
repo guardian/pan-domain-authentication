@@ -219,7 +219,9 @@ Add the ```AuthAction``` or ```ApiAuthAction``` to any endpoints you with to req
     * **419** - authorisation expired - occurs when the authorisation with google has expired (after 1 hour), you will need to re auth with
             google to reestablish the session, this can typically be done transparently on the next page load request.
 
-Both the actions add the current user to the request, this is available as ```request.user```
+  See also [Customising error responses for an authenticated API]().
+
+Both the actions add the current user to the request, this is available as ```request.user```.
 
 ### Using pan domain auth with another framework
 
@@ -268,6 +270,26 @@ The fields are:
 * **expires** - the authentication session expiry time in milliseconds, after this has passed then the session is invalid and the user will need to
                 be reauthenticated with google. There is a handy method to check if the authentication is expired ```def isExpired = expires < new Date().getTime```
 * **multiFactor** - true if the user's authentication used a 2 factor type login. This defaults to false
+
+
+### Customising error responses for an authenticated API
+
+The default `ApiAuthAction` error responses returns sensible status codes but no body.
+
+To customise the responses (code and body) of an authenticated API,
+you can provide your own implementation of the `AbstractApiAuthAction`
+trait that provides the various abstract result properties:
+
+``` scala
+object VerboseAPIAuthAction extends AbstractApiAuthAction {
+  val notAuthenticatedResult: Result = Unauthorized(errorResponse("Not authenticated"))
+  val invalidCookieResult: Result    = notAuthenticatedResult
+  val expiredResult: Result          = Forbidden(errorResponse("Session expired"))
+  val notAuthorizedResult: Result    = Forbidden(errorResponse("Not authorized"))
+
+  private def errorResponse(msg: String) = Json.obj("error" -> msg)
+}
+```
 
 
 ## Using Google group based 2 factor authentication validation
