@@ -11,8 +11,8 @@ interactions (e.g javascript CORS or jsonp requests) can be easily secured.
 ## How it works
 
 Each application in the domain is configured with the domain, an application name and an AWS key. The AWS key allows the
-application to connect to an S3 bucket (```pan-domain-auth-settings```)and download the domain the settings (in a
-```<domain>.settings``` file). The downloaded settings configure the shared secret used to sign the cookie and the credentials
+application to connect to an S3 bucket (`pan-domain-auth-settings`)and download the domain the settings (in a
+`<domain>.settings` file). The downloaded settings configure the shared secret used to sign the cookie and the credentials
 needed to authenticate with Google.
 
 Each authenticated request that an application receives is checked to see if there is a auth cookie.
@@ -32,20 +32,20 @@ On returning from Google the existing cookie is updated with the new expiry time
 
 Pan domain auth is split into 3 modules.
 
-The ```pan-domain-auth-core``` library provides the core utilities to load the domain settings, create and validate the cookie and
+The `pan-domain-auth-core` library provides the core utilities to load the domain settings, create and validate the cookie and
 check if the user has mutlifactor auth turned on (see below). Note this does not include the Google oath dance code or cookie setting
 as these vary based on web framework being used by implementing apps
 
-The ```pan-domain-auth-play``` library provides an implementation for play apps. There is an auth action that can be applied to the
+The `pan-domain-auth-play` library provides an implementation for play apps. There is an auth action that can be applied to the
 endpoints in you appliciation that will do checking and setting of the cookie and will give you the Google authentication mechanism
 and callback. This is the only framework specific implementation currently (due to play being the framework predominantly used at the
 guardian), this can be used as reference if you need to implement another framework implementation.
 
-The ```pan-domain-auth-example``` provides an example app with authentication. This is implemented in play and is used for testing.
+The `pan-domain-auth-example` provides an example app with authentication. This is implemented in play and is used for testing.
 Additionally the nginx directory provides an example of how to set up an nginx configuration to allow you to run multiple authenticated
 apps locally as if they were all on the same domain (also useful for testing)
 
-The ```pan-domain-auth-core``` and ```pan-domain-auth-play``` libraries are available on maven central cross compiled for scala
+The `pan-domain-auth-core` and `pan-domain-auth-play` libraries are available on maven central cross compiled for scala
 2.10.4 and 2.11.1. to include them via sbt:
 
 ```
@@ -67,7 +67,7 @@ To use pan domain authentication you will need:
 
 * The apps must be using https - the cookie set by pan domain auth are set to secure and http only
 
-* An AWS S3 bucket names ```pan-domain-auth-settings``` where the configuration for your domain will live
+* An AWS S3 bucket names `pan-domain-auth-settings` where the configuration for your domain will live
 
 * The AWS login credentials for a user that can read from the said bucket (it is recommended that this is the only thing that the user is allowed to do in your s3 account)
 
@@ -77,7 +77,7 @@ To use pan domain authentication you will need:
     * ensure that you have switched on access to the `Google+ API` for your credentials
     * configure all the oath callbacks used by your apps
 
-* A configuartion file in the S3 bucket named ```<domain>.settings```
+* A configuartion file in the S3 bucket named `<domain>.settings`
 
 
 ## Setting up your domain configuration
@@ -116,7 +116,7 @@ multifactorGroupId=group@2fa_admin_user
 
 If you are using play then use the play library, this provides the actions that allow you to secure your endpoints.
 
-Create a pan domain auth actions trait that extends the ```AuthActions``` trait in the the play lib. This trait will
+Create a pan domain auth actions trait that extends the `AuthActions` trait in the the play lib. This trait will
 provide the config needed to connect to the aws bucket and the domain and app you are using. You will also need to
 add a method here to ensure that any authenticated user is valid in your specific app (and this could be used to create
 users in you app's datastore). You should also provide the full url of the endpoint that will handle the oauth callback
@@ -155,7 +155,7 @@ trait PanDomainAuthActions extends AuthActions {
 ```
 
 By default the user validation method is called every request. If your validation method has side effects or is expensive then you
-can set ```cacheValidation``` to true, this will mean that ```validateUser``` is only called once per system per Google auth (i.e
+can set `cacheValidation` to true, this will mean that `validateUser` is only called once per system per Google auth (i.e
 validation will only reoccur when the Google session is refreshed)
 
 Create a controller that will handle the oauth callback and logout actions, add these actions to the routes file.
@@ -179,7 +179,7 @@ object Login extends Controller with PanDomainAuthActions {
 }
 ```
 
-Add the ```AuthAction``` or ```ApiAuthAction``` to any endpoints you with to require an authenticated user for.
+Add the `AuthAction` or `ApiAuthAction` to any endpoints you with to require an authenticated user for.
 
 ``` scala
 package controllers
@@ -204,16 +204,16 @@ object Application extends Controller with PanDomainAuthActions {
 }
 ```
 
-* ```AuthAction``` is used for endpoints that the user requests and will redirect unauthenticated users to Google for authentication.
+* `AuthAction` is used for endpoints that the user requests and will redirect unauthenticated users to Google for authentication.
   Use this for standard page loads etc.
 
-* ```ApiAuthAction``` is used for api ajax / xhr style requests and will not redirect to Google for auth. This action will either process
+* `ApiAuthAction` is used for api ajax / xhr style requests and will not redirect to Google for auth. This action will either process
   the action or return an error code that can be processed by your client javascript (see section on handling expired logins in a single
   page webapp).
 
-  A grace period on expiry can be set by adding a ```apiGracePeriod```. This is useful for when browsers have third party cookies disabled
-  and reauthenticaiton solutions like [pandular](https://github.com/guardian/pandular) break due to cookies being blocked on ```window.open```
-  or ```iframe``` requests. During this period we are hopeful of the user refreshing or revisiting the application through a standard browser
+  A grace period on expiry can be set by adding a `apiGracePeriod`. This is useful for when browsers have third party cookies disabled
+  and reauthenticaiton solutions like [pandular](https://github.com/guardian/pandular) break due to cookies being blocked on `window.open`
+  or `iframe` requests. During this period we are hopeful of the user refreshing or revisiting the application through a standard browser
   request thus triggering off a reauthentication.
 
   The response codes are:
@@ -229,7 +229,7 @@ object Application extends Controller with PanDomainAuthActions {
 
   See also [Customising error responses for an authenticated API]().
 
-Both the actions add the current user to the request, this is available as ```request.user```.
+Both the actions add the current user to the request, this is available as `request.user`.
 
 ### Using pan domain auth with another framework
 
@@ -242,11 +242,11 @@ More examples and framework clients may be added in the future as they become av
 
 ### Configuring access to the S3 bucket
 
-Access to the s3 bucket is controlled by overriding the ```awsCredentials``` and ```awsRegion``` options in the ```PanDomainAuth``` trait (or the
-```AuthActions``` sub trait in the play implementation).
+Access to the s3 bucket is controlled by overriding the `awsCredentials` and `awsRegion` options in the `PanDomainAuth` trait (or the
+`AuthActions` sub trait in the play implementation).
 
 * **awsCredentials** defaults to None - this means that the instance profile of your app running in EC2 will be used. You can configure access to the bucket
-in your cloud formation script. For apps tha are not running in EC2 (such as developer environments) you can supply ```BasicAWSCredentials``` with a key and secret
+in your cloud formation script. For apps tha are not running in EC2 (such as developer environments) you can supply `BasicAWSCredentials` with a key and secret
 for a user that will grant access to the bucket.
 
 * **awsRegion** defaults to eu-west-1 - This is where the guardian runs the majority of it's aws estate so is a useful default for us.
@@ -273,7 +273,7 @@ choices you've made in you implementing app.
 ### Validating the user
 
 As different apps may have different requirements on user validity each individual app should provide a user validation mechanism. The validation
-method takes in an ```AuthenticatedUser``` object which contains the user object and metadata about the authentication.
+method takes in an `AuthenticatedUser` object which contains the user object and metadata about the authentication.
 
 ``` scala
 case class AuthenticatedUser(
@@ -291,7 +291,7 @@ The fields are:
 * **authenticatingSystem** - the app name of the app that authenticated the user
 * **authenticatedIn** - the set of app names that this user is known to be valid, this prevents revalidation if cacheValidation is set to true
 * **expires** - the authentication session expiry time in milliseconds, after this has passed then the session is invalid and the user will need to
-                be reauthenticated with Google. There is a handy method to check if the authentication is expired ```def isExpired = expires < new Date().getTime```
+                be reauthenticated with Google. There is a handy method to check if the authentication is expired `def isExpired = expires < new Date().getTime`
 * **multiFactor** - true if the user's authentication used a 2 factor type login. This defaults to false
 
 
