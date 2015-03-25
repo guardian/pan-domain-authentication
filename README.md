@@ -11,7 +11,7 @@ interactions (e.g javascript CORS or jsonp requests) can be easily secured.
 ## How it works
 
 Each application in the domain is configured with the domain, an application name and an AWS key. The AWS key allows the
-application to connect to an S3 bucket (`pan-domain-auth-settings`)and download the domain the settings (in a
+application to connect to an S3 bucket (`pan-domain-auth-settings`) and download the domain the settings (in a
 `<domain>.settings` file). The downloaded settings configure the shared secret used to sign the cookie and the credentials
 needed to authenticate with Google.
 
