@@ -5,11 +5,10 @@ import com.gu.pandomainauth.model.{AuthenticatedUser, User}
 import com.gu.pandomainauth.service.{Google2FAGroupChecker, GoogleAuthException, GoogleAuth, CookieUtils}
 import play.api.mvc.Results._
 import play.api.mvc._
-import play.api.{Application, Logger}
+import play.api.Logger
 import play.api.Play.current
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration.DurationInt
 
 
 class UserRequest[A](val user: User, request: Request[A]) extends WrappedRequest[A](request)
