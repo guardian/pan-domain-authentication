@@ -232,7 +232,7 @@ your framework and http client etc.
 
 More examples and framework clients may be added in the future as they become available.
 
-### configuring access to the S3 bucket
+### Configuring access to the S3 bucket
 
 Access to the s3 bucket is controlled by overriding the ```awsCredentials``` and ```awsRegion``` options in the ```PanDomainAuth``` trait (or the
 ```AuthActions``` sub trait in the play implementation).
