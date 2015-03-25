@@ -85,16 +85,18 @@ To use pan domain authentication you will need:
 The configuration file is named for the domain and is a simple properties style file. For all apps on the *.example.com
 domain the file would be called example.com.settings. The contents of the file would look something like this:
 
-    secret=example_secret
-    cookieName=exampleAuth
+``` ini
+secret=example_secret
+cookieName=exampleAuth
 
-    googleAuthClientId=example_google_client
-    googleAuthSecret=example_google_secret
+googleAuthClientId=example_google_client
+googleAuthSecret=example_google_secret
 
-    googleServiceAccountId=serviceAccount@developer.gserviceaccount.com
-    googleServiceAccountCert=name_of_cert_in_bucket.p12
-    google2faUser=an.admin@example.com
-    multifactorGroupId=group@2fa_admin_user
+googleServiceAccountId=serviceAccount@developer.gserviceaccount.com
+googleServiceAccountCert=name_of_cert_in_bucket.p12
+google2faUser=an.admin@example.com
+multifactorGroupId=group@2fa_admin_user
+```
 
 
 * **secret** - this is the shared secret used to sign the cookie
