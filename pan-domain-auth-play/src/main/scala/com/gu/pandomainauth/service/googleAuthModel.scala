@@ -26,7 +26,10 @@ object Token {
     (JsPath \ "id_token").read[String]
   )(Token.apply _)
 
-  def fromJson(json:JsValue):Token = Json.fromJson[Token](json).get
+  def fromJson(json:JsValue):Token = {
+    println(json)
+    Json.fromJson[Token](json).get
+  }
 }
 
 case class JwtClaims(iss: String, sub:String, azp: String, email: String, at_hash: String, email_verified: Boolean,
@@ -35,11 +38,29 @@ object JwtClaims {
   implicit val claimsReads = Json.reads[JwtClaims]
 }
 
-case class UserInfo(kind: String, gender: Option[String], sub: Option[String], name: String, given_name: String, family_name: String,
+case class UserInfo(kind: Option[String], gender: Option[String], sub: Option[String], name: String, given_name: String, family_name: String,
                     profile: Option[String], picture: Option[String], email: String, email_verified: Option[String], locale: Option[String], hd: Option[String])
 object UserInfo {
-  implicit val userInfoReads = Json.reads[UserInfo]
-  def fromJson(json:JsValue):UserInfo = json.as[UserInfo]
+  implicit val userInfoReads: Reads[UserInfo] = (
+    (JsPath \ "kind").readNullable[String] and
+    (JsPath \ "gender").readNullable[String] and
+    (JsPath \ "sub").readNullable[String] and
+    (JsPath \ "name").read[String] and
+    (JsPath \ "given_name").read[String] and
+    (JsPath \ "family_name").read[String] and
+    (JsPath \ "profile").readNullable[String] and
+    (JsPath \ "picture").readNullable[String] and
+    (JsPath \ "email").read[String] and
+    (JsPath \ "email_verified").readNullable[Boolean].map(b => b.map{ s => if(s) "true" else "false" })
+      .orElse((JsPath \ "email_verified").readNullable[String]) and
+    (JsPath \ "locale").readNullable[String] and
+    (JsPath \ "hd").readNullable[String]
+  )(UserInfo.apply _)
+
+  def fromJson(json:JsValue):UserInfo = {
+    println(json)
+    json.as[UserInfo]
+  }
 }
 
 case class JsonWebToken(jwt: String) {
