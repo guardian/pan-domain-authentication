@@ -26,7 +26,9 @@ object Token {
     (JsPath \ "id_token").read[String]
   )(Token.apply _)
 
-  def fromJson(json:JsValue):Token = Json.fromJson[Token](json).get
+  def fromJson(json:JsValue):Token = {
+    Json.fromJson[Token](json).get
+  }
 }
 
 case class JwtClaims(iss: String, sub:String, azp: String, email: String, at_hash: String, email_verified: Boolean,
@@ -35,11 +37,14 @@ object JwtClaims {
   implicit val claimsReads = Json.reads[JwtClaims]
 }
 
-case class UserInfo(kind: String, gender: Option[String], sub: Option[String], name: String, given_name: String, family_name: String,
-                    profile: Option[String], picture: Option[String], email: String, email_verified: Option[String], locale: Option[String], hd: Option[String])
+case class UserInfo(gender: Option[String], sub: Option[String], name: String, given_name: String, family_name: String,
+                    profile: Option[String], picture: Option[String], email: String, locale: Option[String], hd: Option[String])
 object UserInfo {
   implicit val userInfoReads = Json.reads[UserInfo]
-  def fromJson(json:JsValue):UserInfo = json.as[UserInfo]
+
+  def fromJson(json:JsValue):UserInfo = {
+    json.as[UserInfo]
+  }
 }
 
 case class JsonWebToken(jwt: String) {
