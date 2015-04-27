@@ -1,7 +1,8 @@
 package com.gu.pandomainauth.model
 
 case class PanDomainAuthSettings(
-  secret: String,
+  publicKey: String,
+  privateKey: String,
   cookieName: String,
   googleAuthSettings: GoogleAuthSettings,
   google2FAGroupSettings: Option[Google2FAGroupSettings]
@@ -34,6 +35,6 @@ object PanDomainAuthSettings{
       Google2FAGroupSettings(serviceAccountId, serviceAccountCert, adminUser, group)
     }
 
-    PanDomainAuthSettings(settingMap("secret"), settingMap("cookieName"), googleAuthSettings, google2faSettings)
+    PanDomainAuthSettings(settingMap("publicKey"), settingMap("privateKey"), settingMap("cookieName"), googleAuthSettings, google2faSettings)
   }
 }

@@ -12,8 +12,8 @@ interactions (e.g javascript CORS or jsonp requests) can be easily secured.
 
 Each application in the domain is configured with the domain, an application name and an AWS key. The AWS key allows the
 application to connect to an S3 bucket (`pan-domain-auth-settings`) and download the domain the settings (in a
-`<domain>.settings` file). The downloaded settings configure the shared secret used to sign the cookie and the credentials
-needed to authenticate with Google.
+`<domain>.settings` file). The downloaded settings configure the public/private keypair used to sign and verify the
+login cookie as well as the credentials needed to authenticate with Google.
 
 Each authenticated request that an application receives is checked to see if there is a auth cookie.
 
@@ -86,7 +86,8 @@ The configuration file is named for the domain and is a simple properties style 
 domain the file would be called example.com.settings. The contents of the file would look something like this:
 
 ``` ini
-secret=example_secret
+publicKey=example_key
+privateKey=example_key
 cookieName=exampleAuth
 
 googleAuthClientId=example_google_client

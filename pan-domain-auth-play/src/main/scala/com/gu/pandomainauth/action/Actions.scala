@@ -117,7 +117,7 @@ trait AuthActions extends PanDomainAuth {
     GoogleAuth.validatedUserIdentity(token).map { claimedAuth =>
       val authedUserData = existingCookie match {
         case Some(c) => {
-          val existingAuth = CookieUtils.parseCookieData(c.value, settings.secret)
+          val existingAuth = CookieUtils.parseCookieData(c.value, settings.publicKey)
           Logger.debug("user re-authed, merging auth data")
 
           claimedAuth.copy(
@@ -147,7 +147,7 @@ trait AuthActions extends PanDomainAuth {
 
 
   def readAuthenticatedUser(request: RequestHeader): Option[AuthenticatedUser] = readCookie(request) map { cookie =>
-    CookieUtils.parseCookieData(cookie.value, settings.secret)
+    CookieUtils.parseCookieData(cookie.value, settings.publicKey)
   }
 
 
@@ -155,7 +155,7 @@ trait AuthActions extends PanDomainAuth {
 
   def generateCookie(authedUser: AuthenticatedUser): Cookie = Cookie(
     name     = settings.cookieName,
-    value    = CookieUtils.generateCookieData(authedUser, settings.secret),
+    value    = CookieUtils.generateCookieData(authedUser, settings.privateKey),
     domain   = Some(domain),
     secure   = true,
     httpOnly = true

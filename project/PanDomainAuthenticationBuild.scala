@@ -77,7 +77,7 @@ object PanDomainAuthenticationBuild extends Build {
   lazy val panDomainAuthCore = project("pan-domain-auth-core")
     .settings(sonatypeReleaseSettings: _*)
     .settings(
-      libraryDependencies ++= akkaDependencies ++ awsDependencies ++ googleDirectoryApiDependencies,
+      libraryDependencies ++= akkaDependencies ++ awsDependencies ++ googleDirectoryApiDependencies ++ cryptoDependencies ++ testDependencies,
       publishArtifact := true
     )
 

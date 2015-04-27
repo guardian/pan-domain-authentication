@@ -1,11 +1,9 @@
 package com.gu.pandomainauth.service
 
-import javax.crypto.Mac
-import javax.crypto.spec.SecretKeySpec
+import java.security.SignatureException
 
-import com.gu.pandomainauth.PanDomainAuth
-import com.gu.pandomainauth.model.{User, AuthenticatedUser}
-import org.apache.commons.codec.binary.{Hex, Base64}
+import com.gu.pandomainauth.model.{AuthenticatedUser, User}
+import org.apache.commons.codec.binary.Base64
 
 
 object CookieUtils {
@@ -36,58 +34,34 @@ object CookieUtils {
     )
   }
 
-  private def encode(data: String) = new String(Base64.encodeBase64(data.getBytes("UTF-8")))
+  def generateCookieData(authUser: AuthenticatedUser, prvKeyString: String): String = {
+    val data = serializeAuthenticatedUser(authUser)
+    val encodedData = new String(Base64.encodeBase64(data.getBytes("UTF-8")))
+    val signature = Crypto.getSignature(data.getBytes("UTF-8"), prvKeyString)
+    val encodedSignature = new String(Base64.encodeBase64(signature))
 
-  private def decode(data: String) = new String(Base64.decodeBase64(data.getBytes("UTF-8")))
-
-  private def generateSignature(message: String, secret: String): String = {
-    val mac = Mac.getInstance("HmacSHA1")
-    mac.init(new SecretKeySpec(secret.getBytes, "HmacSHA1"))
-
-    new String(Hex.encodeHex(mac.doFinal(message.getBytes("UTF-8"))))
+    s"$encodedData.$encodedSignature"
   }
 
-  def generateCookieData(authUser: AuthenticatedUser, secret: String): String = {
-    val data = encode(serializeAuthenticatedUser(authUser))
-    val sign = generateSignature(data, secret)
+  lazy val CookieRegEx = "^^([\\w\\W]*)\\.([\\w\\W]*)$".r
 
-    s"$data>>$sign"
-  }
-
-  lazy val CookieRegEx = "^^([\\w\\W]*)>>([\\w\\W]*)$".r
-
-  def parseCookieData(cookieString: String, secret: String): AuthenticatedUser = {
+  def parseCookieData(cookieString: String, pubKeyStr: String): AuthenticatedUser = {
 
     cookieString match {
-      case CookieRegEx(data, sig) => {
-        val computedSig = generateSignature(data, secret)
-        if (safeEquals(sig, computedSig)) {
-          deserializeAuthenticatedUser(decode(data))
-        } else {
-          throw new CookieSignatureInvalidException
+      case CookieRegEx(data, sig) =>
+        try {
+          if (Crypto.verifySignature(Base64.decodeBase64(data.getBytes("UTF-8")), Base64.decodeBase64(sig.getBytes("UTF-8")), pubKeyStr)) {
+            deserializeAuthenticatedUser(new String(Base64.decodeBase64(data)))
+          } else {
+            throw new CookieSignatureInvalidException
+          }
+        } catch {
+          case e: SignatureException =>
+            throw new CookieSignatureInvalidException
         }
-      }
       case _ => throw new CookieParseException
     }
   }
-
-
-  // Cribbed from the play framework equivalent - seems like a sound idea
-  // Do not change this unless you understand the security issues behind timing attacks.
-  // This method intentionally runs in constant time if the two strings have the same length.
-  // If it didn't, it would be vulnerable to a timing attack.
-  private def safeEquals(a: String, b: String) = {
-    if (a.length != b.length) {
-      false
-    } else {
-      var equal = 0
-      for (i <- Array.range(0, a.length)) {
-        equal |= a(i) ^ b(i)
-      }
-      equal == 0
-    }
-  }
-
 }
 
 class CookieSignatureInvalidException extends RuntimeException("cookie signature incorrect")
