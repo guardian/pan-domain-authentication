@@ -1,7 +1,7 @@
 package com.gu.pandomainauth.action
 
 import com.gu.pandomainauth.PanDomainAuth
-import com.gu.pandomainauth.model.{AuthenticatedUser, User}
+import com.gu.pandomainauth.model._
 import com.gu.pandomainauth.service.{Google2FAGroupChecker, GoogleAuthException, GoogleAuth, CookieUtils}
 import play.api.mvc.Results._
 import play.api.mvc._
@@ -17,10 +17,10 @@ trait AuthActions extends PanDomainAuth {
 
   /**
    * Returns true if the authed user is valid in the implementing system (meets your multifactor requirements, you recognise the email etc.).
-   * 
+   *
    * If your implementing application needs to audit logins / register new users etc then this ia also the place to do it (although in this case
    * you should strongly consider setting cacheValidation to true).
-   * 
+   *
    * @param authedUser
    * @return true if the user is valid in your app
    */
@@ -54,7 +54,7 @@ trait AuthActions extends PanDomainAuth {
   /**
    * The auth callback url. This is where google will send the user after authentication. This action on this url should
    * invoke processGoogleCallback
-   * 
+   *
    * @return
    */
   def authCallbackUrl: String
@@ -175,16 +175,6 @@ trait AuthActions extends PanDomainAuth {
     )
     result.discardingCookies(clearCookie)
   }
-
-
-  // Represents the status of the attempted authentication
-  sealed trait AuthenticationStatus
-  case class Expired(authedUser: AuthenticatedUser) extends AuthenticationStatus
-  case class GracePeriod(authedUser: AuthenticatedUser) extends AuthenticationStatus
-  case class Authenticated(authedUser: AuthenticatedUser) extends AuthenticationStatus
-  case class NotAuthorized(authedUser: AuthenticatedUser) extends AuthenticationStatus
-  case class InvalidCookie(exception: Exception) extends AuthenticationStatus
-  case object NotAuthenticated extends AuthenticationStatus
 
   /**
    * Extract the authentication status from the request.

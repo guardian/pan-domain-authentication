@@ -2,9 +2,8 @@ package com.gu.pandomainauth.service
 
 import java.security.SignatureException
 
-import com.gu.pandomainauth.model.{AuthenticatedUser, User}
+import com.gu.pandomainauth.model.{CookieParseException, CookieSignatureInvalidException, AuthenticatedUser, User}
 import org.apache.commons.codec.binary.Base64
-
 
 object CookieUtils {
 
@@ -63,6 +62,3 @@ object CookieUtils {
     }
   }
 }
-
-class CookieSignatureInvalidException extends RuntimeException("cookie signature incorrect")
-class CookieParseException extends RuntimeException("cookie format incorrect")

@@ -2,14 +2,14 @@ package com.gu.pandomainauth.service
 
 import java.util.Date
 
-import com.gu.pandomainauth.model.{AuthenticatedUser, User}
+import com.gu.pandomainauth.model.{AuthenticatedUser, CookieParseException, CookieSignatureInvalidException, User}
 import org.scalatest.{FreeSpec, Matchers}
 
 
 class CookieUtilsTest extends FreeSpec with Matchers {
   import TestKeys._
 
-  val authUser = AuthenticatedUser(User("test", "user", "test.user@example.com", None), "testsuite", Set.empty, new Date().getTime + 86400, multiFactor = true)
+  val authUser = AuthenticatedUser(User("test", "user", "test.user@example.com", None), "testsuite", Set("testsuite"), new Date().getTime + 86400, multiFactor = true)
 
   "generateCookieData" - {
     "generates a a base64-encoded 'data.signature' cookie value" in {
@@ -18,9 +18,9 @@ class CookieUtilsTest extends FreeSpec with Matchers {
   }
 
   "parseCookieData" - {
-    "can extract an authenticatedUSer from real cookie data" in {
+    "can extract an authenticatedUser from real cookie data" in {
       val cookieData = CookieUtils.generateCookieData(authUser, testPrivateKey)
-      CookieUtils.parseCookieData(cookieData, testPublicKey) should have('multiFactor(true))
+      CookieUtils.parseCookieData(cookieData, testPublicKey) should equal(authUser)
     }
 
     "fails to extract invalid data with a CookieSignatureInvalidException" in {
