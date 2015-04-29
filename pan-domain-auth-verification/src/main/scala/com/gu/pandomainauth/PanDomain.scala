@@ -8,7 +8,7 @@ object PanDomain {
   /**
    * Check the authentication status of the provided credentials by examining the signed cookie data.
    */
-  def authStatus(cookieData: String, publicKey: String, validateUser: AuthenticatedUser => Boolean): AuthenticationStatus = {
+  def authStatus(cookieData: String, publicKey: String, validateUser: AuthenticatedUser => Boolean = guardianValidation): AuthenticationStatus = {
     try {
       val authedUser = CookieUtils.parseCookieData(cookieData, publicKey)
 
@@ -23,5 +23,9 @@ object PanDomain {
       case e: Exception =>
         InvalidCookie(e)
     }
+  }
+
+  val guardianValidation: AuthenticatedUser => Boolean = { authedUser =>
+    (authedUser.user.emailDomain endsWith "@guardian.co.uk") && authedUser.multiFactor
   }
 }

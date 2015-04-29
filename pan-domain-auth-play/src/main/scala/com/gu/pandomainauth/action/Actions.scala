@@ -1,6 +1,6 @@
 package com.gu.pandomainauth.action
 
-import com.gu.pandomainauth.PanDomainAuth
+import com.gu.pandomainauth.{PanDomain, PanDomainAuth}
 import com.gu.pandomainauth.model._
 import com.gu.pandomainauth.service.{Google2FAGroupChecker, GoogleAuthException, GoogleAuth, CookieUtils}
 import play.api.mvc.Results._
@@ -145,12 +145,6 @@ trait AuthActions extends PanDomainAuth {
     flushCookie(showUnauthedMessage("logged out"))
   }
 
-
-  def readAuthenticatedUser(request: RequestHeader): Option[AuthenticatedUser] = readCookie(request) map { cookie =>
-    CookieUtils.parseCookieData(cookie.value, settings.publicKey)
-  }
-
-
   def readCookie(request: RequestHeader): Option[Cookie] = request.cookies.get(settings.cookieName)
 
   def generateCookie(authedUser: AuthenticatedUser): Cookie = Cookie(
@@ -179,27 +173,18 @@ trait AuthActions extends PanDomainAuth {
   /**
    * Extract the authentication status from the request.
    */
-  def extractAuth(request: RequestHeader): AuthenticationStatus = try {
-    readAuthenticatedUser(request) map { authedUser =>
-      if (authedUser.isExpired) {
-        if(authedUser.isInGracePeriod(apiGracePeriod)) {
+  def extractAuth(request: RequestHeader): AuthenticationStatus = {
+    readCookie(request).map { cookie =>
+      PanDomain.authStatus(cookie.value, settings.publicKey, _ => true) match {
+        case Expired(authedUser) if authedUser.isInGracePeriod(apiGracePeriod) =>
           GracePeriod(authedUser)
-        } else {
-          Expired(authedUser)
-        }
-      } else if (
-        (cacheValidation && authedUser.authenticatedIn(system))
-          || validateUser(authedUser)
-      ) {
-        Authenticated(authedUser)
-      } else {
-        NotAuthorized(authedUser)
+        case authStatus @ Authenticated(authedUser) =>
+          if (cacheValidation && authedUser.authenticatedIn(system)) authStatus
+          else if (validateUser(authedUser)) authStatus
+          else NotAuthorized(authedUser)
+        case authStatus => authStatus
       }
-    } getOrElse {
-      NotAuthenticated
-    }
-  } catch {
-    case e: Exception => InvalidCookie(e)
+    } getOrElse NotAuthenticated
   }
 
 
