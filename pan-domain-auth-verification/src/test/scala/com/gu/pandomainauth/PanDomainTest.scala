@@ -49,4 +49,22 @@ class PanDomainTest extends FreeSpec with Matchers with Inside {
       PanDomain.authStatus(cookieData, testPublicKey, _ => false) shouldBe a [NotAuthorized]
     }
   }
+
+  "guardianValidation" - {
+    val validUser = AuthenticatedUser(User("example", "user", "example@guardian.co.uk", None), "tests", Set("tests"), new Date().getTime + 86400, multiFactor = true)
+
+    "returns true for a multi-factor user with a Guardian email address" in {
+      PanDomain.guardianValidation(validUser) should equal(true)
+    }
+
+    "returns false for a multi-factor user without a guardian email address" in {
+      val invalidUser = validUser.copy(user = validUser.user.copy(email = "notGaurdian@example.com"))
+      PanDomain.guardianValidation(invalidUser) should equal(false)
+    }
+
+    "returns false for a guardian email address that is not authenticated with multi-factor-auth" in {
+      val invalidUser = validUser.copy(multiFactor = false)
+      PanDomain.guardianValidation(invalidUser) should equal(false)
+    }
+  }
 }
