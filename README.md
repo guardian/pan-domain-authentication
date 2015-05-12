@@ -10,10 +10,10 @@ interactions (e.g javascript CORS or jsonp requests) can be easily secured.
 
 ## How it works
 
-Each application in the domain is configured with the domain, an application name and an AWS key. The AWS key allows the
-application to connect to an S3 bucket (`pan-domain-auth-settings`) and download the domain the settings (in a
-`<domain>.settings` file). The downloaded settings configure the shared secret used to sign the cookie and the credentials
-needed to authenticate with Google.
+Each application that needs to issue logins is configured with the domain, an application name and an AWS key. The AWS key allows
+the application to connect to an S3 bucket (`pan-domain-auth-settings`) and download the settings for that domain (from a
+`<domain>.settings` file). The downloaded settings configure the public/private keypair used to sign and verify the
+login cookie as well as the credentials needed to authenticate with Google.
 
 Each authenticated request that an application receives is checked to see if there is a auth cookie.
 
@@ -30,23 +30,39 @@ On returning from Google the existing cookie is updated with the new expiry time
 
 ## What's provided
 
-Pan domain auth is split into 3 modules.
+Pan domain auth is split into 4 modules.
+
+The `pan-domain-auth-verification` library provides the basic functionality for sigining and verifying login cookies. For
+applications that only need to *VERIFY* an existing login (rather than issue logins themselves) this is the library to use.
+In most cases this will be useful for APIs that are unwilling or unable to offer a user-facing OAuth dance to acquire
+credentials directly, on behalf of the user.
 
 The `pan-domain-auth-core` library provides the core utilities to load the domain settings, create and validate the cookie and
 check if the user has mutlifactor auth turned on (see below). Note this does not include the Google oath dance code or cookie setting
-as these vary based on web framework being used by implementing apps
+as these vary based on web framework being used by implementing apps.
 
 The `pan-domain-auth-play` library provides an implementation for play apps. There is an auth action that can be applied to the
 endpoints in you appliciation that will do checking and setting of the cookie and will give you the Google authentication mechanism
 and callback. This is the only framework specific implementation currently (due to play being the framework predominantly used at the
-guardian), this can be used as reference if you need to implement another framework implementation.
+guardian), this can be used as reference if you need to implement another framework implementation. This library is for applications
+that need to be able to issue and verify logins which is likely to include user-facing applications.
 
 The `pan-domain-auth-example` provides an example app with authentication. This is implemented in play and is used for testing.
 Additionally the nginx directory provides an example of how to set up an nginx configuration to allow you to run multiple authenticated
 apps locally as if they were all on the same domain (also useful for testing)
 
-The `pan-domain-auth-core` and `pan-domain-auth-play` libraries are available on maven central cross compiled for scala
-2.10.4 and 2.11.1. to include them via sbt:
+The `pan-domain-auth-verification`, `pan-domain-auth-core` and `pan-domain-auth-play` libraries are available on maven central
+cross compiled for scala 2.10.4 and 2.11.1. to include them via sbt:
+
+### To verify logins
+
+```
+"com.gu" %% "pan-domain-auth-verification" % "0.2.7-SNAPSHOT"
+```
+
+You'll need to get hold of the public key for the domain to be able to verify the pan-domain-auth cookies.
+
+### If your application needs to issue logins
 
 ```
 "com.gu" %% "pan-domain-auth-core" % "0.2.6"
@@ -57,6 +73,8 @@ or
 ```
 "com.gu" %% "pan-domain-auth-play" % "0.2.6"
 ```
+
+In both cases you will need to set up a few things, see `Requirements` below.
 
 
 ## Requirements
@@ -86,7 +104,8 @@ The configuration file is named for the domain and is a simple properties style 
 domain the file would be called example.com.settings. The contents of the file would look something like this:
 
 ``` ini
-secret=example_secret
+publicKey=example_key
+privateKey=example_key
 cookieName=exampleAuth
 
 googleAuthClientId=example_google_client
@@ -111,6 +130,22 @@ multifactorGroupId=group@2fa_admin_user
 
 
 ## Integrating with your app
+
+### Verify-only
+
+If your service only needs to verify existing pan-domain-auth cookies use the `pan-domain-auth-verification` library.
+Inside it is a `PanDomain` object which contains an `authStatus` method. You'll just need the pan-domain-auth cookie
+value and the public key for the domain you are on. Calling that function will return an `AuthenticationStatus` which
+can be any of:
+
+* Authenticated
+* Expired
+* InvalidCookie
+* NotAuthorized
+
+Note that the `authStatus` method takes a function you can use to validate the user. Typically this involves checking
+the domain and ensuring the user has 2-factor-auth enabled on their Google account so the default argument does this
+for you. If this check fails you will recieve a `NotAuthorized` result.
 
 ### Using the play implementation
 
@@ -246,7 +281,7 @@ Access to the s3 bucket is controlled by overriding the `awsCredentials` and `aw
 `AuthActions` sub trait in the play implementation).
 
 * **awsCredentials** defaults to None - this means that the instance profile of your app running in EC2 will be used. You can configure access to the bucket
-in your cloud formation script. For apps tha are not running in EC2 (such as developer environments) you can supply `BasicAWSCredentials` with a key and secret
+in your cloud formation script. For apps that are not running in EC2 (such as developer environments) you can supply `BasicAWSCredentials` with a key and secret
 for a user that will grant access to the bucket.
 
 * **awsRegion** defaults to eu-west-1 - This is where the guardian runs the majority of it's aws estate so is a useful default for us.
@@ -294,6 +329,9 @@ The fields are:
                 be reauthenticated with Google. There is a handy method to check if the authentication is expired `def isExpired = expires < new Date().getTime`
 * **multiFactor** - true if the user's authentication used a 2 factor type login. This defaults to false
 
+In many cases you will just want to check that the user is on the right domain and that they have 2-factor-auth
+enabled on their Google account. A function that enforces this common use-case is provided for convenience,
+`PanDomain.guardianValidation`.
 
 ### Customising error responses for an authenticated API
 

@@ -73,20 +73,29 @@ object PanDomainAuthenticationBuild extends Build {
       )
     )
 
-
-  lazy val panDomainAuthCore = project("pan-domain-auth-core")
+  lazy val panDomainAuthVerification = project("pan-domain-auth-verification")
     .settings(sonatypeReleaseSettings: _*)
     .settings(
-      libraryDependencies ++= akkaDependencies ++ awsDependencies ++ googleDirectoryApiDependencies,
+      libraryDependencies ++= cryptoDependencies ++ testDependencies,
+      publishArtifact := true
+    )
+
+
+  lazy val panDomainAuthCore = project("pan-domain-auth-core")
+    .dependsOn(panDomainAuthVerification % "test->test;compile->compile")
+    .settings(sonatypeReleaseSettings: _*)
+    .settings(
+      libraryDependencies ++= akkaDependencies ++ awsDependencies ++ googleDirectoryApiDependencies ++ cryptoDependencies ++ testDependencies,
       publishArtifact := true
     )
 
   lazy val panDomainAuthPlay = project("pan-domain-auth-play")
+    .dependsOn(panDomainAuthCore, panDomainAuthVerification % "test->test;compile->compile")
     .settings(sonatypeReleaseSettings: _*)
     .settings(
       libraryDependencies ++= playLibs,
       publishArtifact := true
-    ).dependsOn(panDomainAuthCore)
+    )
 
   lazy val exampleApp = playProject("pan-domain-auth-example")
                   .settings(libraryDependencies ++= awsDependencies)
@@ -94,6 +103,7 @@ object PanDomainAuthenticationBuild extends Build {
                   .dependsOn(panDomainAuthPlay)
 
   lazy val root = Project("pan-domain-auth-root", file(".")).aggregate(
+    panDomainAuthVerification,
     panDomainAuthCore,
     panDomainAuthPlay,
     exampleApp

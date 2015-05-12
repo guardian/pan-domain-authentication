@@ -1,7 +1,7 @@
 package com.gu.pandomainauth.action
 
-import com.gu.pandomainauth.PanDomainAuth
-import com.gu.pandomainauth.model.{AuthenticatedUser, User}
+import com.gu.pandomainauth.{PanDomain, PanDomainAuth}
+import com.gu.pandomainauth.model._
 import com.gu.pandomainauth.service.{Google2FAGroupChecker, GoogleAuthException, GoogleAuth, CookieUtils}
 import play.api.mvc.Results._
 import play.api.mvc._
@@ -17,10 +17,10 @@ trait AuthActions extends PanDomainAuth {
 
   /**
    * Returns true if the authed user is valid in the implementing system (meets your multifactor requirements, you recognise the email etc.).
-   * 
+   *
    * If your implementing application needs to audit logins / register new users etc then this ia also the place to do it (although in this case
    * you should strongly consider setting cacheValidation to true).
-   * 
+   *
    * @param authedUser
    * @return true if the user is valid in your app
    */
@@ -54,7 +54,7 @@ trait AuthActions extends PanDomainAuth {
   /**
    * The auth callback url. This is where google will send the user after authentication. This action on this url should
    * invoke processGoogleCallback
-   * 
+   *
    * @return
    */
   def authCallbackUrl: String
@@ -117,7 +117,7 @@ trait AuthActions extends PanDomainAuth {
     GoogleAuth.validatedUserIdentity(token).map { claimedAuth =>
       val authedUserData = existingCookie match {
         case Some(c) => {
-          val existingAuth = CookieUtils.parseCookieData(c.value, settings.secret)
+          val existingAuth = CookieUtils.parseCookieData(c.value, settings.publicKey)
           Logger.debug("user re-authed, merging auth data")
 
           claimedAuth.copy(
@@ -145,17 +145,11 @@ trait AuthActions extends PanDomainAuth {
     flushCookie(showUnauthedMessage("logged out"))
   }
 
-
-  def readAuthenticatedUser(request: RequestHeader): Option[AuthenticatedUser] = readCookie(request) map { cookie =>
-    CookieUtils.parseCookieData(cookie.value, settings.secret)
-  }
-
-
   def readCookie(request: RequestHeader): Option[Cookie] = request.cookies.get(settings.cookieName)
 
   def generateCookie(authedUser: AuthenticatedUser): Cookie = Cookie(
     name     = settings.cookieName,
-    value    = CookieUtils.generateCookieData(authedUser, settings.secret),
+    value    = CookieUtils.generateCookieData(authedUser, settings.privateKey),
     domain   = Some(domain),
     secure   = true,
     httpOnly = true
@@ -176,40 +170,21 @@ trait AuthActions extends PanDomainAuth {
     result.discardingCookies(clearCookie)
   }
 
-
-  // Represents the status of the attempted authentication
-  sealed trait AuthenticationStatus
-  case class Expired(authedUser: AuthenticatedUser) extends AuthenticationStatus
-  case class GracePeriod(authedUser: AuthenticatedUser) extends AuthenticationStatus
-  case class Authenticated(authedUser: AuthenticatedUser) extends AuthenticationStatus
-  case class NotAuthorized(authedUser: AuthenticatedUser) extends AuthenticationStatus
-  case class InvalidCookie(exception: Exception) extends AuthenticationStatus
-  case object NotAuthenticated extends AuthenticationStatus
-
   /**
    * Extract the authentication status from the request.
    */
-  def extractAuth(request: RequestHeader): AuthenticationStatus = try {
-    readAuthenticatedUser(request) map { authedUser =>
-      if (authedUser.isExpired) {
-        if(authedUser.isInGracePeriod(apiGracePeriod)) {
+  def extractAuth(request: RequestHeader): AuthenticationStatus = {
+    readCookie(request).map { cookie =>
+      PanDomain.authStatus(cookie.value, settings.publicKey, _ => true) match {
+        case Expired(authedUser) if authedUser.isInGracePeriod(apiGracePeriod) =>
           GracePeriod(authedUser)
-        } else {
-          Expired(authedUser)
-        }
-      } else if (
-        (cacheValidation && authedUser.authenticatedIn(system))
-          || validateUser(authedUser)
-      ) {
-        Authenticated(authedUser)
-      } else {
-        NotAuthorized(authedUser)
+        case authStatus @ Authenticated(authedUser) =>
+          if (cacheValidation && authedUser.authenticatedIn(system)) authStatus
+          else if (validateUser(authedUser)) authStatus
+          else NotAuthorized(authedUser)
+        case authStatus => authStatus
       }
-    } getOrElse {
-      NotAuthenticated
-    }
-  } catch {
-    case e: Exception => InvalidCookie(e)
+    } getOrElse NotAuthenticated
   }
 
 
