@@ -66,5 +66,10 @@ class PanDomainTest extends FreeSpec with Matchers with Inside {
       val invalidUser = validUser.copy(multiFactor = false)
       PanDomain.guardianValidation(invalidUser) should equal(false)
     }
+
+    "returns false for something that looks a bit like a guardian domain" in {
+      val invalidUser = validUser.copy(user = validUser.user.copy(email = "notQuiteGaurdian@notguardian.co.uk"))
+      PanDomain.guardianValidation(invalidUser) should equal(false)
+    }
   }
 }

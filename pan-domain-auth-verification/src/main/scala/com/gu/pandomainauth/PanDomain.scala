@@ -26,6 +26,6 @@ object PanDomain {
   }
 
   val guardianValidation: AuthenticatedUser => Boolean = { authedUser =>
-    (authedUser.user.emailDomain endsWith "guardian.co.uk") && authedUser.multiFactor
+    (authedUser.user.emailDomain == "guardian.co.uk") && authedUser.multiFactor
   }
 }
