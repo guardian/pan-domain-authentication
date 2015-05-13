@@ -2,7 +2,7 @@ package com.gu.pandomainauth.action
 
 import com.gu.pandomainauth.{PanDomain, PanDomainAuth}
 import com.gu.pandomainauth.model._
-import com.gu.pandomainauth.service.{Google2FAGroupChecker, GoogleAuthException, GoogleAuth, CookieUtils}
+import com.gu.pandomainauth.service._
 import play.api.mvc.Results._
 import play.api.mvc._
 import play.api.Logger
@@ -112,12 +112,14 @@ trait AuthActions extends PanDomainAuth {
     val token = request.session.get(ANTI_FORGERY_KEY).getOrElse( throw new GoogleAuthException("missing anti forgery token"))
     val originalUrl = request.session.get(LOGIN_ORIGIN_KEY).getOrElse( throw new GoogleAuthException("missing original url"))
 
-    val existingCookie = request.cookies.get(settings.cookieName) // will e populated if this was a re-auth for expired login
+    val existingCookie = readCookie(request) // will be populated if this was a re-auth for expired login
 
+    // use legacy cookie in the check for now, even though both are dropped
+    // phase two of the rollout will be to use the assymetric cookie
     GoogleAuth.validatedUserIdentity(token).map { claimedAuth =>
       val authedUserData = existingCookie match {
         case Some(c) => {
-          val existingAuth = CookieUtils.parseCookieData(c.value, settings.publicKey)
+          val existingAuth = LegacyCookie.parseCookieData(c.value, settings.secret)
           Logger.debug("user re-authed, merging auth data")
 
           claimedAuth.copy(
@@ -133,8 +135,8 @@ trait AuthActions extends PanDomainAuth {
       }
 
       if (validateUser(authedUserData)) {
-        val updatedCookie = generateCookie(authedUserData)
-        Redirect(originalUrl).withCookies(updatedCookie).withSession(session = request.session - ANTI_FORGERY_KEY - LOGIN_ORIGIN_KEY)
+        val updatedCookies = generateCookies(authedUserData)
+        Redirect(originalUrl).withCookies(updatedCookies:_*).withSession(session = request.session - ANTI_FORGERY_KEY - LOGIN_ORIGIN_KEY)
       } else {
         showUnauthedMessage(invalidUserMessage(claimedAuth))
       }
@@ -147,18 +149,27 @@ trait AuthActions extends PanDomainAuth {
 
   def readCookie(request: RequestHeader): Option[Cookie] = request.cookies.get(settings.cookieName)
 
-  def generateCookie(authedUser: AuthenticatedUser): Cookie = Cookie(
-    name     = settings.cookieName,
-    value    = CookieUtils.generateCookieData(authedUser, settings.privateKey),
-    domain   = Some(domain),
-    secure   = true,
-    httpOnly = true
+  def generateCookies(authedUser: AuthenticatedUser): List[Cookie] = List(
+    Cookie(
+      name     = settings.cookieName,
+      value    = LegacyCookie.generateCookieData(authedUser, settings.secret),
+      domain   = Some(domain),
+      secure   = true,
+      httpOnly = true
+    ),
+    Cookie(
+      name     = settings.assymCookieName,
+      value    = CookieUtils.generateCookieData(authedUser, settings.privateKey),
+      domain   = Some(domain),
+      secure   = true,
+      httpOnly = true
+    )
   )
 
   def includeSystemInCookie(authedUser: AuthenticatedUser)(result: Result): Result = {
     val updatedAuth = authedUser.copy(authenticatedIn = authedUser.authenticatedIn + system)
-    val updatedCookie = generateCookie(updatedAuth)
-    result.withCookies(updatedCookie)
+    val updatedCookies = generateCookies(updatedAuth)
+    result.withCookies(updatedCookies:_*)
   }
 
   def flushCookie(result: Result): Result = {
@@ -167,7 +178,12 @@ trait AuthActions extends PanDomainAuth {
       domain = Some(domain),
       secure = true
     )
-    result.discardingCookies(clearCookie)
+    val clearAssymCookie = DiscardingCookie(
+      name = settings.assymCookieName,
+      domain = Some(domain),
+      secure = true
+    )
+    result.discardingCookies(clearCookie, clearAssymCookie)
   }
 
   /**
@@ -175,7 +191,7 @@ trait AuthActions extends PanDomainAuth {
    */
   def extractAuth(request: RequestHeader): AuthenticationStatus = {
     readCookie(request).map { cookie =>
-      PanDomain.authStatus(cookie.value, settings.publicKey, _ => true) match {
+      PanDomain.authStatusWithLegacyCheck(cookie.value, settings.publicKey, settings.secret) match {
         case Expired(authedUser) if authedUser.isInGracePeriod(apiGracePeriod) =>
           GracePeriod(authedUser)
         case authStatus @ Authenticated(authedUser) =>

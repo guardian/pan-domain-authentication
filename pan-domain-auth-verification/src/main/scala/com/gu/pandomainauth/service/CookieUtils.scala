@@ -7,17 +7,17 @@ import org.apache.commons.codec.binary.Base64
 
 object CookieUtils {
 
-  private def serializeAuthenticatedUser(authUser: AuthenticatedUser): String =
+  private[service] def serializeAuthenticatedUser(authUser: AuthenticatedUser): String =
       s"firstName=${authUser.user.firstName}" +
       s"&lastName=${authUser.user.lastName}" +
       s"&email=${authUser.user.email}" +
-      authUser.user.avatarUrl.map(a => s"&avatarUrl=${a}").getOrElse("") +
+      authUser.user.avatarUrl.map(a => s"&avatarUrl=$a").getOrElse("") +
       s"&system=${authUser.authenticatingSystem}" +
       s"&authedIn=${authUser.authenticatedIn.mkString(",")}" +
       s"&expires=${authUser.expires}" +
       s"&multifactor=${authUser.multiFactor}"
 
-  private def deserializeAuthenticatedUser(serializedForm: String): AuthenticatedUser = {
+  private[service] def deserializeAuthenticatedUser(serializedForm: String): AuthenticatedUser = {
     val data = serializedForm
       .split("&")
       .map(_.split("=", 2))
