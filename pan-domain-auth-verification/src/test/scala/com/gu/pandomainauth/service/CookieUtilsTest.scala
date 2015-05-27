@@ -28,7 +28,6 @@ class CookieUtilsTest extends FreeSpec with Matchers {
       intercept[CookieSignatureInvalidException] {
         CookieUtils.parseCookieData("data.invalidSignature", testPublicKey)
       }
-
     }
 
     "fails to extract incorrectly signed data with a CookieSignatureInvalidException" - {

@@ -3,7 +3,7 @@ package com.gu.pandomainauth
 import java.util.Date
 
 import com.gu.pandomainauth.model._
-import com.gu.pandomainauth.service.CookieUtils
+import com.gu.pandomainauth.service.{LegacyCookie, CookieUtils}
 import org.scalatest.{Inside, Matchers, FreeSpec}
 
 class PanDomainTest extends FreeSpec with Matchers with Inside {
@@ -16,7 +16,7 @@ class PanDomainTest extends FreeSpec with Matchers with Inside {
       def validateUser(au: AuthenticatedUser): Boolean = au.multiFactor && au.user.emailDomain == "example.com"
       val cookieData = CookieUtils.generateCookieData(authUser, testPrivateKey)
 
-      PanDomain.authStatus(cookieData, testPublicKey, _ => true) shouldBe a [Authenticated]
+      PanDomain.authStatus(cookieData, testPublicKey, validateUser) shouldBe a [Authenticated]
     }
 
     "gives back the provided auth user if successful" in {
@@ -70,6 +70,21 @@ class PanDomainTest extends FreeSpec with Matchers with Inside {
     "returns false for something that looks a bit like a guardian domain" in {
       val invalidUser = validUser.copy(user = validUser.user.copy(email = "notQuiteGaurdian@notguardian.co.uk"))
       PanDomain.guardianValidation(invalidUser) should equal(false)
+    }
+  }
+
+  "authStatusWithLegacyCheck" - {
+    val authUser = AuthenticatedUser(User("test", "user", "test.user@example.com", None), "testsuite", Set("testsuite"), new Date().getTime + 86400, multiFactor = true)
+    val testSecret = "test"
+
+    "works with a new cookie" in {
+      val cookieData = CookieUtils.generateCookieData(authUser, testPrivateKey)
+      PanDomain.authStatusWithLegacyCheck(cookieData, testPublicKey, testSecret) shouldBe a[Authenticated]
+    }
+
+    "works with a legacy cookie" in {
+      val cookieData = LegacyCookie.generateCookieData(authUser, testSecret)
+      PanDomain.authStatusWithLegacyCheck(cookieData, testPublicKey, testSecret) shouldBe a[Authenticated]
     }
   }
 }
