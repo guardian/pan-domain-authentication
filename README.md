@@ -259,6 +259,9 @@ is a policy on the S3 bucket itself permitting access from a different AWS accou
 You can add the first of these policies using the S3 console (in the account that owns the bucket). Inspect the bucket in the console and under _Permissions_
 select _Edit bucket policy_.
 
+Add something like the following statement to the bucket policy (if there is no existing policy then you'll need the skeleton in place as this fragment is only
+a statement).
+
 ```
 {
   "Sid": "gu-aws-composer-account",
