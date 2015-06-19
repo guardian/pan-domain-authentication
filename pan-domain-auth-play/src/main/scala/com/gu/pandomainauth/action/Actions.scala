@@ -1,6 +1,6 @@
 package com.gu.pandomainauth.action
 
-import com.gu.pandomainauth.{PanDomain, PanDomainAuth}
+import com.gu.pandomainauth.{PublicSettings, PanDomain, PanDomainAuth}
 import com.gu.pandomainauth.model._
 import com.gu.pandomainauth.service._
 import play.api.mvc.Results._
@@ -147,18 +147,18 @@ trait AuthActions extends PanDomainAuth {
     flushCookie(showUnauthedMessage("logged out"))
   }
 
-  def readCookie(request: RequestHeader): Option[Cookie] = request.cookies.get(settings.cookieName)
+  def readCookie(request: RequestHeader): Option[Cookie] = request.cookies.get(PublicSettings.cookieName)
 
   def generateCookies(authedUser: AuthenticatedUser): List[Cookie] = List(
     Cookie(
-      name     = settings.cookieName,
+      name     = PublicSettings.cookieName,
       value    = LegacyCookie.generateCookieData(authedUser, settings.secret),
       domain   = Some(domain),
       secure   = true,
       httpOnly = true
     ),
     Cookie(
-      name     = settings.assymCookieName,
+      name     = PublicSettings.assymCookieName,
       value    = CookieUtils.generateCookieData(authedUser, settings.privateKey),
       domain   = Some(domain),
       secure   = true,
@@ -174,12 +174,12 @@ trait AuthActions extends PanDomainAuth {
 
   def flushCookie(result: Result): Result = {
     val clearCookie = DiscardingCookie(
-      name = settings.cookieName,
+      name = PublicSettings.cookieName,
       domain = Some(domain),
       secure = true
     )
     val clearAssymCookie = DiscardingCookie(
-      name = settings.assymCookieName,
+      name = PublicSettings.assymCookieName,
       domain = Some(domain),
       secure = true
     )

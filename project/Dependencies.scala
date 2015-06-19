@@ -24,4 +24,5 @@ object Dependencies {
 
   val testDependencies = Seq("org.scalatest" %% "scalatest" % "2.1.5" % "test")
 
+  val httpClient = Seq("net.databinder.dispatch" %% "dispatch-core" % "0.11.2")
 }

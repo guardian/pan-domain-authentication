@@ -60,7 +60,22 @@ cross compiled for scala 2.10.4 and 2.11.1. to include them via sbt:
 "com.gu" %% "pan-domain-auth-verification" % "0.2.7-SNAPSHOT"
 ```
 
-You'll need to get hold of the public key for the domain to be able to verify the pan-domain-auth cookies.
+You'll need to the public key for your domain before you can verify the pan-domain-auth cookies. The `PublicSettings`
+object contains the cookie name to read from as well as a function that fetches the public key. You should use
+`getPublicKey(domain)` to fetch the public key for the domain you are using. This returns a `Future` containing the
+value fetched from the settings bucket in S3. You might do this at application start, lazily when the check happens, or
+in an agent to keep the value up to date.
+
+```scala
+import com.gu.pandomainauth.PublicSettings
+import scala.concurrent.ExecutionContext.Implicits.global
+
+object Config {
+  val domain = "my-domain.co.uk"
+  implicit val httpClient = dispatch.Http
+  lazy val publicKey = PublicSettings.getPublicKey(domain)
+}
+```
 
 ### If your application needs to issue logins
 
@@ -144,8 +159,8 @@ can be any of:
 * NotAuthorized
 
 Note that the `authStatus` method takes a function you can use to validate the user. Typically this involves checking
-the domain and ensuring the user has 2-factor-auth enabled on their Google account so the default argument does this
-for you. If this check fails you will recieve a `NotAuthorized` result.
+the domain and ensuring the user has 2-factor-auth enabled on their Google account so the default argument
+(guardianValidation) does this for you. If this check fails you will recieve a `NotAuthorized` result.
 
 ### Using the play implementation
 
