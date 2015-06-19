@@ -10,10 +10,13 @@ object PublicSettings {
   val cookieName = "gutoolsAuth"
   val assymCookieName = s"$cookieName-assym"
 
-  def getPublicKey(domain: String)(implicit client: Http, ec: scala.concurrent.ExecutionContext): Future[Either[Throwable, String]] = {
+  def getPublicKey(domain: String)(implicit client: Http, ec: scala.concurrent.ExecutionContext): Future[String] = {
     val req = host("s3-eu-west-1.amazonaws.com").secure / bucketName / s"$domain.settings.public"
     client(req OK as.String).either.left.map(new PublicKeyAcquisitionException(_)).map { attemptedKey =>
       attemptedKey.right.flatMap(validateKey)
+    } flatMap {
+      case Right(key) => Future.successful(key)
+      case Left(err) => Future.failed(err)
     }
   }
 
