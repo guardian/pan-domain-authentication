@@ -73,9 +73,16 @@ import scala.concurrent.ExecutionContext.Implicits.global
 object Config {
   val domain = "my-domain.co.uk"
   implicit val httpClient = dispatch.Http
-  lazy val publicKey = PublicSettings.getPublicKey(domain)
+  val publicKey = PublicSettings.getPublicKey(domain)
 }
 ```
+
+This creates `publicKey` as a `Future` you can use when you need to verify the user's login. You may choose to hook
+this value into your healthcheck if the verification is an integral part of the application. If you don't want to have
+to restart the application to update the public key you can use this function to populate an Akka Agent.
+[This is a good example](https://github.com/guardian/frontend/blob/master/common/app/common/AutoRefresh.scala)
+of setting up an agent that automatically refreshes a value. In this case `getPublicKey` would serve as the
+implementation for `refresh`.
 
 ### If your application needs to issue logins
 
