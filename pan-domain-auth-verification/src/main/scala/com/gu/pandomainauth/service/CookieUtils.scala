@@ -36,7 +36,7 @@ object CookieUtils {
   def generateCookieData(authUser: AuthenticatedUser, prvKeyString: String): String = {
     val data = serializeAuthenticatedUser(authUser)
     val encodedData = new String(Base64.encodeBase64(data.getBytes("UTF-8")))
-    val signature = Crypto.getSignature(data.getBytes("UTF-8"), prvKeyString)
+    val signature = Crypto.signData(data.getBytes("UTF-8"), prvKeyString)
     val encodedSignature = new String(Base64.encodeBase64(signature))
 
     s"$encodedData.$encodedSignature"

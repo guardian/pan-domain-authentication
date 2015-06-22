@@ -4,6 +4,7 @@ import com.gu.pandomainauth.PublicSettings.PublicKeyFormatException
 import com.gu.pandomainauth.service.TestKeys
 import org.scalatest.{EitherValues, Matchers, FreeSpec}
 
+
 class PublicSettingsTest extends FreeSpec with Matchers with EitherValues {
   "validateKey" - {
     "returns an error if the key looks invalid" in {

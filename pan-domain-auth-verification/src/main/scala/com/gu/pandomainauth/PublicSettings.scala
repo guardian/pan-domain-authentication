@@ -21,7 +21,7 @@ object PublicSettings {
   }
 
   private[pandomainauth] def validateKey(pubKey: String): Either[Throwable, String] = {
-    if ("[a-zA-Z0-9+/]+={0,3}".r.pattern.matcher(pubKey).matches) Right(pubKey)
+    if ("[a-zA-Z0-9+/\n]+={0,3}".r.pattern.matcher(pubKey).matches) Right(pubKey)
     else Left(PublicKeyFormatException)
   }
 
