@@ -6,6 +6,8 @@ object Dependencies {
 
   val akkaDependencies = Seq("com.typesafe.akka" %% "akka-agent" % "2.3.4")
 
+  val scheduler = Seq("org.quartz-scheduler" % "quartz" % "2.2.1")
+
   val playLibs = Seq(
     "com.typesafe.play" %% "play" % "2.3.2" % "provided",
     "com.typesafe.play" %% "play-ws" % "2.3.2" % "provided",
