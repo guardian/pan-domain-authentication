@@ -35,7 +35,8 @@ Pan domain auth is split into 4 modules.
 The `pan-domain-auth-verification` library provides the basic functionality for sigining and verifying login cookies. For
 applications that only need to *VERIFY* an existing login (rather than issue logins themselves) this is the library to use.
 In most cases this will be useful for APIs that are unwilling or unable to offer a user-facing OAuth dance to acquire
-credentials directly, on behalf of the user.
+credentials directly, on behalf of the user. Note that this module also includes means for obtaining the public key used
+to do the verification (more details below).
 
 The `pan-domain-auth-core` library provides the core utilities to load the domain settings, create and validate the cookie and
 check if the user has mutlifactor auth turned on (see below). Note this does not include the Google oath dance code or cookie setting
@@ -60,29 +61,57 @@ cross compiled for scala 2.10.4 and 2.11.1. to include them via sbt:
 "com.gu" %% "pan-domain-auth-verification" % "0.2.7-SNAPSHOT"
 ```
 
+To verify a login, you'll need to read the user's cookie value and verify its integrity. This is done using the
+`authStatus` method on the `PanDomain` object. This method can optionally take a callback function used to validate the
+authenticated user - by default this enforces two-factor-auth and ensures it is a Guardian user.
+
+```scala
+import com.gu.pandomainauth.PanDomain
+
+PanDomain.authStatus(cookieValue, publicKey)
+```
+
+The way you fetch the cookie value depends on your application but this library includes a way to retrieve the public
+key for the domain you are using. The recommended way is to use the provided AKKA agent using an instance of
+`PublicSettings`. You can call this instance's `start` method when your application comes up and it will keep the
+publicKey value up to date in the background while your application runs.
+
+```scala
+import com.gu.pandomainauth.PublicSettings
+import scala.concurrent.ExecutionContext.Implicits.global
+
+// create a client to use for fetching the required information
+implicit val httpClient = Http
+val publicSettings = new PublicSettings(domain)
+
+// call this when your application comes up to kick off the agent (e.g. Global.onStart in Play)
+publicSettings.start()
+
+// the public key will be None until a value is successfully obtained
+def publicKey: Option[String] = publicSettings.publicKey
+```
+
 You'll need to the public key for your domain before you can verify the pan-domain-auth cookies. The `PublicSettings`
 object contains the cookie name to read from as well as a function that fetches the public key. You should use
 `getPublicKey(domain)` to fetch the public key for the domain you are using. This returns a `Future` containing the
 value fetched from the settings bucket in S3. You might do this at application start, lazily when the check happens, or
 in an agent to keep the value up to date.
 
-```scala
-import com.gu.pandomainauth.PublicSettings
-import scala.concurrent.ExecutionContext.Implicits.global
+You will likely also want to have some logging in place for the calls to fetch the public settings. This can be
+achieved by providing a callback to the publicSettings instance.
 
-object Config {
-  val domain = "my-domain.co.uk"
-  implicit val httpClient = dispatch.Http
-  val publicKey = PublicSettings.getPublicKey(domain)
-}
+```scala
+val publicSettings = new PublicSettings(domain, {
+  case Success(settings) =>
+    Logger.info("successfully updated pan-domain public settings")
+  case Failure(err) =>
+    Logger.warn("failed to update pan-domain public settings", err)
+})
 ```
 
-This creates `publicKey` as a `Future` you can use when you need to verify the user's login. You may choose to hook
-this value into your healthcheck if the verification is an integral part of the application. If you don't want to have
-to restart the application to update the public key you can use this function to populate an Akka Agent.
-[This is a good example](https://github.com/guardian/frontend/blob/master/common/app/common/AutoRefresh.scala)
-of setting up an agent that automatically refreshes a value. In this case `getPublicKey` would serve as the
-implementation for `refresh`.
+If you'd rather not use the provided agent you can hook the `PublicSettings` instance up to your own scheduler by
+calling its `refresh` method directly, instead of invoking start. You can also manually fetch the settings using the
+provided helper `PublicSettings.getPublicKey(domain)` helper function.
 
 ### If your application needs to issue logins
 
