@@ -1,11 +1,15 @@
 package com.gu.pandomainauth
 
+import java.io.ByteArrayInputStream
+import java.util.Properties
+
 import akka.agent.Agent
 import com.gu.pandomainauth.PublicSettings.FunctionJob
 import dispatch._
 import org.quartz._
 import org.quartz.impl.StdSchedulerFactory
 
+import scala.collection.JavaConversions._
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
@@ -27,10 +31,10 @@ import scala.util.Try
  * @param client    Implicit instance of dispatch.Http used to make the call to fetch the public settings
  * @param ec        Implicit execution context used to fetch the settings
  */
-class PublicSettings(domain: String, callback: Try[String] => Unit = _ => (), scheduler: Scheduler = StdSchedulerFactory.getDefaultScheduler())
+class PublicSettings(domain: String, callback: Try[Map[String, String]] => Unit = _ => (), scheduler: Scheduler = StdSchedulerFactory.getDefaultScheduler())
                     (implicit client: Http, ec: ExecutionContext) {
 
-  private val agent = Agent[Option[String]](None)
+  private val agent = Agent[Map[String, String]](Map.empty)
   private val job = JobBuilder.newJob(classOf[FunctionJob])
     .withIdentity(s"refresh-public-key-$domain")
     .build
@@ -59,14 +63,14 @@ class PublicSettings(domain: String, callback: Try[String] => Unit = _ => (), sc
     scheduler.deleteJob(job.getKey)
   }
   def refresh() = {
-    val publicFuture = PublicSettings.getPublicKey(domain)
+    val publicFuture = PublicSettings.getPublicSettings(domain)
     publicFuture
       .onComplete(callback)
     publicFuture
-      .foreach(pubKey => agent.send(Some(pubKey)))
+      .foreach(settings => agent.send(settings))
   }
 
-  def publicKey = agent.get()
+  def publicKey = agent.get().get("publicKey")
   val bucketName = PublicSettings.bucketName
   val cookieName = PublicSettings.cookieName
   val assymCookieName = PublicSettings.assymCookieName
@@ -81,6 +85,10 @@ object PublicSettings {
   val cookieName = "gutoolsAuth"
   val assymCookieName = s"$cookieName-assym"
 
+  def getPublicSettings(domain: String)(implicit client: Http, ec: ExecutionContext): Future[Map[String, String]] = {
+    fetchSettings(domain) flatMap extractSettings
+  }
+
   /**
    * Fetches the public key from the public S3 bucket
    *
@@ -89,22 +97,40 @@ object PublicSettings {
    * @param ec     implicit execution context to use for fetching the key
    */
   def getPublicKey(domain: String)(implicit client: Http, ec: ExecutionContext): Future[String] = {
+    getPublicSettings(domain) flatMap extractPublicKey
+  }
+
+  // internal functions for fetching and parsing the responses
+  private def fetchSettings(domain: String)(implicit client: Http, ec: ExecutionContext): Future[Either[Throwable, String]] = {
     val req = host("s3-eu-west-1.amazonaws.com").secure / bucketName / s"$domain.settings.public"
-    client(req OK as.String).either.left.map(new PublicKeyAcquisitionException(_)).map { attemptedKey =>
-      attemptedKey.right.flatMap(validateKey)
-    } flatMap {
-      case Right(key) => Future.successful(key)
+    client(req OK as.String).either
+  }
+  private[pandomainauth] def extractSettings(settingsAttempt: Either[Throwable, String]): Future[Map[String, String]] =
+    settingsAttempt match {
+      case Right(settingsBody) =>
+        val props = new Properties()
+        props.load(new ByteArrayInputStream(settingsBody.getBytes("UTF-8")))
+        Future.successful(props.toMap)
+      case Left(err) =>
+        Future.failed(new PublicSettingsAcquisitionException(err))
+    }
+  private[pandomainauth] def extractPublicKey(settings: Map[String, String]): Future[String] = {
+    (for {
+      rawKey <- settings.get("publicKey").toRight(PublicKeyNotFoundException).right
+      publicKey <- validateKey(rawKey).right
+    } yield publicKey) match {
+      case Right(publicKey) => Future.successful(publicKey)
       case Left(err) => Future.failed(err)
     }
   }
-
   private[pandomainauth] def validateKey(pubKey: String): Either[Throwable, String] = {
     if ("[a-zA-Z0-9+/\n]+={0,3}".r.pattern.matcher(pubKey).matches) Right(pubKey)
     else Left(PublicKeyFormatException)
   }
 
-  class PublicKeyAcquisitionException(cause: Throwable) extends Exception(cause.getMessage, cause)
+  class PublicSettingsAcquisitionException(cause: Throwable) extends Exception(cause.getMessage, cause)
   object PublicKeyFormatException extends Exception("Invalid public key")
+  object PublicKeyNotFoundException extends Exception("Public key not found")
 
   // globally accessible state for the scheduler
   private val jobs = mutable.Map[JobKey, () => Unit]()

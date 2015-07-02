@@ -1,11 +1,14 @@
 package com.gu.pandomainauth
 
-import com.gu.pandomainauth.PublicSettings.PublicKeyFormatException
+import java.io.IOException
+
+import com.gu.pandomainauth.PublicSettings.{PublicKeyFormatException, PublicKeyNotFoundException, PublicSettingsAcquisitionException}
 import com.gu.pandomainauth.service.TestKeys
-import org.scalatest.{EitherValues, Matchers, FreeSpec}
+import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.{EitherValues, FreeSpec, Matchers}
 
 
-class PublicSettingsTest extends FreeSpec with Matchers with EitherValues {
+class PublicSettingsTest extends FreeSpec with Matchers with EitherValues with ScalaFutures {
   "validateKey" - {
     "returns an error if the key looks invalid" in {
       val invalidKey = "not a valid key"
@@ -21,6 +24,42 @@ class PublicSettingsTest extends FreeSpec with Matchers with EitherValues {
     "returns the key if it is valid" in {
       val key = TestKeys.testPublicKey
       PublicSettings.validateKey(key).right.value shouldEqual key
+    }
+  }
+
+  "extractPublicKey" - {
+    "will get a public key from a valid settings map" in {
+      PublicSettings.extractPublicKey(Map("publicKey" -> TestKeys.testPublicKey)).futureValue shouldEqual TestKeys.testPublicKey
+    }
+
+    "will reject a key that is not correctly formatted" in {
+      whenReady(PublicSettings.extractPublicKey(Map("publicKey" -> "improperly formatted public key!!")).failed) { e =>
+        e shouldBe a [PublicKeyFormatException.type]
+      }
+    }
+
+    "will fail if the key is not present in the settings" in {
+      whenReady(PublicSettings.extractPublicKey(Map("another key" -> "bar")).failed) { e =>
+        e shouldBe a [PublicKeyNotFoundException.type]
+      }
+    }
+  }
+
+  "extractSettings" - {
+    "extracts properties from a valid body" in {
+      val body =
+        """key=value
+          |foo=bar
+        """.stripMargin
+      PublicSettings.extractSettings(Right(body)).futureValue shouldEqual Map("key" -> "value", "foo" -> "bar")
+    }
+
+    "handles a provided failure" in {
+      val exception = new IOException
+      whenReady(PublicSettings.extractSettings(Left(exception)).failed) { err =>
+        err shouldBe a [PublicSettingsAcquisitionException]
+        err.getCause shouldEqual exception
+      }
     }
   }
 }
