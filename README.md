@@ -72,15 +72,16 @@ PanDomain.authStatus(cookieValue, publicKey)
 ```
 
 The way you fetch the cookie value depends on your application but this library includes a way to retrieve the public
-key for the domain you are using. The recommended way is to use the provided AKKA agent using an instance of
+key for the domain you are using. The recommended way is to use the provided akka agent using an instance of
 `PublicSettings`. You can call this instance's `start` method when your application comes up and it will keep the
 publicKey value up to date in the background while your application runs.
 
 ```scala
 import com.gu.pandomainauth.PublicSettings
 import scala.concurrent.ExecutionContext.Implicits.global
+import dispatch.Http
 
-// create a client to use for fetching the required information
+// provide a client to use for fetching the required information
 implicit val httpClient = Http
 val publicSettings = new PublicSettings(domain)
 
