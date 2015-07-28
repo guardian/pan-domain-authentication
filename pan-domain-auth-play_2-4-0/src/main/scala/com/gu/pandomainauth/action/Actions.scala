@@ -1,15 +1,14 @@
 package com.gu.pandomainauth.action
 
-import com.gu.pandomainauth.{PanDomain, PanDomainAuth, PublicSettings}
-import com.gu.pandomainauth.model._
-import com.gu.pandomainauth.service._
-import play.api.Logger
-import play.api.Play.current
+import com.gu.pandomainauth.PanDomainAuth
+import com.gu.pandomainauth.model.{AuthenticatedUser, User}
+import com.gu.pandomainauth.service.{Google2FAGroupChecker, GoogleAuthException, GoogleAuth, CookieUtils}
 import play.api.mvc.Results._
 import play.api.mvc._
-
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.Logger
+import play.api.Play.current
 import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 
 class UserRequest[A](val user: User, request: Request[A]) extends WrappedRequest[A](request)
@@ -18,10 +17,10 @@ trait AuthActions extends PanDomainAuth {
 
   /**
    * Returns true if the authed user is valid in the implementing system (meets your multifactor requirements, you recognise the email etc.).
-   *
+   * 
    * If your implementing application needs to audit logins / register new users etc then this ia also the place to do it (although in this case
    * you should strongly consider setting cacheValidation to true).
-   *
+   * 
    * @param authedUser
    * @return true if the user is valid in your app
    */
@@ -55,7 +54,7 @@ trait AuthActions extends PanDomainAuth {
   /**
    * The auth callback url. This is where google will send the user after authentication. This action on this url should
    * invoke processGoogleCallback
-   *
+   * 
    * @return
    */
   def authCallbackUrl: String
@@ -113,14 +112,12 @@ trait AuthActions extends PanDomainAuth {
     val token = request.session.get(ANTI_FORGERY_KEY).getOrElse( throw new GoogleAuthException("missing anti forgery token"))
     val originalUrl = request.session.get(LOGIN_ORIGIN_KEY).getOrElse( throw new GoogleAuthException("missing original url"))
 
-    val existingCookie = readCookie(request) // will be populated if this was a re-auth for expired login
+    val existingCookie = request.cookies.get(settings.cookieName) // will e populated if this was a re-auth for expired login
 
-    // use legacy cookie in the check for now, even though both are dropped
-    // phase two of the rollout will be to use the assymetric cookie
     GoogleAuth.validatedUserIdentity(token).map { claimedAuth =>
       val authedUserData = existingCookie match {
         case Some(c) => {
-          val existingAuth = LegacyCookie.parseCookieData(c.value, settings.secret)
+          val existingAuth = CookieUtils.parseCookieData(c.value, settings.secret)
           Logger.debug("user re-authed, merging auth data")
 
           claimedAuth.copy(
@@ -136,8 +133,8 @@ trait AuthActions extends PanDomainAuth {
       }
 
       if (validateUser(authedUserData)) {
-        val updatedCookies = generateCookies(authedUserData)
-        Redirect(originalUrl).withCookies(updatedCookies:_*).withSession(session = request.session - ANTI_FORGERY_KEY - LOGIN_ORIGIN_KEY)
+        val updatedCookie = generateCookie(authedUserData)
+        Redirect(originalUrl).withCookies(updatedCookie).withSession(session = request.session - ANTI_FORGERY_KEY - LOGIN_ORIGIN_KEY)
       } else {
         showUnauthedMessage(invalidUserMessage(claimedAuth))
       }
@@ -154,61 +151,65 @@ trait AuthActions extends PanDomainAuth {
   }
 
 
-  def readCookie(request: RequestHeader): Option[Cookie] = request.cookies.get(PublicSettings.cookieName)
+  def readCookie(request: RequestHeader): Option[Cookie] = request.cookies.get(settings.cookieName)
 
-  def generateCookies(authedUser: AuthenticatedUser): List[Cookie] = List(
-    Cookie(
-      name     = PublicSettings.cookieName,
-      value    = LegacyCookie.generateCookieData(authedUser, settings.secret),
-      domain   = Some(domain),
-      secure   = true,
-      httpOnly = true
-    ),
-    Cookie(
-      name     = PublicSettings.assymCookieName,
-      value    = CookieUtils.generateCookieData(authedUser, settings.privateKey),
-      domain   = Some(domain),
-      secure   = true,
-      httpOnly = true
-    )
+  def generateCookie(authedUser: AuthenticatedUser): Cookie = Cookie(
+    name     = settings.cookieName,
+    value    = CookieUtils.generateCookieData(authedUser, settings.secret),
+    domain   = Some(domain),
+    secure   = true,
+    httpOnly = true
   )
 
   def includeSystemInCookie(authedUser: AuthenticatedUser)(result: Result): Result = {
     val updatedAuth = authedUser.copy(authenticatedIn = authedUser.authenticatedIn + system)
-    val updatedCookies = generateCookies(updatedAuth)
-    result.withCookies(updatedCookies:_*)
+    val updatedCookie = generateCookie(updatedAuth)
+    result.withCookies(updatedCookie)
   }
 
   def flushCookie(result: Result): Result = {
     val clearCookie = DiscardingCookie(
-      name = PublicSettings.cookieName,
+      name = settings.cookieName,
       domain = Some(domain),
       secure = true
     )
-    val clearAssymCookie = DiscardingCookie(
-      name = PublicSettings.assymCookieName,
-      domain = Some(domain),
-      secure = true
-    )
-    result.discardingCookies(clearCookie, clearAssymCookie)
+    result.discardingCookies(clearCookie)
   }
 
+
+  // Represents the status of the attempted authentication
+  sealed trait AuthenticationStatus
+  case class Expired(authedUser: AuthenticatedUser) extends AuthenticationStatus
+  case class GracePeriod(authedUser: AuthenticatedUser) extends AuthenticationStatus
+  case class Authenticated(authedUser: AuthenticatedUser) extends AuthenticationStatus
+  case class NotAuthorized(authedUser: AuthenticatedUser) extends AuthenticationStatus
+  case class InvalidCookie(exception: Exception) extends AuthenticationStatus
+  case object NotAuthenticated extends AuthenticationStatus
 
   /**
    * Extract the authentication status from the request.
    */
-  def extractAuth(request: RequestHeader): AuthenticationStatus = {
-    readCookie(request).map { cookie =>
-      PanDomain.authStatusWithLegacyCheck(cookie.value, settings.publicKey, settings.secret) match {
-        case Expired(authedUser) if authedUser.isInGracePeriod(apiGracePeriod) =>
+  def extractAuth(request: RequestHeader): AuthenticationStatus = try {
+    readAuthenticatedUser(request) map { authedUser =>
+      if (authedUser.isExpired) {
+        if(authedUser.isInGracePeriod(apiGracePeriod)) {
           GracePeriod(authedUser)
-        case authStatus @ Authenticated(authedUser) =>
-          if (cacheValidation && authedUser.authenticatedIn(system)) authStatus
-          else if (validateUser(authedUser)) authStatus
-          else NotAuthorized(authedUser)
-        case authStatus => authStatus
+        } else {
+          Expired(authedUser)
+        }
+      } else if (
+        (cacheValidation && authedUser.authenticatedIn(system))
+          || validateUser(authedUser)
+      ) {
+        Authenticated(authedUser)
+      } else {
+        NotAuthorized(authedUser)
       }
-    } getOrElse NotAuthenticated
+    } getOrElse {
+      NotAuthenticated
+    }
+  } catch {
+    case e: Exception => InvalidCookie(e)
   }
 
 
