@@ -168,7 +168,13 @@ googleServiceAccountCert=name_of_cert_in_bucket.p12
 google2faUser=an.admin@example.com
 multifactorGroupId=group@2fa_admin_user
 ```
-
+  
+There is a corresponding (publicly available) file called example.com.settings.public. 
+The contents of the file looks like:
+ 
+``` ini
+publicKey=example_key
+```
 
 * **secret** - this is the shared secret used to sign the cookie
 
@@ -180,6 +186,19 @@ multifactorGroupId=group@2fa_admin_user
 
 * **googleServiceAccountId, googleServiceAccountCert, google2faUser and multifactorGroupId** - these are optional parameters for using a group based 2 factor auth verification, see explanation below
 
+* **privateKey** - this is the private key used to sign the asymmetrical cookie
+
+* **publicKey** - this is the public key used to verify the asymmetrical cookie
+
+### Generating Keys
+
+You can generate an rsa key pair as follows:
+
+    openssl genrsa -out private_key.pem 4096
+    openssl rsa -pubout -in private_key.pem -out public_key.pem
+
+Note: you only need to pass the key ie the blob of base64 between the start and end markers in the pem file.
+   
 
 ## Integrating with your app
 
