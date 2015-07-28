@@ -1,20 +1,11 @@
 package com.gu.pandomainauth.model
 
-import com.gu.pandomainauth.PublicSettings
-
 case class PanDomainAuthSettings(
   secret: String,
-  publicKey: String,
-  privateKey: String,
+  cookieName: String,
   googleAuthSettings: GoogleAuthSettings,
   google2FAGroupSettings: Option[Google2FAGroupSettings]
-) {
-  @deprecated("Use com.gu.pandomainauth.PublicSettings.cookieName", "0.2.7")
-  val cookieName = PublicSettings.cookieName
-
-  @deprecated("Use com.gu.pandomainauth.PublicSettings.assymCookieName", "0.2.7")
-  val assymCookieName = PublicSettings.assymCookieName
-}
+)
 
 case class GoogleAuthSettings(
   googleAuthClient: String,
@@ -43,6 +34,6 @@ object PanDomainAuthSettings{
       Google2FAGroupSettings(serviceAccountId, serviceAccountCert, adminUser, group)
     }
 
-    PanDomainAuthSettings(settingMap("secret"), settingMap("publicKey"), settingMap("privateKey"), googleAuthSettings, google2faSettings)
+    PanDomainAuthSettings(settingMap("secret"), settingMap("cookieName"), googleAuthSettings, google2faSettings)
   }
 }

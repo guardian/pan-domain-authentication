@@ -2,7 +2,6 @@ package controllers
 
 import com.amazonaws.auth.{BasicAWSCredentials, AWSCredentials}
 import com.amazonaws.regions.Region
-import com.gu.pandomainauth.PanDomain
 import com.gu.pandomainauth.action.AuthActions
 import com.gu.pandomainauth.model.AuthenticatedUser
 import play.api.Logger
@@ -14,7 +13,7 @@ trait ExampleAuthActions extends AuthActions {
 
   override def validateUser(authedUser: AuthenticatedUser): Boolean = {
     Logger.info(s"validating user $authedUser")
-    PanDomain.guardianValidation(authedUser)
+    (authedUser.user.email endsWith ("@guardian.co.uk")) && authedUser.multiFactor
   }
 
   override def cacheValidation = false
