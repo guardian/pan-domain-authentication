@@ -4,6 +4,7 @@ import java.util.Properties
 import com.amazonaws.ClientConfiguration
 import com.amazonaws.internal.StaticCredentialsProvider
 import com.amazonaws.regions.{Regions, Region}
+import com.gu.pandomainauth.PublicSettings
 
 import scala.collection.JavaConversions._
 import com.amazonaws.auth.AWSCredentials
@@ -18,7 +19,7 @@ class S3Bucket(credentials: Option[AWSCredentials] = None, regionOption: Option[
   val region = regionOption getOrElse(Region getRegion(Regions.EU_WEST_1))
   val s3Client = region.createClient(classOf[AmazonS3Client], credentialsProvider, awsClientConfiguration)
 
-  val bucketName = "pan-domain-auth-settings"
+  val bucketName = PublicSettings.bucketName
 
   def readDomainSettings(domain: String) = {
 
