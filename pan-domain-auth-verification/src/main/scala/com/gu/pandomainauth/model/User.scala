@@ -6,4 +6,5 @@ case class User(firstName: String, lastName: String, email: String, avatarUrl: O
   }
 
   def emailDomain = email.split("@").last
+  def username = email.split("@").head
 }
