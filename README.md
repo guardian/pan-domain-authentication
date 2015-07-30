@@ -58,7 +58,7 @@ cross compiled for scala 2.10.4 and 2.11.1. to include them via sbt:
 ### To verify logins
 
 ```
-"com.gu" %% "pan-domain-auth-verification" % "0.2.7-SNAPSHOT"
+"com.gu" %% "pan-domain-auth-verification" % "0.2.7"
 ```
 
 To verify a login, you'll need to read the user's cookie value and verify its integrity. This is done using the
@@ -117,13 +117,13 @@ provided helper `PublicSettings.getPublicKey(domain)` helper function.
 ### If your application needs to issue logins
 
 ```
-"com.gu" %% "pan-domain-auth-core" % "0.2.6"
+"com.gu" %% "pan-domain-auth-core" % "0.2.7"
 ```
 
 or
 
 ```
-"com.gu" %% "pan-domain-auth-play" % "0.2.6"
+"com.gu" %% "pan-domain-auth-play" % "0.2.7"
 ```
 
 In both cases you will need to set up a few things, see `Requirements` below.
