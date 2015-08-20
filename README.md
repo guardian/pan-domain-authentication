@@ -357,7 +357,32 @@ for a user that will grant access to the bucket.
 
 * **awsRegion** defaults to eu-west-1 - This is where the guardian runs the majority of it's aws estate so is a useful default for us.
 
+### Cross-account access to S3 buckets
 
+Note that if your application is not running in the same AWS account as the S3 bucket then you will need to ensure two policy statements are in place. The first
+is a policy on the S3 bucket itself permitting access from a different AWS account. The second is the usual IAM policy defined in your cloudformation.
+
+You can add the first of these policies using the S3 console (in the account that owns the bucket). Inspect the bucket in the console and under _Permissions_
+select _Edit bucket policy_.
+
+Add something like the following statement to the bucket policy (if there is no existing policy then you'll need the skeleton in place as this fragment is only
+a statement).
+
+```
+{
+  "Sid": "gu-aws-composer-account",
+  "Effect": "Allow",
+  "Principal": {
+    "AWS": "arn:aws:iam::743583969668:root"
+  },
+  "Action": "s3:GetObject",
+  "Resource": "arn:aws:s3:::pan-domain-auth-settings/*"
+}
+```
+
+In this example, we are giving permission for access to all resources in the pan-domain-auth-settings bucket to policies in AWS account 743583969668. This only
+needs to be done once per account - once in place any number of applications in the account can access the bucket in the same manner they would be able to if
+it were in the same account.
 
 ### The user object
 
