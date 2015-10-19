@@ -6,16 +6,14 @@ import com.amazonaws.regions.{Regions, Region}
 import com.gu.pandomainauth.PublicSettings
 
 import scala.collection.JavaConversions._
-import com.amazonaws.auth.AWSCredentialsProviderChain
+import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.model.GetObjectRequest
 
-
-
-class S3Bucket(credentials: Option[AWSCredentialsProviderChain] = None, regionOption: Option[Region] = None, proxyConfiguration: Option[ProxyConfiguration] = None) {
+class S3Bucket(credentialsProvider: AWSCredentialsProvider, regionOption: Option[Region] = None, proxyConfiguration: Option[ProxyConfiguration] = None) {
 
   val region = regionOption getOrElse (Region getRegion Regions.EU_WEST_1)
-  val s3Client = region.createClient(classOf[AmazonS3Client], credentials.orNull, awsClientConfiguration)
+  val s3Client = region.createClient(classOf[AmazonS3Client], credentialsProvider, awsClientConfiguration)
 
   val bucketName = PublicSettings.bucketName
 
