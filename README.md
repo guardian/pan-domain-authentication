@@ -351,8 +351,8 @@ More examples and framework clients may be added in the future as they become av
 Access to the s3 bucket is controlled by overriding the `awsCredentials` and `awsRegion` options in the `PanDomainAuth` trait (or the
 `AuthActions` sub trait in the play implementation).
 
-* **awsCredentials** defaults to None - this means that the instance profile of your app running in EC2 will be used. You can configure access to the bucket
-in your cloud formation script. For apps that are not running in EC2 (such as developer environments) you can supply `BasicAWSCredentials` with a key and secret
+* **awsCredentialsProvider** defaults to DefaultAWSCredentialsProviderChain - this means that the instance profile of your app running in EC2 will be used. You can configure access to the bucket
+in your cloud formation script. For apps that are not running in EC2 (such as developer environments) you can supply `StaticCredentialsProvider(BasicAWSCredentials)` with a key and secret
 for a user that will grant access to the bucket.
 
 * **awsRegion** defaults to eu-west-1 - This is where the guardian runs the majority of it's aws estate so is a useful default for us.
