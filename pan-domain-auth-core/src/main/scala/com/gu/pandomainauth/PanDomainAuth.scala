@@ -1,6 +1,6 @@
 package com.gu.pandomainauth
 
-import com.amazonaws.auth.AWSCredentials
+import com.amazonaws.auth.{DefaultAWSCredentialsProviderChain, AWSCredentialsProvider}
 import com.amazonaws.regions.{Regions, Region}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -35,7 +35,7 @@ trait PanDomainAuth {
    * the AwsCredentials to access the configuration bucket, defaults to None so the instance credentials are used
    * @return
    */
-  def awsCredentials: Option[AWSCredentials] = None
+  def awsCredentialsProvider: AWSCredentialsProvider = new DefaultAWSCredentialsProviderChain()
 
   /**
    * the aws region the configuration bucket is in, defaults to eu-west-1 as that's where the guardian tends to run stuff
@@ -49,7 +49,7 @@ trait PanDomainAuth {
    */
   def proxyConfiguration: Option[ProxyConfiguration] = None
 
-  lazy val bucket = new S3Bucket(awsCredentials, awsRegion, proxyConfiguration)
+  lazy val bucket = new S3Bucket(awsCredentialsProvider, awsRegion, proxyConfiguration)
 
   lazy val settingsMap = bucket.readDomainSettings(domain)
   lazy val authSettings: Agent[PanDomainAuthSettings] = Agent(PanDomainAuthSettings(settingsMap))
