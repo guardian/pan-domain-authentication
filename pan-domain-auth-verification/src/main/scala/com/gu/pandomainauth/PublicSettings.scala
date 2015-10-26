@@ -81,7 +81,7 @@ class PublicSettings(domain: String, callback: Try[Map[String, String]] => Unit 
  * public data.
  */
 object PublicSettings {
-  val bucketName = "pan-domain-auth-settings"
+  val bucketName = sys.env.getOrElse("PANDA_BUCKET_NAME", "pan-domain-auth-settings")
   val cookieName = "gutoolsAuth"
   val assymCookieName = s"$cookieName-assym"
 

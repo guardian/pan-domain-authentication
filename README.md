@@ -137,7 +137,9 @@ To use pan domain authentication you will need:
 
 * The apps must be using https - the cookie set by pan domain auth are set to secure and http only
 
-* An AWS S3 bucket names `pan-domain-auth-settings` where the configuration for your domain will live
+* An AWS S3 bucket where the configuration for your domain will live
+
+    * the name is taken from `PANDA_BUCKET_NAME` environment variable or `pan-domain-auth-settings` is used by default
 
 * The AWS login credentials for a user that can read from the said bucket (it is recommended that this is the only thing that the user is allowed to do in your s3 account)
 
