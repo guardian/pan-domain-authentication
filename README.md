@@ -38,7 +38,8 @@ In your PanDomainAuthActions include this:
 
 ```
 override def awsCredentialsProvider  = {
-  new AWSCredentialsProviderChain(new STSAssumeRoleSessionCredentialsProvider({{roleArn}}, "yourapp"),new ProfileCredentialsProvider("workflow"))
+  new AWSCredentialsProviderChain(new STSAssumeRoleSessionCredentialsProvider({{roleArn}}, "yourapp"),
+                                  new ProfileCredentialsProvider("workflow"))
 } 
 ```
 
