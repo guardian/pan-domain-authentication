@@ -36,10 +36,10 @@ parameters and upload this to the Workflow account and get the roleArn.
 
 In your PanDomainAuthActions include this:
 
-```override def awsCredentialsProvider  = new AWSCredentialsProviderChain(
-    new STSAssumeRoleSessionCredentialsProvider({{roleArn}}, "yourapp"),
-    new ProfileCredentialsProvider("workflow")
-)```
+```override def awsCredentialsProvider  = {
+    new AWSCredentialsProviderChain(new STSAssumeRoleSessionCredentialsProvider({{roleArn}}, "yourapp"),new ProfileCredentialsProvider("workflow"))
+}
+```
 
 (The profile credentials provider assumes you have a workflow profile on your machine and allows local access to the bucket)
 
