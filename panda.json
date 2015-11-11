@@ -1,6 +1,6 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "Facia tool template to create cross account roles.",
+    "Description": "Template to create cross account roles to access the panda bucket",
     "Parameters": {
         "AccountId": {
             "Description": "The AWS account ID for your account",
