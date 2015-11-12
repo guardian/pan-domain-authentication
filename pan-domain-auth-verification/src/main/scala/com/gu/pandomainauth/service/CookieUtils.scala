@@ -50,7 +50,7 @@ object CookieUtils {
       case CookieRegEx(data, sig) =>
         try {
           if (Crypto.verifySignature(Base64.decodeBase64(data.getBytes("UTF-8")), Base64.decodeBase64(sig.getBytes("UTF-8")), pubKeyStr)) {
-            deserializeAuthenticatedUser(new String(Base64.decodeBase64(data)))
+            deserializeAuthenticatedUser(new String(Base64.decodeBase64(data.getBytes("UTF-8"))))
           } else {
             throw new CookieSignatureInvalidException
           }
