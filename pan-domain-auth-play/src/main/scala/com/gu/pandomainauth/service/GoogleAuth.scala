@@ -95,7 +95,8 @@ class GoogleAuth(config: GoogleAuthSettings, system: String, redirectUrl: String
   }
 
 
-  private def requestToken(tokenEndpoint: String, code: Seq[String], retries: Int = 3): Future[WSResponse] = {
+  private def requestToken(tokenEndpoint: String, code: Seq[String], retries: Int = 3)
+                          (implicit context: ExecutionContext, application: Application): Future[WSResponse] = {
     WS.url(tokenEndpoint).post {
       Map(
         "code" -> code,
@@ -116,7 +117,8 @@ class GoogleAuth(config: GoogleAuthSettings, system: String, redirectUrl: String
     response.status == 500 && response.body.contains("Backend Error")
 
 
-  private def afterDelay[T](block: => Future[T]) = delay(300 milliseconds)(block)
+  private def afterDelay[T](block: => Future[T])(implicit context: ExecutionContext) =
+    delay(300 milliseconds)(block)
 
   private def delay[T](delay: FiniteDuration)(block: => Future[T])(implicit executor: ExecutionContext): Future[T] = {
     val promise = Promise[T]()
