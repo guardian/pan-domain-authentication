@@ -2,8 +2,10 @@ package com.gu.pandomainauth.service
 
 import com.gu.pandomainauth.model.{User, GoogleAuthSettings, AuthenticatedUser}
 import play.api.mvc.Results.Redirect
-import play.api.mvc.{Call, Result, RequestHeader}
-import scala.concurrent.{ExecutionContext, Future}
+import play.api.mvc.{Result, RequestHeader}
+import play.libs.Akka
+import scala.concurrent.duration._
+import scala.concurrent.{Promise, ExecutionContext, Future}
 import play.api.libs.ws.{WSResponse, WS}
 import play.api.libs.json.JsValue
 import scala.language.postfixOps
@@ -63,15 +65,7 @@ class GoogleAuth(config: GoogleAuthSettings, system: String, redirectUrl: String
     } else {
       discoveryDocument.flatMap { dd =>
         val code = request.queryString("code")
-        WS.url(dd.token_endpoint).post {
-          Map(
-            "code" -> code,
-            "client_id" -> Seq(config.googleAuthClient),
-            "client_secret" -> Seq(config.googleAuthSecret),
-            "redirect_uri" -> Seq(redirectUrl),
-            "grant_type" -> Seq("authorization_code")
-          )
-        }.flatMap { response =>
+        requestToken(dd.token_endpoint, code) flatMap { response =>
           googleResponse(response) { json =>
             val token = Token.fromJson(json)
             val jwt = token.jwt
@@ -98,5 +92,41 @@ class GoogleAuth(config: GoogleAuthSettings, system: String, redirectUrl: String
         }
       }
     }
+  }
+
+
+  private def requestToken(tokenEndpoint: String, code: Seq[String], retries: Int = 3): Future[WSResponse] = {
+    WS.url(tokenEndpoint).post {
+      Map(
+        "code" -> code,
+        "client_id" -> Seq(config.googleAuthClient),
+        "client_secret" -> Seq(config.googleAuthSecret),
+        "redirect_uri" -> Seq(redirectUrl),
+        "grant_type" -> Seq("authorization_code")
+      )
+    } flatMap {
+      // Intercept flaky Google 500 error and retry after a delay
+      case response if isFlakyGoogle500(response) && retries > 0 =>
+        afterDelay(requestToken(tokenEndpoint, code, retries - 1))
+      case otherResponse => Future.successful(otherResponse)
+    }
+  }
+
+  private def isFlakyGoogle500(response: WSResponse) =
+    response.status == 500 && response.body.contains("Backend Error")
+
+
+  private def afterDelay[T](block: => Future[T]) = delay(300 milliseconds)(block)
+
+  private def delay[T](delay: FiniteDuration)(block: => Future[T])(implicit executor: ExecutionContext): Future[T] = {
+    val promise = Promise[T]()
+
+    Akka.system.scheduler.scheduleOnce(delay) {
+      try promise.completeWith(block)
+      catch {
+        case t: Throwable => promise.failure(t)
+      }
+    }
+    promise.future
   }
 }
