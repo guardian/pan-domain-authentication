@@ -59,7 +59,7 @@ class GoogleAuth(config: GoogleAuthSettings, system: String, redirectUrl: String
   def validatedUserIdentity(expectedAntiForgeryToken: String)
                            (implicit request: RequestHeader, context: ExecutionContext, application: Application): Future[AuthenticatedUser] = {
     if (!request.queryString.getOrElse("state", Nil).contains(expectedAntiForgeryToken)) {
-      throw new IllegalArgumentException("The anti forgery token did not match")
+      throw new GoogleAuthException("The anti forgery token did not match")
     } else {
       discoveryDocument.flatMap { dd =>
         val code = request.queryString("code")
