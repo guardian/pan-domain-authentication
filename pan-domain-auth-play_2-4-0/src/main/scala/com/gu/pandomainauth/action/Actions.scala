@@ -117,10 +117,18 @@ trait AuthActions extends PanDomainAuth {
 
     // use legacy cookie in the check for now, even though both are dropped
     // phase two of the rollout will be to use the assymetric cookie
+    /**
+      * This is required during a period of transition       * between the old cookie and the new assymetric one.
+      */
     GoogleAuth.validatedUserIdentity(token).map { claimedAuth =>
       val authedUserData = existingCookie match {
         case Some(c) => {
-          val existingAuth = LegacyCookie.parseCookieData(c.value, settings.secret)
+          val existingAuth = try {
+            LegacyCookie.parseCookieData(c.value, settings.secret)
+          } catch {
+            case e: Exception =>
+              CookieUtils.parseCookieData(c.value, settings.publicKey)
+          }
           Logger.debug("user re-authed, merging auth data")
 
           claimedAuth.copy(
