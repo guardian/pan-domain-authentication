@@ -115,19 +115,15 @@ trait AuthActions extends PanDomainAuth {
 
     val existingCookie = readCookie(request) // will be populated if this was a re-auth for expired login
 
-    // use legacy cookie in the check for now, even though both are dropped
-    // phase two of the rollout will be to use the assymetric cookie
-    /**
-      * This is required during a period of transition between the old cookie and the new assymetric one.
-      */
+    // use both parsers until we complete the transition to only set the assymetric cookie.
     GoogleAuth.validatedUserIdentity(token).map { claimedAuth =>
       val authedUserData = existingCookie match {
         case Some(c) => {
           val existingAuth = try {
-            LegacyCookie.parseCookieData(c.value, settings.secret)
+            CookieUtils.parseCookieData(c.value, settings.publicKey)
           } catch {
             case e: Exception =>
-              CookieUtils.parseCookieData(c.value, settings.publicKey)
+              LegacyCookie.parseCookieData(c.value, settings.secret)
           }
           Logger.debug("user re-authed, merging auth data")
 
