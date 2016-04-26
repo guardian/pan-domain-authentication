@@ -7,7 +7,7 @@ import play.api.Logger
 import play.api.Play.current
 import play.api.mvc.Results._
 import play.api.mvc._
-
+import scala.util.control.NonFatal
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
@@ -115,12 +115,16 @@ trait AuthActions extends PanDomainAuth {
 
     val existingCookie = readCookie(request) // will be populated if this was a re-auth for expired login
 
-    // use legacy cookie in the check for now, even though both are dropped
-    // phase two of the rollout will be to use the assymetric cookie
+    // use both parsers until we complete the transition to only set the assymetric cookie.
     GoogleAuth.validatedUserIdentity(token).map { claimedAuth =>
       val authedUserData = existingCookie match {
         case Some(c) => {
-          val existingAuth = LegacyCookie.parseCookieData(c.value, settings.secret)
+          val existingAuth = try {
+            CookieUtils.parseCookieData(c.value, settings.publicKey)
+          } catch {
+            case NonFatal(e) =>
+              LegacyCookie.parseCookieData(c.value, settings.secret)
+          }
           Logger.debug("user re-authed, merging auth data")
 
           claimedAuth.copy(
