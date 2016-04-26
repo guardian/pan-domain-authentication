@@ -7,7 +7,7 @@ import play.api.Logger
 import play.api.Play.current
 import play.api.mvc.Results._
 import play.api.mvc._
-
+import scala.util.control.NonFatal
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
@@ -122,7 +122,7 @@ trait AuthActions extends PanDomainAuth {
           val existingAuth = try {
             CookieUtils.parseCookieData(c.value, settings.publicKey)
           } catch {
-            case e: Exception =>
+            case NonFatal(e) =>
               LegacyCookie.parseCookieData(c.value, settings.secret)
           }
           Logger.debug("user re-authed, merging auth data")
