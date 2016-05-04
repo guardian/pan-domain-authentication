@@ -17,7 +17,8 @@ object Dependencies {
   val playLibs_2_4_0 = Seq(
     "com.typesafe.play" %% "play" % "2.4.0" % "provided",
     "com.typesafe.play" %% "play-ws" % "2.4.0" % "provided",
-    "commons-codec" % "commons-codec" % "1.9"
+    "commons-codec" % "commons-codec" % "1.9",
+    "net.databinder.dispatch" %% "dispatch-core" % "0.11.3"
   )
 
   val googleDirectoryApiDependencies = Seq(
