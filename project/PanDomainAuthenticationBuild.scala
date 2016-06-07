@@ -1,8 +1,6 @@
 import plugins.PlayArtifact._
 import sbt._
 import sbt.Keys._
-import play.Play.autoImport._
-import PlayKeys._
 import sbtassembly.Plugin.{AssemblyKeys, MergeStrategy}
 import AssemblyKeys._
 import Dependencies._
@@ -91,14 +89,6 @@ object PanDomainAuthenticationBuild extends Build {
       publishArtifact := true
     )
 
-  lazy val panDomainAuthPlay = project("pan-domain-auth-play")
-    .dependsOn(panDomainAuthCore, panDomainAuthVerification)
-    .settings(sonatypeReleaseSettings: _*)
-    .settings(
-      libraryDependencies ++= playLibs,
-      publishArtifact := true
-    )
-
   lazy val panDomainAuthPlay_2_4_0 = project("pan-domain-auth-play_2-4-0")
     .settings(sonatypeReleaseSettings: _*)
     .settings(
@@ -115,13 +105,12 @@ object PanDomainAuthenticationBuild extends Build {
 
   lazy val exampleApp = playProject("pan-domain-auth-example")
                   .settings(libraryDependencies ++= awsDependencies)
-                  .settings(playDefaultPort := 9500)
-                  .dependsOn(panDomainAuthPlay)
+                  //.settings(playDefaultPort := 9500)
+                  .dependsOn(panDomainAuthPlay_2_5)
 
   lazy val root = Project("pan-domain-auth-root", file(".")).aggregate(
     panDomainAuthVerification,
     panDomainAuthCore,
-    panDomainAuthPlay,
     panDomainAuthPlay_2_4_0,
     panDomainAuthPlay_2_5,
     exampleApp
@@ -135,9 +124,9 @@ object PanDomainAuthenticationBuild extends Build {
     Project(path, file(path)).settings(commonSettings: _*)
 
   def playProject(path: String): Project =
-    Project(path, file(path)).enablePlugins(play.PlayScala)
+    Project(path, file(path)).enablePlugins(play.sbt.PlayScala)
       .settings(commonSettings ++ sonatypeReleaseSettings ++ playArtifactDistSettings ++ playArtifactSettings: _*)
-      .settings(libraryDependencies += ws)
+      .settings(libraryDependencies += play.sbt.PlayImport.ws)
       .settings(magentaPackageName := path)
 
   def playArtifactSettings = Seq(
