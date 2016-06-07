@@ -16,11 +16,13 @@ import com.typesafe.sbt.pgp.PgpKeys
 
 object PanDomainAuthenticationBuild extends Build {
 
+  val scala211 = "2.11.8"
+
   val commonSettings =
     Seq(
-      scalaVersion := "2.11.1",
-      scalaVersion in ThisBuild := "2.11.1",
-      crossScalaVersions := Seq("2.10.4", "2.11.1"),
+      scalaVersion := scala211,
+      scalaVersion in ThisBuild := scala211,
+      crossScalaVersions := Seq(scala211),
       organization := "com.gu",
       fork in Test := false,
       resolvers ++= Seq("Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"),
@@ -124,7 +126,7 @@ object PanDomainAuthenticationBuild extends Build {
     panDomainAuthPlay_2_5,
     exampleApp
   ).settings(sonatypeReleaseSettings: _*).settings(
-      crossScalaVersions := Seq("2.10.4", "2.11.1"),
+      crossScalaVersions := Seq(scala211),
       organization := "com.gu",
       publishArtifact := false
     )
