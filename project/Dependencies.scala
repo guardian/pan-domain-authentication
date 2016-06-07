@@ -21,6 +21,12 @@ object Dependencies {
     "net.databinder.dispatch" %% "dispatch-core" % "0.11.3"
   )
 
+  val playLibs_2_5 = Seq(
+    "com.typesafe.play" %% "play" % "2.5.3" % "provided",
+    "com.typesafe.play" %% "play-ws" % "2.5.3" % "provided",
+    "commons-codec" % "commons-codec" % "1.9"
+  )
+
   val googleDirectoryApiDependencies = Seq(
     "com.google.api-client" % "google-api-client" % "1.19.1",
     "com.google.apis" % "google-api-services-admin" % "directory_v1-rev32-1.16.0-rc"

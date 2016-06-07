@@ -1,20 +1,26 @@
 package com.gu.pandomainauth.action
 
-import com.gu.pandomainauth.{PanDomain, PanDomainAuth, PublicSettings}
 import com.gu.pandomainauth.model._
 import com.gu.pandomainauth.service._
+import com.gu.pandomainauth.{PanDomain, PanDomainAuth, PublicSettings}
 import play.api.Logger
-import play.api.Play.current
+import play.api.libs.ws.WSClient
 import play.api.mvc.Results._
 import play.api.mvc._
-import scala.util.control.NonFatal
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.util.control.NonFatal
 
 
 class UserRequest[A](val user: User, request: Request[A]) extends WrappedRequest[A](request)
 
 trait AuthActions extends PanDomainAuth {
+
+  /**
+    * Play application
+    */
+  def wsClient: WSClient
 
   /**
    * Returns true if the authed user is valid in the implementing system (meets your multifactor requirements, you recognise the email etc.).
@@ -76,7 +82,8 @@ trait AuthActions extends PanDomainAuth {
    */
   def sendForAuth[A](implicit request: RequestHeader, email: Option[String] = None) = {
     val antiForgeryToken = GoogleAuth.generateAntiForgeryToken()
-    GoogleAuth.redirectToGoogle(antiForgeryToken, email).map { res =>
+    GoogleAuth.redirectToGoogle(antiForgeryToken, email)(global, request, wsClient).map { res =>
+
       val originUrl = request.uri
       res.withSession { request.session + (ANTI_FORGERY_KEY -> antiForgeryToken) + (LOGIN_ORIGIN_KEY -> originUrl) }
     }
@@ -116,7 +123,7 @@ trait AuthActions extends PanDomainAuth {
     val existingCookie = readCookie(request) // will be populated if this was a re-auth for expired login
 
     // use both parsers until we complete the transition to only set the assymetric cookie.
-    GoogleAuth.validatedUserIdentity(token).map { claimedAuth =>
+    GoogleAuth.validatedUserIdentity(token)(request, global, wsClient).map { claimedAuth =>
       val authedUserData = existingCookie match {
         case Some(c) => {
           val existingAuth = try {

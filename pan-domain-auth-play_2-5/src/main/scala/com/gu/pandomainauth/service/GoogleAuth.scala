@@ -1,15 +1,16 @@
 package com.gu.pandomainauth.service
 
-import com.gu.pandomainauth.model.{User, GoogleAuthSettings, AuthenticatedUser}
-import play.api.mvc.Results.Redirect
-import play.api.mvc.{Call, Result, RequestHeader}
-import scala.concurrent.{ExecutionContext, Future}
-import play.api.libs.ws.{WSResponse, WS}
-import play.api.libs.json.JsValue
-import scala.language.postfixOps
 import java.math.BigInteger
 import java.security.SecureRandom
-import play.api.Application
+
+import com.gu.pandomainauth.model.{AuthenticatedUser, GoogleAuthSettings, User}
+import play.api.libs.json.JsValue
+import play.api.libs.ws.{WSClient, WSResponse}
+import play.api.mvc.Results.Redirect
+import play.api.mvc.{RequestHeader, Result}
+
+import scala.concurrent.{ExecutionContext, Future}
+import scala.language.postfixOps
 
 
 class GoogleAuthException(val message: String, val throwable: Throwable = null) extends Exception(message, throwable)
@@ -17,10 +18,10 @@ class GoogleAuthException(val message: String, val throwable: Throwable = null) 
 class GoogleAuth(config: GoogleAuthSettings, system: String, redirectUrl: String) {
   var discoveryDocumentHolder: Option[Future[DiscoveryDocument]] = None
 
-  private def discoveryDocument(implicit context: ExecutionContext, application: Application): Future[DiscoveryDocument] =
+  private def discoveryDocument(implicit context: ExecutionContext, ws: WSClient): Future[DiscoveryDocument] =
     if (discoveryDocumentHolder.isDefined) discoveryDocumentHolder.get
     else {
-      val discoveryDocumentFuture = WS.url(DiscoveryDocument.url).get().map(r => DiscoveryDocument.fromJson(r.json))
+      val discoveryDocumentFuture = ws.url(DiscoveryDocument.url).get().map(r => DiscoveryDocument.fromJson(r.json))
       discoveryDocumentHolder = Some(discoveryDocumentFuture)
       discoveryDocumentFuture
     }
@@ -44,7 +45,7 @@ class GoogleAuth(config: GoogleAuthSettings, system: String, redirectUrl: String
   }
 
   def redirectToGoogle(antiForgeryToken: String, email: Option[String] = None)
-                      (implicit context: ExecutionContext, application: Application, request: RequestHeader): Future[Result] = {
+                      (implicit context: ExecutionContext, request: RequestHeader, ws: WSClient): Future[Result] = {
     val queryString: Map[String, Seq[String]] = Map(
       "client_id" -> Seq(config.googleAuthClient),
       "response_type" -> Seq("code"),
@@ -57,13 +58,13 @@ class GoogleAuth(config: GoogleAuthSettings, system: String, redirectUrl: String
   }
 
   def validatedUserIdentity(expectedAntiForgeryToken: String)
-                           (implicit request: RequestHeader, context: ExecutionContext, application: Application): Future[AuthenticatedUser] = {
+                           (implicit request: RequestHeader, context: ExecutionContext, ws: WSClient): Future[AuthenticatedUser] = {
     if (!request.queryString.getOrElse("state", Nil).contains(expectedAntiForgeryToken)) {
       throw new IllegalArgumentException("The anti forgery token did not match")
     } else {
       discoveryDocument.flatMap { dd =>
         val code = request.queryString("code")
-        WS.url(dd.token_endpoint).post {
+        ws.url(dd.token_endpoint).post {
           Map(
             "code" -> code,
             "client_id" -> Seq(config.googleAuthClient),
@@ -75,7 +76,7 @@ class GoogleAuth(config: GoogleAuthSettings, system: String, redirectUrl: String
           googleResponse(response) { json =>
             val token = Token.fromJson(json)
             val jwt = token.jwt
-            WS.url(dd.userinfo_endpoint)
+            ws.url(dd.userinfo_endpoint)
               .withHeaders("Authorization" -> s"Bearer ${token.access_token}")
               .get().map { response =>
               googleResponse(response) { json =>
