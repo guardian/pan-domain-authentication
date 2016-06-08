@@ -1,8 +1,6 @@
 import plugins.PlayArtifact._
 import sbt._
 import sbt.Keys._
-import play.Play.autoImport._
-import PlayKeys._
 import sbtassembly.Plugin.{AssemblyKeys, MergeStrategy}
 import AssemblyKeys._
 import Dependencies._
@@ -12,15 +10,18 @@ import ReleaseStateTransformations._
 import xerial.sbt.Sonatype.SonatypeKeys
 import xerial.sbt.Sonatype._
 import com.typesafe.sbt.pgp.PgpKeys
+import play.sbt.routes.RoutesKeys._
 
 
 object PanDomainAuthenticationBuild extends Build {
 
+  val scala211 = "2.11.8"
+
   val commonSettings =
     Seq(
-      scalaVersion := "2.11.1",
-      scalaVersion in ThisBuild := "2.11.1",
-      crossScalaVersions := Seq("2.10.4", "2.11.1"),
+      scalaVersion := scala211,
+      scalaVersion in ThisBuild := scala211,
+      crossScalaVersions := Seq(scala211),
       organization := "com.gu",
       fork in Test := false,
       resolvers ++= Seq("Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"),
@@ -89,14 +90,6 @@ object PanDomainAuthenticationBuild extends Build {
       publishArtifact := true
     )
 
-  lazy val panDomainAuthPlay = project("pan-domain-auth-play")
-    .dependsOn(panDomainAuthCore, panDomainAuthVerification)
-    .settings(sonatypeReleaseSettings: _*)
-    .settings(
-      libraryDependencies ++= playLibs,
-      publishArtifact := true
-    )
-
   lazy val panDomainAuthPlay_2_4_0 = project("pan-domain-auth-play_2-4-0")
     .settings(sonatypeReleaseSettings: _*)
     .settings(
@@ -113,18 +106,17 @@ object PanDomainAuthenticationBuild extends Build {
 
   lazy val exampleApp = playProject("pan-domain-auth-example")
                   .settings(libraryDependencies ++= awsDependencies)
-                  .settings(playDefaultPort := 9500)
-                  .dependsOn(panDomainAuthPlay)
+                  //.settings(playDefaultPort := 9500)
+                  .dependsOn(panDomainAuthPlay_2_5)
 
   lazy val root = Project("pan-domain-auth-root", file(".")).aggregate(
     panDomainAuthVerification,
     panDomainAuthCore,
-    panDomainAuthPlay,
     panDomainAuthPlay_2_4_0,
     panDomainAuthPlay_2_5,
     exampleApp
   ).settings(sonatypeReleaseSettings: _*).settings(
-      crossScalaVersions := Seq("2.10.4", "2.11.1"),
+      crossScalaVersions := Seq(scala211),
       organization := "com.gu",
       publishArtifact := false
     )
@@ -133,9 +125,12 @@ object PanDomainAuthenticationBuild extends Build {
     Project(path, file(path)).settings(commonSettings: _*)
 
   def playProject(path: String): Project =
-    Project(path, file(path)).enablePlugins(play.PlayScala)
+    Project(path, file(path)).enablePlugins(play.sbt.PlayScala)
       .settings(commonSettings ++ sonatypeReleaseSettings ++ playArtifactDistSettings ++ playArtifactSettings: _*)
-      .settings(libraryDependencies += ws)
+      .settings(
+        libraryDependencies += play.sbt.PlayImport.ws,
+        routesGenerator := InjectedRoutesGenerator
+      )
       .settings(magentaPackageName := path)
 
   def playArtifactSettings = Seq(

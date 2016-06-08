@@ -1,11 +1,16 @@
 package controllers
 
-import play.api.mvc.{ Action, Controller}
+import javax.inject.Inject
+
+import play.api.Configuration
+import play.api.mvc.{Action, Controller}
 import play.api.Play.configuration
 import play.api.Play.current
+import play.api.libs.ws.WSClient
 
 
-object AdminController extends Controller with ExampleAuthActions {
+class AdminController (override val config: Configuration, override val wsClient: WSClient)
+  extends Controller with ExampleAuthActions {
 
   def index = Action{Ok("hello")}
 
@@ -13,7 +18,7 @@ object AdminController extends Controller with ExampleAuthActions {
     Ok(req.user.toString)
   }
 
-  def oathCallback = Action.async { implicit request =>
+  def oauthCallback = Action.async { implicit request =>
     processGoogleCallback()
   }
 

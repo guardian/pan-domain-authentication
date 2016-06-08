@@ -2,8 +2,6 @@ package plugins
 
 import sbt._
 import sbt.Keys._
-import play.Play.autoImport._
-import PlayKeys._
 import sbtassembly.Plugin._
 import sbtassembly.Plugin.AssemblyKeys._
 import com.typesafe.sbt.packager
