@@ -9,7 +9,7 @@ import play.api.Play.current
 import play.api.libs.ws.WSClient
 
 
-class AdminController @Inject() (override val config: Configuration, override val wsClient: WSClient)
+class AdminController (override val config: Configuration, override val wsClient: WSClient)
   extends Controller with ExampleAuthActions {
 
   def index = Action{Ok("hello")}

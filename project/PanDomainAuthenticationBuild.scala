@@ -10,6 +10,7 @@ import ReleaseStateTransformations._
 import xerial.sbt.Sonatype.SonatypeKeys
 import xerial.sbt.Sonatype._
 import com.typesafe.sbt.pgp.PgpKeys
+import play.sbt.routes.RoutesKeys._
 
 
 object PanDomainAuthenticationBuild extends Build {
@@ -126,7 +127,10 @@ object PanDomainAuthenticationBuild extends Build {
   def playProject(path: String): Project =
     Project(path, file(path)).enablePlugins(play.sbt.PlayScala)
       .settings(commonSettings ++ sonatypeReleaseSettings ++ playArtifactDistSettings ++ playArtifactSettings: _*)
-      .settings(libraryDependencies += play.sbt.PlayImport.ws)
+      .settings(
+        libraryDependencies += play.sbt.PlayImport.ws,
+        routesGenerator := InjectedRoutesGenerator
+      )
       .settings(magentaPackageName := path)
 
   def playArtifactSettings = Seq(
