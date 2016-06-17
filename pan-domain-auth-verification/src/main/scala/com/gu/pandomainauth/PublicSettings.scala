@@ -117,14 +117,14 @@ object PublicSettings {
   private[pandomainauth] def extractPublicKey(settings: Map[String, String]): Future[PublicKey] = {
     (for {
       rawKey <- settings.get("publicKey").toRight(PublicKeyNotFoundException).right
-      publicKey <- validateKey(rawKey).right
+      publicKey <- validateKey(PublicKey(rawKey)).right
     } yield publicKey) match {
       case Right(publicKey) => Future.successful(publicKey)
       case Left(err) => Future.failed(err)
     }
   }
-  private[pandomainauth] def validateKey(pubKey: String): Either[Throwable, PublicKey] = {
-    if ("[a-zA-Z0-9+/\n]+={0,3}".r.pattern.matcher(pubKey).matches) Right(PublicKey(pubKey))
+  private[pandomainauth] def validateKey(pubKey: PublicKey): Either[Throwable, PublicKey] = {
+    if ("[a-zA-Z0-9+/\n]+={0,3}".r.pattern.matcher(pubKey.key).matches) Right(pubKey)
     else Left(PublicKeyFormatException)
   }
 
