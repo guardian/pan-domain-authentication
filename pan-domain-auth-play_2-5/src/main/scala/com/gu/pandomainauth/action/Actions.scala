@@ -122,21 +122,15 @@ trait AuthActions extends PanDomainAuth {
 
     val existingCookie = readCookie(request) // will be populated if this was a re-auth for expired login
 
-    // use both parsers until we complete the transition to only set the assymetric cookie.
     GoogleAuth.validatedUserIdentity(token)(request, global, wsClient).map { claimedAuth =>
       val authedUserData = existingCookie match {
         case Some(c) => {
-          val existingAuth = try {
-            CookieUtils.parseCookieData(c.value, settings.publicKey)
-          } catch {
-            case NonFatal(e) =>
-              LegacyCookie.parseCookieData(c.value, settings.secret)
-          }
+          val existingAuth = CookieUtils.parseCookieData(c.value, settings.publicKey)
           Logger.debug("user re-authed, merging auth data")
 
           claimedAuth.copy(
             authenticatingSystem = system,
-            authenticatedIn = Set(system),
+            authenticatedIn = existingAuth.authenticatedIn ++ Set(system),
             multiFactor = checkMultifactor(claimedAuth)
           )
         }
@@ -161,11 +155,11 @@ trait AuthActions extends PanDomainAuth {
 
 
   def readAuthenticatedUser(request: RequestHeader): Option[AuthenticatedUser] = readCookie(request) map { cookie =>
-    CookieUtils.parseCookieData(cookie.value, settings.secret)
+    CookieUtils.parseCookieData(cookie.value, settings.publicKey)
   }
 
 
-  def readCookie(request: RequestHeader): Option[Cookie] = request.cookies.get(PublicSettings.cookieName)
+  def readCookie(request: RequestHeader): Option[Cookie] = request.cookies.get(PublicSettings.assymCookieName)
 
   def generateCookies(authedUser: AuthenticatedUser): List[Cookie] = List(
     Cookie(
