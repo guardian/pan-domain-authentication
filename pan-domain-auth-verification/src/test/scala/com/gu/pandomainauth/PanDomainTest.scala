@@ -72,19 +72,4 @@ class PanDomainTest extends FreeSpec with Matchers with Inside {
       PanDomain.guardianValidation(invalidUser) should equal(false)
     }
   }
-
-  "authStatusWithLegacyCheck" - {
-    val authUser = AuthenticatedUser(User("test", "user", "test.user@example.com", None), "testsuite", Set("testsuite"), new Date().getTime + 86400, multiFactor = true)
-    val testSecret = "test"
-
-    "works with a new cookie" in {
-      val cookieData = CookieUtils.generateCookieData(authUser, testPrivateKey)
-      PanDomain.authStatusWithLegacyCheck(cookieData, testPublicKey, testSecret) shouldBe a[Authenticated]
-    }
-
-    "works with a legacy cookie" in {
-      val cookieData = LegacyCookie.generateCookieData(authUser, testSecret)
-      PanDomain.authStatusWithLegacyCheck(cookieData, testPublicKey, testSecret) shouldBe a[Authenticated]
-    }
-  }
 }

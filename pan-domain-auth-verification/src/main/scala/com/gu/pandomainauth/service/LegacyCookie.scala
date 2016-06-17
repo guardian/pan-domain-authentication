@@ -26,20 +26,6 @@ object LegacyCookie {
     new String(Hex.encodeHex(mac.doFinal(message.getBytes("UTF-8"))))
   }
 
-  def parseCookieData(cookieString: String, secret: Secret): AuthenticatedUser = {
-
-    cookieString match {
-      case CookieRegEx(data, sig) =>
-        val computedSig = generateSignature(data, secret)
-        if (safeEquals(sig, computedSig)) {
-            CookieUtils.deserializeAuthenticatedUser(decode(data))
-        } else {
-        throw new CookieSignatureInvalidException
-        }
-      case _ => throw new CookieParseException
-    }
-  }
-
   // Cribbed from the play framework equivalent - seems like a sound idea
   // Do not change this unless you understand the security issues behind timing attacks.
   // This method intentionally runs in constant time if the two strings have the same length.

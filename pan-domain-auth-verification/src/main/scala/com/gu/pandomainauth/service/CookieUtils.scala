@@ -37,7 +37,7 @@ object CookieUtils {
   def generateCookieData(authUser: AuthenticatedUser, prvKey: PrivateKey): String = {
     val data = serializeAuthenticatedUser(authUser)
     val encodedData = new String(Base64.encodeBase64(data.getBytes("UTF-8")))
-    val signature = Crypto.signData(data.getBytes("UTF-8"), prvKey.key)
+    val signature = Crypto.signData(data.getBytes("UTF-8"), prvKey)
     val encodedSignature = new String(Base64.encodeBase64(signature))
 
     s"$encodedData.$encodedSignature"
@@ -50,7 +50,7 @@ object CookieUtils {
     cookieString match {
       case CookieRegEx(data, sig) =>
         try {
-          if (Crypto.verifySignature(Base64.decodeBase64(data.getBytes("UTF-8")), Base64.decodeBase64(sig.getBytes("UTF-8")), pubKey.key)) {
+          if (Crypto.verifySignature(Base64.decodeBase64(data.getBytes("UTF-8")), Base64.decodeBase64(sig.getBytes("UTF-8")), pubKey)) {
             deserializeAuthenticatedUser(new String(Base64.decodeBase64(data.getBytes("UTF-8"))))
           } else {
             throw new CookieSignatureInvalidException

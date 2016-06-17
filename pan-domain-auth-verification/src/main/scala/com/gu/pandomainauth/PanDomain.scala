@@ -18,25 +18,6 @@ object PanDomain {
     }
   }
 
-  /**
-   * Cookie check that includes the legacy cookie. This is required during a period of transition
-   * between the old cookie and the new assymetric one.
-   */
-  def authStatusWithLegacyCheck(cookieData: String, publicKey: PublicKey, secret: Secret): AuthenticationStatus = {
-    try {
-      val authedUser = try {
-        CookieUtils.parseCookieData(cookieData, publicKey)
-      } catch {
-        case e: Exception =>
-          LegacyCookie.parseCookieData(cookieData, secret)
-      }
-      checkStatus(authedUser, _ => true)
-    } catch {
-      case e: Exception =>
-        InvalidCookie(e)
-    }
-  }
-
   private def checkStatus(authedUser: AuthenticatedUser, validateUser: AuthenticatedUser => Boolean = guardianValidation): AuthenticationStatus = {
     if (authedUser.isExpired) {
       Expired(authedUser)

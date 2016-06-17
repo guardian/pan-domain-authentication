@@ -23,13 +23,13 @@ class PublicSettingsTest extends FreeSpec with Matchers with EitherValues with S
 
     "returns the key if it is valid" in {
       val key = TestKeys.testPublicKey
-      PublicSettings.validateKey(key).right.value shouldEqual key
+      PublicSettings.validateKey(key.key).right.value shouldEqual key
     }
   }
 
   "extractPublicKey" - {
     "will get a public key from a valid settings map" in {
-      PublicSettings.extractPublicKey(Map("publicKey" -> TestKeys.testPublicKey)).futureValue shouldEqual TestKeys.testPublicKey
+      PublicSettings.extractPublicKey(Map("publicKey" -> TestKeys.testPublicKey.key)).futureValue shouldEqual TestKeys.testPublicKey
     }
 
     "will reject a key that is not correctly formatted" in {
