@@ -2,7 +2,8 @@ package com.gu.pandomainauth.service
 
 import java.security.SignatureException
 
-import com.gu.pandomainauth.model.{CookieParseException, CookieSignatureInvalidException, AuthenticatedUser, User}
+import com.gu.pandomainauth.{PrivateKey, PublicKey}
+import com.gu.pandomainauth.model.{AuthenticatedUser, CookieParseException, CookieSignatureInvalidException, User}
 import org.apache.commons.codec.binary.Base64
 
 object CookieUtils {
@@ -33,10 +34,10 @@ object CookieUtils {
     )
   }
 
-  def generateCookieData(authUser: AuthenticatedUser, prvKeyString: String): String = {
+  def generateCookieData(authUser: AuthenticatedUser, prvKey: PrivateKey): String = {
     val data = serializeAuthenticatedUser(authUser)
     val encodedData = new String(Base64.encodeBase64(data.getBytes("UTF-8")))
-    val signature = Crypto.signData(data.getBytes("UTF-8"), prvKeyString)
+    val signature = Crypto.signData(data.getBytes("UTF-8"), prvKey)
     val encodedSignature = new String(Base64.encodeBase64(signature))
 
     s"$encodedData.$encodedSignature"
@@ -44,12 +45,12 @@ object CookieUtils {
 
   lazy val CookieRegEx = "^^([\\w\\W]*)\\.([\\w\\W]*)$".r
 
-  def parseCookieData(cookieString: String, pubKeyStr: String): AuthenticatedUser = {
+  def parseCookieData(cookieString: String, pubKey: PublicKey): AuthenticatedUser = {
 
     cookieString match {
       case CookieRegEx(data, sig) =>
         try {
-          if (Crypto.verifySignature(Base64.decodeBase64(data.getBytes("UTF-8")), Base64.decodeBase64(sig.getBytes("UTF-8")), pubKeyStr)) {
+          if (Crypto.verifySignature(Base64.decodeBase64(data.getBytes("UTF-8")), Base64.decodeBase64(sig.getBytes("UTF-8")), pubKey)) {
             deserializeAuthenticatedUser(new String(Base64.decodeBase64(data.getBytes("UTF-8"))))
           } else {
             throw new CookieSignatureInvalidException

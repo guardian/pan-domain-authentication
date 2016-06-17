@@ -3,6 +3,7 @@ package com.gu.pandomainauth.service
 import java.security.spec.{PKCS8EncodedKeySpec, X509EncodedKeySpec}
 import java.security.{KeyFactory, Security, Signature}
 
+import com.gu.pandomainauth.{PrivateKey, PublicKey}
 import org.apache.commons.codec.binary.Base64._
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 
@@ -22,18 +23,18 @@ object Crypto {
   val signatureAlgorithm: String = "SHA256withRSA"
   val keyFactory = KeyFactory.getInstance("RSA")
 
-  def signData(data: Array[Byte], prvKeyStr: String): Array[Byte] = {
+  def signData(data: Array[Byte], prvKey: PrivateKey): Array[Byte] = {
     val rsa = Signature.getInstance(signatureAlgorithm, "BC")
-    val privateKey = keyFactory.generatePrivate(new PKCS8EncodedKeySpec(decodeBase64(prvKeyStr)))
+    val privateKey = keyFactory.generatePrivate(new PKCS8EncodedKeySpec(decodeBase64(prvKey.key)))
     rsa.initSign(privateKey)
 
     rsa.update(data)
     rsa.sign()
   }
 
-  def verifySignature(data: Array[Byte], signature: Array[Byte], pubKeyStr: String) : Boolean = {
+  def verifySignature(data: Array[Byte], signature: Array[Byte], pubKey: PublicKey) : Boolean = {
     val rsa = Signature.getInstance(signatureAlgorithm, "BC")
-    val publicKey = keyFactory.generatePublic(new X509EncodedKeySpec(decodeBase64(pubKeyStr)))
+    val publicKey = keyFactory.generatePublic(new X509EncodedKeySpec(decodeBase64(pubKey.key)))
     rsa.initVerify(publicKey)
 
     rsa.update(data)

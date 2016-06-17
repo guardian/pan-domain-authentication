@@ -1,11 +1,14 @@
 package com.gu.pandomainauth.service
 
+import com.gu.pandomainauth.{PrivateKey, PublicKey}
+
 object TestKeys {
 
   /**
    * A test public/private key-pair
    */
-  val testPublicKey = """MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEA5AGsiD19GMj8p8jFLRAg
+  val testPublicKey = PublicKey(
+                      """MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEA5AGsiD19GMj8p8jFLRAg
                         |k0z8SFrOU7J3VBCsSn6ByS9tMpkvI9PFWwcmwxgGXAbWkPWOfyC0nNyQPx8MhgRt
                         |zqS+X6j07juaaLnkHh8KmdLYyE7JGH9AfTI2gNI2qvSFhlvYqX8EVVSmooMz6zBu
                         |TIrn9aT9eJRsqBtNw5NKp2lB7FIBUs6by9apZxXXJbwNwe+sIAIpin2Mhg9mQjjS
@@ -16,8 +19,9 @@ object TestKeys {
                         |k5VsihN5iSGSlTqy1/sBppxsd+1955ukKmJsbdbHZoVceqKpVAIlXt8uFHybRp1y
                         |q19rXt5nBnpqVND80oPPn1wc1WrSy1sm8aQwtKSBoNJgvO6diuKPtX2BnQxzKjEw
                         |p2RyzmRIBIw16kjPNLKGgakrJOZP51gFdOA1qjUA44w0V2mxbszq40aMYFsI5Kyd
-                        |qqXkOlqIoeN8DHVaNBPiSakCAwEAAQ==""".stripMargin
-  val testPrivateKey = """MIIJKQIBAAKCAgEA5AGsiD19GMj8p8jFLRAgk0z8SFrOU7J3VBCsSn6ByS9tMpkv
+                        |qqXkOlqIoeN8DHVaNBPiSakCAwEAAQ==""".stripMargin)
+  val testPrivateKey = PrivateKey(
+                       """MIIJKQIBAAKCAgEA5AGsiD19GMj8p8jFLRAgk0z8SFrOU7J3VBCsSn6ByS9tMpkv
                          |I9PFWwcmwxgGXAbWkPWOfyC0nNyQPx8MhgRtzqS+X6j07juaaLnkHh8KmdLYyE7J
                          |GH9AfTI2gNI2qvSFhlvYqX8EVVSmooMz6zBuTIrn9aT9eJRsqBtNw5NKp2lB7FIB
                          |Us6by9apZxXXJbwNwe+sIAIpin2Mhg9mQjjSMSKet0NY3THlUQwGSCvMVs+CD9My
@@ -65,12 +69,13 @@ object TestKeys {
                          |YKkd8Tsi/AKIOmPmGQo7OueR/ogeicTLPhidoG9409x1rmKyEsFwjbHTXbQPqhYa
                          |wXED1ryRmJJQ0YvAm53fex+Hvh6+8gCAP0Rb13UaQnnD53+OPYpzqcoGL5idrhnb
                          |Uk5PRs9HcBnKK3+FLkzvu2lJsUd9LxZCNjabNslaiaJAc98DJCaHgplPhoyRpc5l
-                         |CPdFb0yoYfBZjP3DRXJj2koucqru+2tu2WX+HT216OrB8b20CmUlUynwJvtj""".stripMargin
+                         |CPdFb0yoYfBZjP3DRXJj2koucqru+2tu2WX+HT216OrB8b20CmUlUynwJvtj""".stripMargin)
 
   /**
    * A valid private key that does not match the public key (useful to test things fail with the wrong key)
    */
-  val testINCORRECTPrivateKey = """MIIEpQIBAAKCAQEA2rEzkKiGmC1Dy+MlBESQDhaokUKGKnbyB+8AoZ3dWvMKkUiC
+  val testINCORRECTPrivateKey = PrivateKey(
+                                """MIIEpQIBAAKCAQEA2rEzkKiGmC1Dy+MlBESQDhaokUKGKnbyB+8AoZ3dWvMKkUiC
                                   |u6LoXRPePT9ncKVtJk0fnv08Ca+eP4JOaVJMxZoHnDzhwMeRzmofHlqE6IMsU0vq
                                   |ZHZLV0+WDRCjlScZ5xq/Pvi2HUXTDrGp+DmLzibkerPBNd6f2sMeGpuGXD6ha0no
                                   |PyWjXDmhKioaadoYvgyHZ/i5gbOVFRmBzNadsgemAo8FGtAPIE3cd0AKfgAuuGyW
@@ -94,5 +99,5 @@ object TestKeys {
                                   |VXKUJ9NC3B7uXbyOhWbMrFAdh9TugWM1MdtxRn5hVCyhz2qKDbA5nKKiLmvhM+bd
                                   |Rx4btn8CgYEA8tCxTDjHi/TA3KV5+rHjCo0IYRIvywg6bqy0dDwcZjQ288bm3qPD
                                   |o9PbUxP5TRl8LwEorThRXatdFvOwKC5LDtzyXWzkHbpV2Yu+e5QGZw2HGOKZ3AjC
-                                  |JYA7mT0eNFmOa/d1W8NdXhh6YKYiV4y8q07WVtLUnBowMoa8tgB/53w=""".stripMargin
+                                  |JYA7mT0eNFmOa/d1W8NdXhh6YKYiV4y8q07WVtLUnBowMoa8tgB/53w=""".stripMargin)
 }
