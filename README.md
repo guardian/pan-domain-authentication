@@ -42,7 +42,7 @@ The `pan-domain-auth-core` library provides the core utilities to load the domai
 check if the user has mutlifactor auth turned on (see below). Note this does not include the Google oath dance code or cookie setting
 as these vary based on web framework being used by implementing apps.
 
-The `pan-domain-auth-play` library provides an implementation for play apps. There is an auth action that can be applied to the
+The `pan-domain-auth-play` libraries (`2-4-0` and `2-5`) provide an implementation for play apps. There is an auth action that can be applied to the
 endpoints in you appliciation that will do checking and setting of the cookie and will give you the Google authentication mechanism
 and callback. This is the only framework specific implementation currently (due to play being the framework predominantly used at the
 guardian), this can be used as reference if you need to implement another framework implementation. This library is for applications
@@ -58,7 +58,7 @@ cross compiled for scala 2.10.4 and 2.11.1. to include them via sbt:
 ### To verify logins
 
 ```
-"com.gu" %% "pan-domain-auth-verification" % "0.2.7"
+"com.gu" %% "pan-domain-auth-verification" % "0.3.0"
 ```
 
 To verify a login, you'll need to read the user's cookie value and verify its integrity. This is done using the
@@ -117,13 +117,13 @@ provided helper `PublicSettings.getPublicKey(domain)` helper function.
 ### If your application needs to issue logins
 
 ```
-"com.gu" %% "pan-domain-auth-core" % "0.2.7"
+"com.gu" %% "pan-domain-auth-core" % "0.3.0"
 ```
 
 or
 
 ```
-"com.gu" %% "pan-domain-auth-play" % "0.2.7"
+"com.gu" %% "pan-domain-auth-play_2-5" % "0.3.0"
 ```
 
 In both cases you will need to set up a few things, see `Requirements` below.
