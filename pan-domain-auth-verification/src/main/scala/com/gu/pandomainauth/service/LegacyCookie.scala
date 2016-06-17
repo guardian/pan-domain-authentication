@@ -3,6 +3,7 @@ package com.gu.pandomainauth.service
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
+import com.gu.pandomainauth.Secret
 import com.gu.pandomainauth.model.{AuthenticatedUser, CookieParseException, CookieSignatureInvalidException}
 import org.apache.commons.codec.binary.{Base64, Hex}
 
@@ -11,21 +12,21 @@ object LegacyCookie {
 
   lazy val CookieRegEx = "^^([\\w\\W]*)>>([\\w\\W]*)$".r
 
-  def generateCookieData(authUser: AuthenticatedUser, secret: String): String = {
+  def generateCookieData(authUser: AuthenticatedUser, secret: Secret): String = {
     val data = encode(CookieUtils.serializeAuthenticatedUser(authUser))
     val sign = generateSignature(data, secret)
 
     s"$data>>$sign"
   }
 
-  private def generateSignature(message: String, secret: String): String = {
+  private def generateSignature(message: String, secret: Secret): String = {
     val mac = Mac.getInstance("HmacSHA1")
-    mac.init(new SecretKeySpec(secret.getBytes, "HmacSHA1"))
+    mac.init(new SecretKeySpec(secret.secret.getBytes, "HmacSHA1"))
 
     new String(Hex.encodeHex(mac.doFinal(message.getBytes("UTF-8"))))
   }
 
-  def parseCookieData(cookieString: String, secret: String): AuthenticatedUser = {
+  def parseCookieData(cookieString: String, secret: Secret): AuthenticatedUser = {
 
     cookieString match {
       case CookieRegEx(data, sig) =>
