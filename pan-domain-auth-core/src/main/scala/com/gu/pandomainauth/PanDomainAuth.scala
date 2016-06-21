@@ -58,7 +58,7 @@ trait PanDomainAuth {
 
   actorSystem.scheduler.scheduleOnce(1 minute, domainSettingsRefreshActor, Refresh)
 
-  def shutdown = actorSystem.shutdown
+  def shutdown = actorSystem.terminate
 
   def settings = authSettings.get()
 }
