@@ -199,6 +199,10 @@ You can generate an rsa key pair as follows:
     openssl genrsa -out private_key.pem 4096
     openssl rsa -pubout -in private_key.pem -out public_key.pem
 
+There is a helper script in the root of this project that uses the commands above and outputs a new keypair in the format used by the panda settings file:
+
+    ./generateKeyPair.sh
+
 Note: you only need to pass the key ie the blob of base64 between the start and end markers in the pem file.
    
 
