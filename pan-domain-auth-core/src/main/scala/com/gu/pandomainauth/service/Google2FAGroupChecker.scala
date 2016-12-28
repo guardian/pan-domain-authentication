@@ -55,7 +55,7 @@ class GoogleGroupChecker(config: Google2FAGroupSettings, bucket: S3Bucket) exten
 
   def checkGroups(authenticatedUser: AuthenticatedUser, groupIds: List[String]): Boolean = {
     val query = directory.groups().list().setUserKey(authenticatedUser.user.email)
-    if(groupIds.isEmpty) false else groupIds.foldLeft(true){(acc, groupId) => acc & hasGroup(query, groupId)}
+    groupIds.foldLeft(true){(acc, groupId) => acc & hasGroup(query, groupId)}
   }
 
 }
