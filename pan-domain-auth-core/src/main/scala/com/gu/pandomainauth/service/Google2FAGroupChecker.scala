@@ -10,8 +10,7 @@ import com.google.api.services.admin.directory.{Directory, DirectoryScopes}
 import scala.collection.JavaConverters._
 import com.gu.pandomainauth.model.{AuthenticatedUser, Google2FAGroupSettings}
 
-class Google2FAGroupChecker(config: Google2FAGroupSettings, bucket: S3Bucket) {
-
+class GroupChecker(config: Google2FAGroupSettings, bucket: S3Bucket) {
   val transport = new NetHttpTransport()
   val jsonFactory = new JacksonFactory()
 
@@ -27,25 +26,6 @@ class Google2FAGroupChecker(config: Google2FAGroupSettings, bucket: S3Bucket) {
   val directory = new Directory.Builder(transport, jsonFactory, null)
     .setHttpRequestInitializer(credential).build
 
-
-  def checkMultifactor(authenticatedUser: AuthenticatedUser) = {
-
-    val query = directory.groups().list().setUserKey(authenticatedUser.user.email)
-    has2FAGroup(query)
-  }
-
-  private def has2FAGroup(query: Directory#Groups#List): Boolean = {
-    val groupsResponse = query.execute()
-    val hasGroupOnPage = Option(groupsResponse.getGroups()).map(_.asScala.exists(_.getEmail == config.multifactorGroupId)).getOrElse(false)
-    hasGroupOnPage || (if(hasMoreGroups(groupsResponse)) has2FAGroup( query.setPageToken(groupsResponse.getNextPageToken()) ) else false)
-  }
-
-  private def hasMoreGroups(groupsResponse: Groups) = {
-    val token = groupsResponse.getNextPageToken
-
-    token != null && token.length > 0
-  }
-
   private def loadServiceAccountPrivateKey = {
     val certInputStream = bucket.getObjectInputStream(config.serviceAccountCert)
     val serviceAccountPrivateKey = SecurityUtils.loadPrivateKeyFromKeyStore(
@@ -57,6 +37,35 @@ class Google2FAGroupChecker(config: Google2FAGroupSettings, bucket: S3Bucket) {
     try { certInputStream.close() } catch { case _ : Throwable => }
 
     serviceAccountPrivateKey
+  }
+
+  protected def hasGroup(query: Directory#Groups#List, groupId: String): Boolean = {
+    val groupsResponse = query.execute()
+    val hasGroupOnPage = Option(groupsResponse.getGroups).exists(_.asScala.exists(_.getEmail == groupId))
+    hasGroupOnPage || (if(hasMoreGroups(groupsResponse)) hasGroup( query.setPageToken(groupsResponse.getNextPageToken), groupId ) else false)
+  }
+
+  private def hasMoreGroups(groupsResponse: Groups): Boolean = {
+    val token = groupsResponse.getNextPageToken
+    token != null && token.length > 0
+  }
+}
+
+class GoogleGroupChecker(config: Google2FAGroupSettings, bucket: S3Bucket) extends GroupChecker(config, bucket) {
+
+  def checkGroups(authenticatedUser: AuthenticatedUser, groupIds: List[String]): Either[String, Boolean] = {
+    val query = directory.groups().list().setUserKey(authenticatedUser.user.email)
+    if (groupIds.isEmpty) Left("No groups specified.")
+    else Right(groupIds.foldLeft(true){(acc, groupId) => acc & hasGroup(query, groupId)})
+  }
+
+}
+
+class Google2FAGroupChecker(config: Google2FAGroupSettings, bucket: S3Bucket) extends GroupChecker(config, bucket) {
+
+  def checkMultifactor(authenticatedUser: AuthenticatedUser): Boolean = {
+    val query = directory.groups().list().setUserKey(authenticatedUser.user.email)
+    hasGroup(query, config.multifactorGroupId)
   }
 
 }
