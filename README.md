@@ -1,4 +1,5 @@
-# Pan Domain Authentication
+# Pan Domain Authentication 
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.11/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.11)
 
 Pan domain authentication provides distributed authentication for multiple webapps running in the same domain. Each
 application can authenticate users (currently by using Google's oauth mechanism, but other mechanisms could be added in the future)
