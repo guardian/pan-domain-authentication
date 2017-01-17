@@ -11,7 +11,7 @@ interactions (e.g javascript CORS or jsonp requests) can be easily secured.
 
 ## How it works
 
-Each application that needs to issue logins is configured with the domain, an application name and an AWS key. The AWS key allows
+Each application that needs to issue logins is configured with the domain, an application name and an AWS authorisation method which allows
 the application to connect to an S3 bucket (`pan-domain-auth-settings`) and download the settings for that domain (from a
 `<domain>.settings` file). The downloaded settings configure the public/private keypair used to sign and verify the
 login cookie as well as the credentials needed to authenticate with Google.
@@ -28,6 +28,23 @@ if they are valid then the cookie is updated to indicate this otherwise an error
 
 * if there is a cookie but it indicated the the authentication is expired then the user is sent off to Google to renew their session.
 On returning from Google the existing cookie is updated with the new expiry time.
+
+## Authorising to the s3 bucket
+If the application is running in the same AWS account as the pan-domain bucket (Workflow) then apps can access this by granting read
+access to the pan-domain bucket in the cloudformation script.
+For applications outside the Workflow account there is an example sts:AssumeRole script. You need to add your AWS accountId in the 
+parameters and upload this to the Workflow account and get the roleArn.
+
+In your PanDomainAuthActions include this:
+
+```
+override def awsCredentialsProvider  = {
+  new AWSCredentialsProviderChain(new STSAssumeRoleSessionCredentialsProvider({{roleArn}}, "yourapp"),
+                                  new ProfileCredentialsProvider("workflow"))
+} 
+```
+
+(The profile credentials provider assumes you have a workflow profile on your machine and allows local access to the bucket)
 
 ## What's provided
 

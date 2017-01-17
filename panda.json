@@ -1,0 +1,73 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Template to create cross account roles to access the panda bucket",
+    "Parameters": {
+        "AccountId": {
+            "Description": "The AWS account ID for your account",
+            "Type": "String",
+            "Default": ""
+        }
+    },
+    "Resources": {
+        "PandaRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "Path": "/",
+                "AssumeRolePolicyDocument": {
+                    "Statement": [
+                        {
+                            "Action": "sts:AssumeRole",
+                            "Effect": "Allow",
+                            "Principal": {
+                                "AWS": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "arn:aws:iam::",
+                                            {
+                                                "Ref": "AccountId"
+                                            },
+                                            ":root"
+                                        ]
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        },
+        "CrossAccountPolicies": {
+            "Type": "AWS::IAM::Policy",
+            "Properties": {
+                "PolicyName": "panda-access",
+                "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Action": [
+                                "s3:GetObject"
+                            ],
+                            "Resource": "arn:aws:s3:::pan-domain-auth-settings/*"
+                        }
+                    ]
+                },
+                "Roles": [
+                    {
+                        "Ref": "PandaRole"
+                    }
+                ]
+            }
+        }
+    },
+    "Outputs": {
+        "PandaRole": {
+            "Description": "The name of the PandaRole",
+            "Value": {
+                "Ref": "PandaRole"
+            }
+        }
+    }
+}
+
