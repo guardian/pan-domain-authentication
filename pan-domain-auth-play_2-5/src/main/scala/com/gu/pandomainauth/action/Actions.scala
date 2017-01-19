@@ -31,7 +31,7 @@ trait AuthActions extends PanDomainAuth {
    * @param authedUser
    * @return true if the user is valid in your app
    */
-  def validateUser(authedUser: AuthenticatedUser): Boolean
+  def validateUser(authedUser: AuthenticatedUser): Boolean = PanDomain.guardianValidation(authedUser)
 
 
   /**
@@ -204,15 +204,7 @@ trait AuthActions extends PanDomainAuth {
    */
   def extractAuth(request: RequestHeader): AuthenticationStatus = {
     readCookie(request).map { cookie =>
-      PanDomain.authStatus(cookie.value, settings.publicKey) match {
-        case Expired(authedUser) if authedUser.isInGracePeriod(apiGracePeriod) =>
-          GracePeriod(authedUser)
-        case authStatus @ Authenticated(authedUser) =>
-          if (cacheValidation && authedUser.authenticatedIn(system)) authStatus
-          else if (validateUser(authedUser)) authStatus
-          else NotAuthorized(authedUser)
-        case authStatus => authStatus
-      }
+      PanDomain.authStatus(cookie.value, settings.publicKey, validateUser, apiGracePeriod, system, cacheValidation)
     } getOrElse NotAuthenticated
   }
 
