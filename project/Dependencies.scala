@@ -21,6 +21,15 @@ object Dependencies {
     "commons-codec" % "commons-codec" % "1.10"
   )
 
+  val playLibs_2_6 = {
+    val version = "2.6.2"
+    Seq(
+      "com.typesafe.play" %% "play" % version % "provided",
+      "com.typesafe.play" %% "play-ws" % version % "provided",
+      "commons-codec" % "commons-codec" % "1.10"
+    )
+  }
+
   val googleDirectoryApiDependencies = Seq(
     "com.google.api-client" % "google-api-client" % "1.22.0",
     "com.google.apis" % "google-api-services-admin" % "directory_v1-rev32-1.16.0-rc"
