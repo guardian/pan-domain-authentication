@@ -104,6 +104,13 @@ object PanDomainAuthenticationBuild extends Build {
       publishArtifact := true
     ).dependsOn(panDomainAuthCore)
 
+  lazy val panDomainAuthPlay_2_6 = project("pan-domain-auth-play_2-6")
+    .settings(sonatypeReleaseSettings: _*)
+    .settings(
+      libraryDependencies ++= playLibs_2_6,
+      publishArtifact := true
+    ).dependsOn(panDomainAuthCore)
+
   lazy val exampleApp = playProject("pan-domain-auth-example")
                   .settings(libraryDependencies ++= awsDependencies)
                   //.settings(playDefaultPort := 9500)
@@ -114,6 +121,7 @@ object PanDomainAuthenticationBuild extends Build {
     panDomainAuthCore,
     panDomainAuthPlay_2_4_0,
     panDomainAuthPlay_2_5,
+    panDomainAuthPlay_2_6,
     exampleApp
   ).settings(sonatypeReleaseSettings: _*).settings(
       crossScalaVersions := Seq(scala211),
