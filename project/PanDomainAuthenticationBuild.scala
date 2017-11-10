@@ -77,7 +77,14 @@ object PanDomainAuthenticationBuild extends Build {
   lazy val panDomainAuthVerification = project("pan-domain-auth-verification")
     .settings(sonatypeReleaseSettings: _*)
     .settings(
-      libraryDependencies ++= cryptoDependencies ++ testDependencies ++ httpClient ++ akkaDependencies ++ scheduler,
+      libraryDependencies
+        ++= cryptoDependencies
+        ++ testDependencies
+        ++ httpClient
+        ++ akkaDependencies
+        ++ scheduler
+        ++ jackson
+        ++ logback,
       publishArtifact := true
     )
 

@@ -39,11 +39,32 @@ object Dependencies {
   )
 
   val cryptoDependencies = Seq(
-    "org.bouncycastle" % "bcprov-jdk16" % "1.46",
+    "org.bouncycastle" % "bcprov-jdk15on" % "1.58",
     "commons-codec" % "commons-codec" % "1.10"
   )
 
   val testDependencies = Seq("org.scalatest" %% "scalatest" % "2.2.6" % "test")
 
-  val httpClient = Seq("net.databinder.dispatch" %% "dispatch-core" % "0.11.3")
+  val httpClient = Seq("net.databinder.dispatch" %% "dispatch-core" % "0.11.4")
+
+  /*
+  * Pull in an updated version of jackson and logback libraries as the ones AWS use have security vulnerabilities.
+  * See https://github.com/aws/aws-sdk-java/pull/1373
+  * */
+  val jackson: Seq[ModuleID] = {
+    val version = "2.9.2"
+    Seq(
+      "com.fasterxml.jackson.core" % "jackson-core" % version,
+      "com.fasterxml.jackson.core" % "jackson-databind" % version,
+      "com.fasterxml.jackson.dataformat" % "jackson-dataformat-cbor" % version
+    )
+  }
+
+  val logback: Seq[ModuleID] = {
+    val version = "1.2.3"
+    Seq(
+      "ch.qos.logback" % "logback-core" % version,
+      "ch.qos.logback" % "logback-classic" % version
+    )
+  }
 }
