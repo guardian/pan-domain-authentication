@@ -77,7 +77,7 @@ class GoogleAuth(config: GoogleAuthSettings, system: String, redirectUrl: String
             val token = Token.fromJson(json)
             val jwt = token.jwt
             ws.url(dd.userinfo_endpoint)
-              .withHeaders("Authorization" -> s"Bearer ${token.access_token}")
+              .withHttpHeaders("Authorization" -> s"Bearer ${token.access_token}")
               .get().map { response =>
               googleResponse(response) { json =>
                 val userInfo = UserInfo.fromJson(json)
