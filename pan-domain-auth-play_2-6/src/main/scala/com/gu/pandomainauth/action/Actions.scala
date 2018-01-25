@@ -8,7 +8,6 @@ import play.api.libs.ws.WSClient
 import play.api.mvc.Results._
 import play.api.mvc._
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
 class UserRequest[A](val user: User, request: Request[A]) extends WrappedRequest[A](request)
@@ -16,9 +15,12 @@ class UserRequest[A](val user: User, request: Request[A]) extends WrappedRequest
 trait AuthActions extends PanDomainAuth {
 
   /**
-    * Play application
+    * Play application components that you must provide in order to use AuthActions
     */
   def wsClient: WSClient
+  def controllerComponents: ControllerComponents
+
+  private implicit val ec: ExecutionContext = controllerComponents.executionContext
 
   /**
     * Returns true if the authed user is valid in the implementing system (meets your multifactor requirements, you recognise the email etc.).
@@ -71,16 +73,13 @@ trait AuthActions extends PanDomainAuth {
   val LOGIN_ORIGIN_KEY = "loginOriginUrl"
   val ANTI_FORGERY_KEY = "antiForgeryToken"
 
-  protected val parser: BodyParser[AnyContent]
-  protected val executionContext: ExecutionContext
-
   /**
     * starts the authentication process for a user. By default this just sends the user off to google for auth
     * but if you want to show welcome page with a button on it then override.
     */
   def sendForAuth[A](implicit request: RequestHeader, email: Option[String] = None) = {
     val antiForgeryToken = GoogleAuth.generateAntiForgeryToken()
-    GoogleAuth.redirectToGoogle(antiForgeryToken, email)(global, request, wsClient) map { res =>
+    GoogleAuth.redirectToGoogle(antiForgeryToken, email)(ec, request, wsClient) map { res =>
       val originUrl = request.uri
       res.withSession { request.session + (ANTI_FORGERY_KEY -> antiForgeryToken) + (LOGIN_ORIGIN_KEY -> originUrl) }
     }
@@ -120,7 +119,7 @@ trait AuthActions extends PanDomainAuth {
 
     val existingCookie = readCookie(request) // will be populated if this was a re-auth for expired login
 
-    GoogleAuth.validatedUserIdentity(token)(request, global, wsClient).map { claimedAuth =>
+    GoogleAuth.validatedUserIdentity(token)(request, ec, wsClient).map { claimedAuth =>
       val authedUserData = existingCookie match {
         case Some(c) =>
           val existingAuth = CookieUtils.parseCookieData(c.value, settings.publicKey)
@@ -221,8 +220,8 @@ trait AuthActions extends PanDomainAuth {
     */
   object AuthAction extends ActionBuilder[UserRequest, AnyContent] {
 
-    override def parser: BodyParser[AnyContent]               = AuthActions.this.parser
-    override protected def executionContext: ExecutionContext = AuthActions.this.executionContext
+    override def parser: BodyParser[AnyContent]               = AuthActions.this.controllerComponents.parsers.default
+    override protected def executionContext: ExecutionContext = AuthActions.this.controllerComponents.executionContext
 
     override def invokeBlock[A](request: Request[A], block: (UserRequest[A]) => Future[Result]): Future[Result] = {
       extractAuth(request) match {
@@ -286,8 +285,8 @@ trait AuthActions extends PanDomainAuth {
     */
   trait AbstractApiAuthAction extends ActionBuilder[UserRequest, AnyContent] {
 
-    override def parser: BodyParser[AnyContent]               = AuthActions.this.parser
-    override protected def executionContext: ExecutionContext = AuthActions.this.executionContext
+    override def parser: BodyParser[AnyContent]               = AuthActions.this.controllerComponents.parsers.default
+    override protected def executionContext: ExecutionContext = AuthActions.this.controllerComponents.executionContext
 
     val notAuthenticatedResult: Result
     val invalidCookieResult: Result

@@ -1,17 +1,17 @@
 package com.gu.pandomainauth
 
-import java.io.ByteArrayInputStream
+import java.io.{ByteArrayInputStream, IOException}
 import java.util.Properties
 
 import akka.agent.Agent
 import com.gu.pandomainauth.PublicSettings.FunctionJob
-import dispatch._
+import okhttp3._
 import org.quartz._
 import org.quartz.impl.StdSchedulerFactory
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.collection.mutable
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.Try
 
 /**
@@ -32,7 +32,7 @@ import scala.util.Try
  * @param ec        Implicit execution context used to fetch the settings
  */
 class PublicSettings(domain: String, callback: Try[Map[String, String]] => Unit = _ => (), scheduler: Scheduler = StdSchedulerFactory.getDefaultScheduler())
-                    (implicit client: Http, ec: ExecutionContext) {
+                    (implicit client: OkHttpClient, ec: ExecutionContext) {
 
   private val agent = Agent[Map[String, String]](Map.empty)
   private val job = JobBuilder.newJob(classOf[FunctionJob])
@@ -85,7 +85,7 @@ object PublicSettings {
   val cookieName = "gutoolsAuth"
   val assymCookieName = s"$cookieName-assym"
 
-  def getPublicSettings(domain: String)(implicit client: Http, ec: ExecutionContext): Future[Map[String, String]] = {
+  def getPublicSettings(domain: String)(implicit client: OkHttpClient, ec: ExecutionContext): Future[Map[String, String]] = {
     fetchSettings(domain) flatMap extractSettings
   }
 
@@ -96,21 +96,29 @@ object PublicSettings {
    * @param client implicit dispatch.Http to use for fetching the key
    * @param ec     implicit execution context to use for fetching the key
    */
-  def getPublicKey(domain: String)(implicit client: Http, ec: ExecutionContext): Future[PublicKey] = {
+  def getPublicKey(domain: String)(implicit client: OkHttpClient, ec: ExecutionContext): Future[PublicKey] = {
     getPublicSettings(domain) flatMap extractPublicKey
   }
 
   // internal functions for fetching and parsing the responses
-  private def fetchSettings(domain: String)(implicit client: Http, ec: ExecutionContext): Future[Either[Throwable, String]] = {
-    val req = host("s3-eu-west-1.amazonaws.com").secure / bucketName / s"$domain.settings.public"
-    client(req OK as.String).either
+  private def fetchSettings(domain: String)(implicit client: OkHttpClient, ec: ExecutionContext): Future[Either[Throwable, String]] = {
+    val promise = Promise[Either[Throwable, String]]()
+    val req = new Request.Builder().url(s"https://s3-eu-west-1.amazonaws.com/$bucketName/$domain.settings.public").build()
+
+    client.newCall(req).enqueue(new Callback {
+      override def onFailure(call: Call, e: IOException): Unit = promise.success(Left(e))
+      override def onResponse(call: Call, response: Response): Unit = promise.success(Right(response.body.string))
+    })
+
+    promise.future
   }
+
   private[pandomainauth] def extractSettings(settingsAttempt: Either[Throwable, String]): Future[Map[String, String]] =
     settingsAttempt match {
       case Right(settingsBody) =>
         val props = new Properties()
         props.load(new ByteArrayInputStream(settingsBody.getBytes("UTF-8")))
-        Future.successful(props.toMap)
+        Future.successful(props.asScala.toMap)
       case Left(err) =>
         Future.failed(new PublicSettingsAcquisitionException(err))
     }

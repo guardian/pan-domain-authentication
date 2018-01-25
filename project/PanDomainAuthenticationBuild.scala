@@ -15,13 +15,14 @@ import play.sbt.routes.RoutesKeys._
 
 object PanDomainAuthenticationBuild extends Build {
 
-  val scala211 = "2.11.8"
+  val scala211 = "2.11.12"
+  val scala212 = "2.12.4"
 
   val commonSettings =
     Seq(
-      scalaVersion := scala211,
-      scalaVersion in ThisBuild := scala211,
-      crossScalaVersions := Seq(scala211),
+      scalaVersion := scala212,
+      scalaVersion in ThisBuild := scala212,
+      crossScalaVersions := Seq(scala211, scala212),
       organization := "com.gu",
       fork in Test := false,
       resolvers ++= Seq("Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"),
@@ -97,23 +98,10 @@ object PanDomainAuthenticationBuild extends Build {
       publishArtifact := true
     )
 
-  lazy val panDomainAuthPlay_2_4_0 = project("pan-domain-auth-play_2-4-0")
-    .settings(sonatypeReleaseSettings: _*)
-    .settings(
-      libraryDependencies ++= playLibs_2_4_0,
-      publishArtifact := true
-    ).dependsOn(panDomainAuthCore)
-
-  lazy val panDomainAuthPlay_2_5 = project("pan-domain-auth-play_2-5")
-    .settings(sonatypeReleaseSettings: _*)
-    .settings(
-      libraryDependencies ++= playLibs_2_5,
-      publishArtifact := true
-    ).dependsOn(panDomainAuthCore)
-
   lazy val panDomainAuthPlay_2_6 = project("pan-domain-auth-play_2-6")
     .settings(sonatypeReleaseSettings: _*)
     .settings(
+      crossScalaVersions := Seq(scala211, scala212),
       libraryDependencies ++= playLibs_2_6,
       publishArtifact := true
     ).dependsOn(panDomainAuthCore)
@@ -121,17 +109,15 @@ object PanDomainAuthenticationBuild extends Build {
   lazy val exampleApp = playProject("pan-domain-auth-example")
                   .settings(libraryDependencies ++= awsDependencies)
                   //.settings(playDefaultPort := 9500)
-                  .dependsOn(panDomainAuthPlay_2_5)
+                  .dependsOn(panDomainAuthPlay_2_6)
 
   lazy val root = Project("pan-domain-auth-root", file(".")).aggregate(
     panDomainAuthVerification,
     panDomainAuthCore,
-    panDomainAuthPlay_2_4_0,
-    panDomainAuthPlay_2_5,
     panDomainAuthPlay_2_6,
     exampleApp
   ).settings(sonatypeReleaseSettings: _*).settings(
-      crossScalaVersions := Seq(scala211),
+      crossScalaVersions := Seq(scala211, scala212),
       organization := "com.gu",
       publishArtifact := false
     )

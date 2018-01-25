@@ -19,11 +19,11 @@ trait ExampleAuthActions extends AuthActions {
 
   override def cacheValidation = false
 
-  override def authCallbackUrl: String = config.getString("host").get + "/oauthCallback"
+  override def authCallbackUrl: String = config.get[String]("host") + "/oauthCallback"
 
   override lazy val domain: String = "local.dev-gutools.co.uk"
-  lazy val awsSecretAccessKey: String = config.getString("aws.secret").get
-  lazy val awsKeyId: String = config.getString("aws.keyId").get
+  lazy val awsSecretAccessKey: String = config.get[String]("aws.secret")
+  lazy val awsKeyId: String = config.get[String]("aws.keyId")
 
   override lazy val awsCredentialsProvider: AWSCredentialsProvider = new StaticCredentialsProvider(new BasicAWSCredentials(awsKeyId, awsSecretAccessKey))
 
