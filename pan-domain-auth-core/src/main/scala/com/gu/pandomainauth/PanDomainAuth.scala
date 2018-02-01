@@ -6,7 +6,7 @@ import com.amazonaws.regions.{Regions, Region}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.language.postfixOps
-import akka.actor.{ActorRef, Props, Actor, ActorSystem}
+import akka.actor.{Props, Actor, ActorSystem}
 import akka.agent.Agent
 import akka.event.Logging
 import com.gu.pandomainauth.model.PanDomainAuthSettings
@@ -17,7 +17,7 @@ import scala.concurrent.duration.FiniteDuration
 
 trait PanDomainAuth {
 
-  lazy val actorSystem = ActorSystem()
+  def actorSystem: ActorSystem
 
   /**
    * the domain you are authin agains
@@ -57,8 +57,6 @@ trait PanDomainAuth {
   lazy val domainSettingsRefreshActor = actorSystem.actorOf(Props(classOf[DomainSettingsRefreshActor], domain, bucket, authSettings), "PanDomainAuthSettingsRefresher")
 
   actorSystem.scheduler.scheduleOnce(1 minute, domainSettingsRefreshActor, Refresh)
-
-  def shutdown = actorSystem.terminate
 
   def settings = authSettings.get()
 }

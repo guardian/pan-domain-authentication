@@ -1,16 +1,17 @@
 package controllers
 
-import javax.inject.Inject
-
+import akka.actor.ActorSystem
 import play.api.Configuration
-import play.api.mvc.{Action, Controller}
-import play.api.Play.configuration
-import play.api.Play.current
+import play.api.mvc.{AbstractController, ControllerComponents}
 import play.api.libs.ws.WSClient
 
 
-class AdminController (override val config: Configuration, override val wsClient: WSClient)
-  extends Controller with ExampleAuthActions {
+class AdminController(
+  override val controllerComponents: ControllerComponents,
+  override val config: Configuration,
+  override val wsClient: WSClient,
+  override val actorSystem: ActorSystem
+) extends AbstractController(controllerComponents) with ExampleAuthActions {
 
   def index = Action{Ok("hello")}
 
@@ -25,5 +26,4 @@ class AdminController (override val config: Configuration, override val wsClient
   def logout = Action { implicit request =>
     processLogout(request)
   }
-
 }

@@ -4,25 +4,12 @@ object Dependencies {
 
   val awsDependencies = Seq("com.amazonaws" % "aws-java-sdk-s3" % "1.11.8")
 
-  val akkaDependencies = Seq("com.typesafe.akka" %% "akka-agent" % "2.4.7")
+  val akkaDependencies = Seq("com.typesafe.akka" %% "akka-agent" % "2.4.20")
 
   val scheduler = Seq("org.quartz-scheduler" % "quartz" % "2.2.3")
 
-  val playLibs_2_4_0 = Seq(
-    "com.typesafe.play" %% "play" % "2.4.0" % "provided",
-    "com.typesafe.play" %% "play-ws" % "2.4.0" % "provided",
-    "commons-codec" % "commons-codec" % "1.10",
-    "net.databinder.dispatch" %% "dispatch-core" % "0.11.3"
-  )
-
-  val playLibs_2_5 = Seq(
-    "com.typesafe.play" %% "play" % "2.5.4" % "provided",
-    "com.typesafe.play" %% "play-ws" % "2.5.4" % "provided",
-    "commons-codec" % "commons-codec" % "1.10"
-  )
-
   val playLibs_2_6 = {
-    val version = "2.6.2"
+    val version = "2.6.11"
     Seq(
       "com.typesafe.play" %% "play" % version % "provided",
       "com.typesafe.play" %% "play-ws" % version % "provided",
@@ -43,9 +30,9 @@ object Dependencies {
     "commons-codec" % "commons-codec" % "1.10"
   )
 
-  val testDependencies = Seq("org.scalatest" %% "scalatest" % "2.2.6" % "test")
+  val testDependencies = Seq("org.scalatest" %% "scalatest" % "3.0.4" % "test")
 
-  val httpClient = Seq("net.databinder.dispatch" %% "dispatch-core" % "0.11.4")
+  val httpClient = Seq("com.squareup.okhttp3" % "okhttp" % "3.9.1")
 
   /*
   * Pull in an updated version of jackson and logback libraries as the ones AWS use have security vulnerabilities.

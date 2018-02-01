@@ -5,7 +5,7 @@ import com.amazonaws.ClientConfiguration
 import com.amazonaws.regions.{Regions, Region}
 import com.gu.pandomainauth.PublicSettings
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.model.GetObjectRequest
@@ -17,14 +17,13 @@ class S3Bucket(credentialsProvider: AWSCredentialsProvider, regionOption: Option
 
   val bucketName = PublicSettings.bucketName
 
-  def readDomainSettings(domain: String) = {
+  def readDomainSettings(domain: String): Map[String, String] = {
 
     val domainSecretFile = s3Client.getObject(new GetObjectRequest(bucketName, domain + ".settings"))
     val props = new Properties()
 
     props.load(domainSecretFile.getObjectContent)
-    props.toMap
-
+    props.asScala.toMap
   }
 
   def getObjectInputStream(objectPath: String) = {
