@@ -236,7 +236,7 @@ users in you app's datastore). You should also provide the full url of the endpo
 from Google.
 
 
-``` scala
+```scala
 package controllers
 
 import com.gu.pandomainauth.action.AuthActions
@@ -296,7 +296,7 @@ import lib._
 import play.api.mvc._
 
 
-object Application(
+class Application(
   override val controllerComponents: ControllerComponents,
   override val config: Configuration,
   override val wsClient: WSClient,
