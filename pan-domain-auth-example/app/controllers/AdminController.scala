@@ -1,6 +1,6 @@
 package controllers
 
-import akka.actor.ActorSystem
+import com.gu.pandomainauth.PanDomainAuthSettingsRefresher
 import play.api.Configuration
 import play.api.mvc.{AbstractController, ControllerComponents}
 import play.api.libs.ws.WSClient
@@ -10,7 +10,7 @@ class AdminController(
   override val controllerComponents: ControllerComponents,
   override val config: Configuration,
   override val wsClient: WSClient,
-  override val actorSystem: ActorSystem
+  override val panDomainSettings: PanDomainAuthSettingsRefresher
 ) extends AbstractController(controllerComponents) with ExampleAuthActions {
 
   def index = Action{Ok("hello")}
