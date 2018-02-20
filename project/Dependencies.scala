@@ -4,7 +4,7 @@ object Dependencies {
 
   val awsDependencies = Seq("com.amazonaws" % "aws-java-sdk-s3" % "1.11.8")
 
-  val akkaDependencies = Seq("com.typesafe.akka" %% "akka-agent" % "2.4.20")
+  val akkaDependencies = Seq("com.typesafe.akka" %% "akka-actor" % "2.5.4")
 
   val scheduler = Seq("org.quartz-scheduler" % "quartz" % "2.2.3")
 
