@@ -14,6 +14,7 @@ import com.gu.pandomainauth.service.{ProxyConfiguration, S3Bucket}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
+import scala.util.{Failure, Success}
 
 /**
   * PanDomainAuthSettingsRefresher will periodically refresh the pan domain settings and expose them via the "settings" method.
@@ -38,12 +39,12 @@ class PanDomainAuthSettingsRefresher(
   private implicit val ec: ExecutionContext = actorSystem.dispatcher
   lazy val bucket = new S3Bucket(awsCredentialsProvider, awsRegion, proxyConfiguration)
 
-  private lazy val settingsMap = bucket.readDomainSettings(domain)
+  private lazy val settingsMap = bucket.readDomainSettingsBlocking(domain)
   private lazy val authSettings: AtomicReference[PanDomainAuthSettings] = new AtomicReference(PanDomainAuthSettings(settingsMap))
 
   private lazy val domainSettingsRefreshActor = actorSystem.actorOf(Props(classOf[DomainSettingsRefreshActor], domain, bucket, authSettings), "PanDomainAuthSettingsRefresher")
 
-  actorSystem.scheduler.scheduleOnce(1 minute, domainSettingsRefreshActor, Refresh)
+  actorSystem.scheduler.schedule(1.minute, 1.minute, domainSettingsRefreshActor, Refresh)
 
   def settings = authSettings.get()
 }
@@ -56,27 +57,13 @@ class DomainSettingsRefreshActor(domain: String, bucket: S3Bucket, authSettings:
   val log = Logging(context.system, this)
 
   override def receive: Receive = {
-    case Refresh => {
-      try {
-        val settingsMap = bucket.readDomainSettings(domain)
-
-        val settings = PanDomainAuthSettings(settingsMap)
-
-        authSettings.set(settings)
-        log.debug("reloaded settings for {}", domain)
-      } catch {
-        case e: Exception => log.error(e, "failed to refresh domain {} settings", domain)
-      }
-      reschedule
-    }
-  }
-
-  override def postRestart(reason: Throwable) {
-    reschedule
-  }
-
-  def reschedule {
-    context.system.scheduler.scheduleOnce(frequency, self, Refresh)
+    case Refresh =>
+      bucket.readDomainSettingsAsync(domain)
+        .map(PanDomainAuthSettings.apply)
+        .onComplete {
+          case Success(value) => authSettings.set(value)
+          case Failure(e) => log.error(e, "failed to refresh domain {} settings", domain)
+        }
   }
 }
 
