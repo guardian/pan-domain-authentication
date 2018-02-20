@@ -1,4 +1,5 @@
 # Pan Domain Authentication 
+
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.11/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.11)
 
 Pan domain authentication provides distributed authentication for multiple webapps running in the same domain. Each
@@ -43,8 +44,8 @@ The `pan-domain-auth-core` library provides the core utilities to load the domai
 check if the user has mutlifactor auth turned on (see below). Note this does not include the Google oath dance code or cookie setting
 as these vary based on web framework being used by implementing apps.
 
-The `pan-domain-auth-play` libraries (`2-4-0` and `2-5`) provide an implementation for play apps. There is an auth action that can be applied to the
-endpoints in you appliciation that will do checking and setting of the cookie and will give you the Google authentication mechanism
+The `pan-domain-auth-play_2-6` library provide an implementation for play apps. There is an auth action that can be applied to the
+endpoints in your application that will do checking and setting of the cookie and will give you the Google authentication mechanism
 and callback. This is the only framework specific implementation currently (due to play being the framework predominantly used at the
 guardian), this can be used as reference if you need to implement another framework implementation. This library is for applications
 that need to be able to issue and verify logins which is likely to include user-facing applications.
@@ -54,12 +55,12 @@ Additionally the nginx directory provides an example of how to set up an nginx c
 apps locally as if they were all on the same domain (also useful for testing)
 
 The `pan-domain-auth-verification`, `pan-domain-auth-core` and `pan-domain-auth-play` libraries are available on maven central
-cross compiled for scala 2.10.4 and 2.11.1. to include them via sbt:
+cross compiled for scala 2.11.12 and 2.12.4. to include them via sbt:
 
 ### To verify logins
 
 ```
-"com.gu" %% "pan-domain-auth-verification" % "0.3.0"
+"com.gu" %% "pan-domain-auth-verification" % "0.6.0"
 ```
 
 To verify a login, you'll need to read the user's cookie value and verify its integrity. This is done using the
@@ -118,13 +119,13 @@ provided helper `PublicSettings.getPublicKey(domain)` helper function.
 ### If your application needs to issue logins
 
 ```
-"com.gu" %% "pan-domain-auth-core" % "0.3.0"
+"com.gu" %% "pan-domain-auth-core" % "0.6.0"
 ```
 
 or
 
 ```
-"com.gu" %% "pan-domain-auth-play_2-5" % "0.3.0"
+"com.gu" %% "pan-domain-auth-play_2-6" % "0.6.0"
 ```
 
 In both cases you will need to set up a few things, see `Requirements` below.
@@ -241,8 +242,12 @@ package controllers
 
 import com.gu.pandomainauth.action.AuthActions
 import com.gu.pandomainauth.model.AuthenticatedUser
+import play.api.mvc.ControllerComponents
+import play.api.Configuration
 
 trait PanDomainAuthActions extends AuthActions {
+
+  def config: Configuration
 
   override def validateUser(authedUser: AuthenticatedUser): Boolean = {
     (authedUser.user.email endsWith ("@guardian.co.uk")) && authedUser.multiFactor
@@ -267,7 +272,8 @@ package controllers
 
 import play.api.mvc._
 import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.Configuration
+import akka.actor.ActorSystem
 
 class Login(
   override val controllerComponents: ControllerComponents,
@@ -291,9 +297,10 @@ Add the `AuthAction` or `ApiAuthAction` to any endpoints you with to require an 
 ```scala
 package controllers
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import lib._
 import play.api.mvc._
+import play.api.Configuration
+import akka.actor.ActorSystem
 
 
 class Application(
@@ -301,6 +308,11 @@ class Application(
   override val config: Configuration,
   override val wsClient: WSClient,
   override val panDomainSettings: PanDomainAuthSettingsRefresher
+) extends AbstractController(controllerComponents) with PanDomainAuthActions {
+class Application(
+  override val controllerComponents: ControllerComponents,
+  override val config: Configuration,
+  override val actorSystem: ActorSystem
 ) extends AbstractController(controllerComponents) with PanDomainAuthActions {
 
   def loginStatus = AuthAction { request =>
