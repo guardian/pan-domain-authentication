@@ -237,7 +237,7 @@ users in you app's datastore). You should also provide the full url of the endpo
 from Google.
 
 
-``` scala
+```scala
 package controllers
 
 import com.gu.pandomainauth.action.AuthActions
@@ -253,19 +253,11 @@ trait PanDomainAuthActions extends AuthActions {
     (authedUser.user.email endsWith ("@guardian.co.uk")) && authedUser.multiFactor
   }
 
-  override def cacheValidation = true
+  def config: Configuration
 
-  override def authCallbackUrl: String = config.getString("host").get + "/oauthCallback"
+  override def cacheValidation = false
 
-  override lazy val domain: String = config.getString("pandomain.domain").get
-
-  lazy val awsSecretAccessKey: String = config.getString("pandomain.aws.secret")
-  lazy val awsKeyId: String = config.getString("pandomain.aws.keyId")
-  override lazy val awscredentials =
-    for (key <- awsKeyId; secret <- awsSecretAccessKey)
-    yield new BasicAWSCredentials(key, secret)
-
-  override lazy val system: String = "workflow"
+  override def authCallbackUrl: String = config.get[String]("host") + "/oauthCallback"
 }
 ```
 
@@ -275,7 +267,7 @@ validation will only reoccur when the Google session is refreshed)
 
 Create a controller that will handle the oauth callback and logout actions, add these actions to the routes file.
 
-``` scala
+```scala
 package controllers
 
 import play.api.mvc._
@@ -286,7 +278,8 @@ import akka.actor.ActorSystem
 class Login(
   override val controllerComponents: ControllerComponents,
   override val config: Configuration,
-  override val actorSystem: ActorSystem
+  override val wsClient: WSClient,
+  override val panDomainSettings: PanDomainAuthSettingsRefresher
 ) extends AbstractController(controllerComponents) with PanDomainAuthActions {
 
   def oauthCallback = Action.async { implicit request =>
@@ -301,7 +294,7 @@ class Login(
 
 Add the `AuthAction` or `ApiAuthAction` to any endpoints you with to require an authenticated user for.
 
-``` scala
+```scala
 package controllers
 
 import lib._
@@ -309,6 +302,13 @@ import play.api.mvc._
 import play.api.Configuration
 import akka.actor.ActorSystem
 
+
+class Application(
+  override val controllerComponents: ControllerComponents,
+  override val config: Configuration,
+  override val wsClient: WSClient,
+  override val panDomainSettings: PanDomainAuthSettingsRefresher
+) extends AbstractController(controllerComponents) with PanDomainAuthActions {
 class Application(
   override val controllerComponents: ControllerComponents,
   override val config: Configuration,
@@ -354,6 +354,22 @@ class Application(
   See also [Customising error responses for an authenticated API]().
 
 Both the actions add the current user to the request, this is available as `request.user`.
+
+In order to instantiate your controller you'll need an instance of PanDomainAuthSettingsRefresher. This one cane be manually created during the wiring of your application (application loader).
+Here's an example of instantiation:
+
+```scala
+  val awsCredentialsProvider = ...
+
+  val panDomainSettings = new PanDomainAuthSettingsRefresher(
+    domain = "local.dev-gutools.co.uk",
+    system = "example",
+    actorSystem = actorSystem,
+    awsCredentialsProvider = awsCredentialsProvider // optional as there's a default value to DefaultAWSCredentialsProviderChain
+  )
+
+  val controller = new AdminController(controllerComponents, configuration, wsClient, panDomainSettings)
+```
 
 ### Using pan domain auth with another framework
 

@@ -1,3 +1,6 @@
+import com.amazonaws.auth.BasicAWSCredentials
+import com.amazonaws.internal.StaticCredentialsProvider
+import com.gu.pandomainauth.PanDomainAuthSettingsRefresher
 import controllers.AdminController
 import play.api.{Application, ApplicationLoader, BuiltInComponentsFromContext}
 import play.api.ApplicationLoader.Context
@@ -15,7 +18,20 @@ class AppLoader extends ApplicationLoader {
 class AppComponents(context: Context) extends BuiltInComponentsFromContext(context)
   with AhcWSComponents
   with HttpFiltersComponents {
-  val controller = new AdminController(controllerComponents, configuration, wsClient, actorSystem)
+
+  val awsCredentialsProvider = new StaticCredentialsProvider(new BasicAWSCredentials(
+    configuration.get[String]("aws.keyId"),
+    configuration.get[String]("aws.secret")
+  ))
+
+  val panDomainSettings = new PanDomainAuthSettingsRefresher(
+    domain = "local.dev-gutools.co.uk",
+    system = "example",
+    actorSystem = actorSystem,
+    awsCredentialsProvider = awsCredentialsProvider
+  )
+
+  val controller = new AdminController(controllerComponents, configuration, wsClient, panDomainSettings)
 
   def router: Router = new Routes(
     httpErrorHandler,
