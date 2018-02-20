@@ -5,7 +5,6 @@ import java.util.concurrent.atomic.AtomicReference
 import com.amazonaws.auth.{AWSCredentialsProvider, DefaultAWSCredentialsProviderChain}
 import com.amazonaws.regions.{Region, Regions}
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.language.postfixOps
 import akka.actor.{Actor, ActorSystem, Props}
@@ -13,6 +12,7 @@ import akka.event.Logging
 import com.gu.pandomainauth.model.PanDomainAuthSettings
 import com.gu.pandomainauth.service.{ProxyConfiguration, S3Bucket}
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 
 /**
@@ -35,6 +35,7 @@ class PanDomainAuthSettingsRefresher(
   awsRegion: Option[Region] = Option(Region getRegion Regions.EU_WEST_1),
   proxyConfiguration: Option[ProxyConfiguration] = None
 ) {
+  private implicit val ec: ExecutionContext = actorSystem.dispatcher
   lazy val bucket = new S3Bucket(awsCredentialsProvider, awsRegion, proxyConfiguration)
 
   private lazy val settingsMap = bucket.readDomainSettings(domain)
@@ -48,6 +49,8 @@ class PanDomainAuthSettingsRefresher(
 }
 
 class DomainSettingsRefreshActor(domain: String, bucket: S3Bucket, authSettings: AtomicReference[PanDomainAuthSettings]) extends Actor {
+
+  implicit val ec: ExecutionContext = this.context.dispatcher
 
   val frequency: FiniteDuration = 1 minute
   val log = Logging(context.system, this)
