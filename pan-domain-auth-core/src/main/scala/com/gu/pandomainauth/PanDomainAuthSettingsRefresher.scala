@@ -1,23 +1,27 @@
 package com.gu.pandomainauth
 
-import com.amazonaws.auth.{DefaultAWSCredentialsProviderChain, AWSCredentialsProvider}
-import com.amazonaws.regions.{Regions, Region}
+import java.util.concurrent.atomic.AtomicReference
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import com.amazonaws.auth.{AWSCredentialsProvider, DefaultAWSCredentialsProviderChain}
+import com.amazonaws.regions.{Region, Regions}
+
 import scala.concurrent.duration._
 import scala.language.postfixOps
-import akka.actor.{Props, Actor, ActorSystem}
-import akka.agent.Agent
+import akka.actor.{Actor, ActorSystem, Props}
 import akka.event.Logging
 import com.gu.pandomainauth.model.PanDomainAuthSettings
 import com.gu.pandomainauth.service.{ProxyConfiguration, S3Bucket}
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
+import scala.util.{Failure, Success}
 
 /**
-  * PanDomainAuthSettingsRefresher will periodically refresh the pan domain settings and expose them via the "settings" method
+  * PanDomainAuthSettingsRefresher will periodically refresh the pan domain settings and expose them via the "settings" method.
   *
-  * @param domain the domain you are authin agains
+  * This is effectively a disguised singleton with a state
+  *
+  * @param domain the domain you are "authing" against
   * @param system the identifier for your app, typically the same as the subdomain your app runs on
   * @param actorSystem the actor system to create the refresh actor
   * @param awsCredentialsProvider optional credential provider
@@ -32,45 +36,34 @@ class PanDomainAuthSettingsRefresher(
   awsRegion: Option[Region] = Option(Region getRegion Regions.EU_WEST_1),
   proxyConfiguration: Option[ProxyConfiguration] = None
 ) {
+  private implicit val ec: ExecutionContext = actorSystem.dispatcher
   lazy val bucket = new S3Bucket(awsCredentialsProvider, awsRegion, proxyConfiguration)
 
-  private lazy val settingsMap = bucket.readDomainSettings(domain)
-  private lazy val authSettings: Agent[PanDomainAuthSettings] = Agent(PanDomainAuthSettings(settingsMap))
+  private lazy val settingsMap = bucket.readDomainSettingsBlocking(domain)
+  private lazy val authSettings: AtomicReference[PanDomainAuthSettings] = new AtomicReference(PanDomainAuthSettings(settingsMap))
 
   private lazy val domainSettingsRefreshActor = actorSystem.actorOf(Props(classOf[DomainSettingsRefreshActor], domain, bucket, authSettings), "PanDomainAuthSettingsRefresher")
 
-  actorSystem.scheduler.scheduleOnce(1 minute, domainSettingsRefreshActor, Refresh)
+  actorSystem.scheduler.schedule(1.minute, 1.minute, domainSettingsRefreshActor, Refresh)
 
   def settings = authSettings.get()
 }
 
-class DomainSettingsRefreshActor(domain: String, bucket: S3Bucket, authSettings: Agent[PanDomainAuthSettings]) extends Actor {
+class DomainSettingsRefreshActor(domain: String, bucket: S3Bucket, authSettings: AtomicReference[PanDomainAuthSettings]) extends Actor {
+
+  implicit val ec: ExecutionContext = this.context.dispatcher
 
   val frequency: FiniteDuration = 1 minute
   val log = Logging(context.system, this)
 
   override def receive: Receive = {
-    case Refresh => {
-      try {
-        val settingsMap = bucket.readDomainSettings(domain)
-
-        val settings = PanDomainAuthSettings(settingsMap)
-
-        authSettings send settings
-        log.debug("reloaded settings for {}", domain)
-      } catch {
-        case e: Exception => log.error(e, "failed to refresh domain {} settings", domain)
-      }
-      reschedule
-    }
-  }
-
-  override def postRestart(reason: Throwable) {
-    reschedule
-  }
-
-  def reschedule {
-    context.system.scheduler.scheduleOnce(frequency, self, Refresh)
+    case Refresh =>
+      bucket.readDomainSettingsAsync(domain)
+        .map(PanDomainAuthSettings.apply)
+        .onComplete {
+          case Success(value) => authSettings.set(value)
+          case Failure(e) => log.error(e, "failed to refresh domain {} settings", domain)
+        }
   }
 }
 

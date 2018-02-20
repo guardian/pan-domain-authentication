@@ -1,14 +1,19 @@
 package com.gu.pandomainauth.service
 
 import java.util.Properties
+
 import com.amazonaws.ClientConfiguration
-import com.amazonaws.regions.{Regions, Region}
+import com.amazonaws.regions.{Region, Regions}
 import com.gu.pandomainauth.PublicSettings
 
 import scala.collection.JavaConverters._
 import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.model.GetObjectRequest
+
+import scala.concurrent.duration.DurationDouble
+import scala.concurrent.{Await, Future, Promise}
+import scala.util.Try
 
 class S3Bucket(credentialsProvider: AWSCredentialsProvider, regionOption: Option[Region] = None, proxyConfiguration: Option[ProxyConfiguration] = None) {
 
@@ -17,13 +22,31 @@ class S3Bucket(credentialsProvider: AWSCredentialsProvider, regionOption: Option
 
   val bucketName = PublicSettings.bucketName
 
-  def readDomainSettings(domain: String): Map[String, String] = {
+  def readDomainSettingsBlocking(domain: String): Map[String, String] = {
+    Await.result(readDomainSettingsAsync(domain), 30.seconds)
+  }
 
-    val domainSecretFile = s3Client.getObject(new GetObjectRequest(bucketName, domain + ".settings"))
-    val props = new Properties()
+  def readDomainSettingsAsync(domain: String): Future[Map[String, String]] = {
+    val promise = Promise[Map[String, String]]
 
-    props.load(domainSecretFile.getObjectContent)
-    props.asScala.toMap
+    def fetch: Unit = {
+      val result = Try {
+        val domainSecretFile = s3Client.getObject(new GetObjectRequest(bucketName, domain + ".settings"))
+        val props = new Properties()
+
+        props.load(domainSecretFile.getObjectContent)
+        props.asScala.toMap
+      }
+      promise.complete(result)
+    }
+
+    // The java way to span a new thread in order to block elsewhere than on Play's actor system
+    val thread = new Thread(() => fetch)
+    thread.setName("readDomainSettings")
+    thread.setDaemon(true)
+    thread.run
+
+    promise.future
   }
 
   def getObjectInputStream(objectPath: String) = {

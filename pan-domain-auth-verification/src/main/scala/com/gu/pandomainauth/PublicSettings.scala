@@ -2,8 +2,8 @@ package com.gu.pandomainauth
 
 import java.io.{ByteArrayInputStream, IOException}
 import java.util.Properties
+import java.util.concurrent.atomic.AtomicReference
 
-import akka.agent.Agent
 import com.gu.pandomainauth.PublicSettings.FunctionJob
 import okhttp3._
 import org.quartz._
@@ -34,7 +34,7 @@ import scala.util.Try
 class PublicSettings(domain: String, callback: Try[Map[String, String]] => Unit = _ => (), scheduler: Scheduler = StdSchedulerFactory.getDefaultScheduler())
                     (implicit client: OkHttpClient, ec: ExecutionContext) {
 
-  private val agent = Agent[Map[String, String]](Map.empty)
+  private val publicKeyRef = new AtomicReference[String]
   private val job = JobBuilder.newJob(classOf[FunctionJob])
     .withIdentity(s"refresh-public-key-$domain")
     .build
@@ -67,10 +67,10 @@ class PublicSettings(domain: String, callback: Try[Map[String, String]] => Unit 
     publicFuture
       .onComplete(callback)
     publicFuture
-      .foreach(settings => agent.send(settings))
+      .foreach(_.get("publicKey").foreach(publicKeyRef.set))
   }
 
-  def publicKey = agent.get().get("publicKey")
+  def publicKey = publicKeyRef.get
   val bucketName = PublicSettings.bucketName
   val cookieName = PublicSettings.cookieName
   val assymCookieName = PublicSettings.assymCookieName
