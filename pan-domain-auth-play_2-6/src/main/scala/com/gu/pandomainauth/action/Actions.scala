@@ -2,7 +2,7 @@ package com.gu.pandomainauth.action
 
 import com.gu.pandomainauth.model._
 import com.gu.pandomainauth.service._
-import com.gu.pandomainauth.{PanDomain, PanDomainAuth, PublicSettings}
+import com.gu.pandomainauth.{PanDomain, PanDomainAuthSettingsRefresher, PublicSettings}
 import play.api.Logger
 import play.api.libs.ws.WSClient
 import play.api.mvc.Results._
@@ -12,13 +12,18 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class UserRequest[A](val user: User, request: Request[A]) extends WrappedRequest[A](request)
 
-trait AuthActions extends PanDomainAuth {
+trait AuthActions {
 
   /**
     * Play application components that you must provide in order to use AuthActions
     */
   def wsClient: WSClient
   def controllerComponents: ControllerComponents
+  def panDomainSettings: PanDomainAuthSettingsRefresher
+
+  private def system: String = panDomainSettings.system
+  private def domain: String = panDomainSettings.domain
+  private def settings: PanDomainAuthSettings = panDomainSettings.settings
 
   private implicit val ec: ExecutionContext = controllerComponents.executionContext
 
@@ -65,7 +70,7 @@ trait AuthActions extends PanDomainAuth {
 
   val GoogleAuth = new GoogleAuth(settings.googleAuthSettings, system, authCallbackUrl)
 
-  val multifactorChecker = settings.google2FAGroupSettings.map(new Google2FAGroupChecker(_, bucket))
+  val multifactorChecker = settings.google2FAGroupSettings.map(new Google2FAGroupChecker(_, panDomainSettings.bucket))
 
   /**
     * A Play session key that stores the target URL that was being accessed when redirected for authentication
