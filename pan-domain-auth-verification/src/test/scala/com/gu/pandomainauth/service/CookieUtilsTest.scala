@@ -9,7 +9,8 @@ import org.scalatest.{FreeSpec, Matchers}
 class CookieUtilsTest extends FreeSpec with Matchers {
   import TestKeys._
 
-  val authUser = AuthenticatedUser(User("test", "üsér", "test.user@example.com", None), "testsuite", Set("testsuite", "another"), new Date().getTime + 86400, multiFactor = true)
+  val authUser = AuthenticatedUser(User("test", "üsér", "test.user@example.com", None), "testsuite", Set("testsuite", "another"),
+    new Date().getTime + 86400, multiFactor = true, emergency = false)
 
   "generateCookieData" - {
     "generates a a base64-encoded 'data.signature' cookie value" in {
@@ -46,5 +47,12 @@ class CookieUtilsTest extends FreeSpec with Matchers {
 
   "serialize/deserialize preserves data" in {
     CookieUtils.deserializeAuthenticatedUser(CookieUtils.serializeAuthenticatedUser(authUser)) should equal(authUser)
+  }
+
+  "deserialize handles data without emergency flag" in {
+    val serialised = CookieUtils.serializeAuthenticatedUser(authUser).replace("&emergency=false", "")
+    val deserialised = CookieUtils.deserializeAuthenticatedUser(serialised)
+
+    deserialised should equal(authUser)
   }
 }

@@ -16,7 +16,8 @@ object CookieUtils {
       s"&system=${authUser.authenticatingSystem}" +
       s"&authedIn=${authUser.authenticatedIn.mkString(",")}" +
       s"&expires=${authUser.expires}" +
-      s"&multifactor=${authUser.multiFactor}"
+      s"&multifactor=${authUser.multiFactor}" +
+      s"&emergency=${authUser.emergency}"
 
   private[service] def deserializeAuthenticatedUser(serializedForm: String): AuthenticatedUser = {
     val data = serializedForm
@@ -30,7 +31,8 @@ object CookieUtils {
       authenticatingSystem = data("system"),
       authenticatedIn = Set(data("authedIn").split(",") :_*),
       expires = data("expires").toLong,
-      multiFactor = data("multifactor").toBoolean
+      multiFactor = data("multifactor").toBoolean,
+      emergency = data.get("emergency").contains("true")
     )
   }
 

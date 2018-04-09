@@ -90,8 +90,9 @@ class GoogleAuth(config: GoogleAuthSettings, system: String, redirectUrl: String
                   ),
                   authenticatingSystem = system,
                   authenticatedIn = Set(system),
-                  jwt.claims.exp * 1000,
-                  false
+                  expires = jwt.claims.exp * 1000,
+                  multiFactor = false,
+                  emergency = false
                 )
               }
             }

@@ -7,7 +7,9 @@ import com.gu.pandomainauth.model.{AuthenticatedUser, CookieParseException, Cook
 import org.scalatest.{FreeSpec, Matchers}
 
 class LegacyCookieTest extends FreeSpec with Matchers {
-  val authUser = AuthenticatedUser(User("test", "user", "test.user@example.com", None), "testsuite", Set("testsuite", "another"), new Date().getTime + 86400, multiFactor = true)
+  val authUser = AuthenticatedUser(User("test", "user", "test.user@example.com", None), "testsuite", Set("testsuite", "another"), new Date().getTime + 86400,
+    multiFactor = true, emergency = false)
+
   val data = CookieUtils.serializeAuthenticatedUser(authUser)
   val secret = Secret("testSecret")
 

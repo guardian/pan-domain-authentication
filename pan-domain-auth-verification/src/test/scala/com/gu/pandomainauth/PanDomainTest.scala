@@ -10,7 +10,7 @@ class PanDomainTest extends FreeSpec with Matchers with Inside {
   import com.gu.pandomainauth.service.TestKeys._
 
   "authStatus" - {
-    val authUser = AuthenticatedUser(User("test", "user", "test.user@example.com", None), "testsuite", Set("testsuite"), new Date().getTime + 86400, multiFactor = true)
+    val authUser = AuthenticatedUser(User("test", "user", "test.user@example.com", None), "testsuite", Set("testsuite"), new Date().getTime + 86400, multiFactor = true, emergency = false)
 
     "returns `Authenticated` for valid cookie data that passes the validation check" in {
       def validateUser(au: AuthenticatedUser): Boolean = au.multiFactor && au.user.emailDomain == "example.com"
@@ -51,7 +51,7 @@ class PanDomainTest extends FreeSpec with Matchers with Inside {
   }
 
   "guardianValidation" - {
-    val validUser = AuthenticatedUser(User("example", "user", "example@guardian.co.uk", None), "tests", Set("tests"), new Date().getTime + 86400, multiFactor = true)
+    val validUser = AuthenticatedUser(User("example", "user", "example@guardian.co.uk", None), "tests", Set("tests"), new Date().getTime + 86400, multiFactor = true, emergency = false)
 
     "returns true for a multi-factor user with a Guardian email address" in {
       PanDomain.guardianValidation(validUser) should equal(true)
