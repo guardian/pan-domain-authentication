@@ -13,6 +13,7 @@ object CookieUtils {
       s"&lastName=${authUser.user.lastName}" +
       s"&email=${authUser.user.email}" +
       authUser.user.avatarUrl.map(a => s"&avatarUrl=$a").getOrElse("") +
+      authUser.user.id.map(a => s"&id=$a").getOrElse("") +
       s"&system=${authUser.authenticatingSystem}" +
       s"&authedIn=${authUser.authenticatedIn.mkString(",")}" +
       s"&expires=${authUser.expires}" +
@@ -26,7 +27,7 @@ object CookieUtils {
       .toMap
 
     AuthenticatedUser(
-      user = User(data("firstName"), data("lastName"), data("email"), data.get("avatarUrl")),
+      user = User(data("firstName"), data("lastName"), data("email"), data.get("avatarUrl"), data.get("id")),
       authenticatingSystem = data("system"),
       authenticatedIn = Set(data("authedIn").split(",") :_*),
       expires = data("expires").toLong,

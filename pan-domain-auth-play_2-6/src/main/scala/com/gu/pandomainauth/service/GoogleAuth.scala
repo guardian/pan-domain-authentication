@@ -83,10 +83,11 @@ class GoogleAuth(config: GoogleAuthSettings, system: String, redirectUrl: String
                 val userInfo = UserInfo.fromJson(json)
                 AuthenticatedUser(
                   user = User(
-                    userInfo.given_name,
-                    userInfo.family_name,
-                    jwt.claims.email,
-                    userInfo.picture
+                    firstName = userInfo.given_name,
+                    lastName = userInfo.family_name,
+                    email = jwt.claims.email,
+                    id = Some(jwt.claims.sub),
+                    avatarUrl = userInfo.picture
                   ),
                   authenticatingSystem = system,
                   authenticatedIn = Set(system),

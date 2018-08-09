@@ -9,7 +9,7 @@ import org.scalatest.{FreeSpec, Matchers}
 class CookieUtilsTest extends FreeSpec with Matchers {
   import TestKeys._
 
-  val authUser = AuthenticatedUser(User("test", "üsér", "test.user@example.com", None), "testsuite", Set("testsuite", "another"), new Date().getTime + 86400, multiFactor = true)
+  val authUser = AuthenticatedUser(User("test", "üsér", "test.user@example.com", None, Some("123456")), "testsuite", Set("testsuite", "another"), new Date().getTime + 86400, multiFactor = true)
 
   "generateCookieData" - {
     "generates a a base64-encoded 'data.signature' cookie value" in {
@@ -41,6 +41,13 @@ class CookieUtilsTest extends FreeSpec with Matchers {
       intercept[CookieParseException] {
         CookieUtils.parseCookieData("Completely incorrect cookie data", testPublicKey)
       }
+    }
+
+    "can extract an authenticatedUser missing id" in {
+      val userWithoutId = authUser.copy(user = authUser.user.copy(id = None))
+      val cookieData = CookieUtils.generateCookieData(userWithoutId, testPrivateKey)
+
+      CookieUtils.parseCookieData(cookieData, testPublicKey) should equal(userWithoutId)
     }
   }
 
