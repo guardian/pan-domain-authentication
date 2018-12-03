@@ -20,7 +20,7 @@ class AdminController(
   }
 
   def oauthCallback = Action.async { implicit request =>
-    processGoogleCallback()
+    processOAuthCallback()
   }
 
   def logout = Action { implicit request =>

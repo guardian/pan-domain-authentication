@@ -7,7 +7,7 @@ case class PanDomainAuthSettings(
   publicKey: PublicKey,
   privateKey: PrivateKey,
   cookieSettings: CookieSettings,
-  googleAuthSettings: GoogleAuthSettings,
+  oAuthSettings: OAuthSettings,
   google2FAGroupSettings: Option[Google2FAGroupSettings]
 )
 
@@ -16,9 +16,10 @@ case class CookieSettings(
   assymCookieName: String
 )
 
-case class GoogleAuthSettings(
-  googleAuthClient: String,
-  googleAuthSecret: String
+case class OAuthSettings(
+  clientId: String,
+  clientSecret: String,
+  discoveryDocumentUrl: String
 )
 
 case class Google2FAGroupSettings(
@@ -36,7 +37,11 @@ object PanDomainAuthSettings{
       assymCookieName = settingMap("assymCookieName")
     )
 
-    val googleAuthSettings = GoogleAuthSettings(settingMap("googleAuthClientId"), settingMap("googleAuthSecret"))
+    val oAuthSettings = OAuthSettings(
+      settingMap("clientId"),
+      settingMap("clientSecret"),
+      settingMap("discoveryDocumentUrl")
+    )
 
     val google2faSettings = for(
       serviceAccountId   <- settingMap.get("googleServiceAccountId");
@@ -52,7 +57,7 @@ object PanDomainAuthSettings{
       PublicKey(settingMap("publicKey")),
       PrivateKey(settingMap("privateKey")),
       cookieSettings,
-      googleAuthSettings,
+      oAuthSettings,
       google2faSettings
     )
   }

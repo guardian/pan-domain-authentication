@@ -1,0 +1,34 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: >
+  Panda example Cognito user pool. Users are added by email address.
+
+Parameters:
+  Name:
+    Type: String
+    Description: The name of the user pool
+
+  RefreshTokenValidity:
+    Type: Number
+    Description: The time limit, in days, after which the refresh token is no longer valid.
+
+Resources:
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: true
+      AutoVerifiedAttributes:
+        - email
+      UsernameAttributes:
+        - email
+      UserPoolName: !Ref Name
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ExplicitAuthFlows:
+        - USER_PASSWORD_AUTH
+      GenerateSecret: true
+      RefreshTokenValidity: !Ref RefreshTokenValidity
+      UserPoolId: !Ref UserPool

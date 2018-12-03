@@ -3,7 +3,7 @@ package com.gu.pandomainauth.service
 import java.math.BigInteger
 import java.security.SecureRandom
 
-import com.gu.pandomainauth.model.{AuthenticatedUser, GoogleAuthSettings, User}
+import com.gu.pandomainauth.model.{AuthenticatedUser, OAuthSettings, User}
 import play.api.libs.json.JsValue
 import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.mvc.Results.Redirect
@@ -13,15 +13,15 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 
 
-class GoogleAuthException(val message: String, val throwable: Throwable = null) extends Exception(message, throwable)
+class OAuthException(val message: String, val throwable: Throwable = null) extends Exception(message, throwable)
 
-class GoogleAuth(config: GoogleAuthSettings, system: String, redirectUrl: String) {
+class OAuth(config: OAuthSettings, system: String, redirectUrl: String) {
   var discoveryDocumentHolder: Option[Future[DiscoveryDocument]] = None
 
   private def discoveryDocument(implicit context: ExecutionContext, ws: WSClient): Future[DiscoveryDocument] =
     if (discoveryDocumentHolder.isDefined) discoveryDocumentHolder.get
     else {
-      val discoveryDocumentFuture = ws.url(DiscoveryDocument.url).get().map(r => DiscoveryDocument.fromJson(r.json))
+      val discoveryDocumentFuture = ws.url(config.discoveryDocumentUrl).get().map(r => DiscoveryDocument.fromJson(r.json))
       discoveryDocumentHolder = Some(discoveryDocumentFuture)
       discoveryDocumentFuture
     }
@@ -30,24 +30,24 @@ class GoogleAuth(config: GoogleAuthSettings, system: String, redirectUrl: String
 
   def generateAntiForgeryToken() = new BigInteger(130, random).toString(32)
 
-  def googleResponse[T](r: WSResponse)(block: JsValue => T): T = {
+  def oAuthResponse[T](r: WSResponse)(block: JsValue => T): T = {
     r.status match {
       case errorCode if errorCode >= 400 =>
-        // try to get error if google sent us an error doc
+        // try to get error if we received an error doc (Google does this)
         val error = (r.json \ "error").asOpt[Error]
         error.map { e =>
-          throw new GoogleAuthException(s"Error when calling Google: ${e.message}")
+          throw new OAuthException(s"Error when calling OAuth provider: ${e.message}")
         }.getOrElse {
-          throw new GoogleAuthException(s"Unknown error when calling Google [status=$errorCode, body=${r.body}]")
+          throw new OAuthException(s"Unknown error when calling OAuth provider [status=$errorCode, body=${r.body}]")
         }
       case normal => block(r.json)
     }
   }
 
-  def redirectToGoogle(antiForgeryToken: String, email: Option[String] = None)
+  def redirectToOAuthProvider(antiForgeryToken: String, email: Option[String] = None)
                       (implicit context: ExecutionContext, request: RequestHeader, ws: WSClient): Future[Result] = {
     val queryString: Map[String, Seq[String]] = Map(
-      "client_id" -> Seq(config.googleAuthClient),
+      "client_id" -> Seq(config.clientId),
       "response_type" -> Seq("code"),
       "scope" -> Seq("openid email profile"),
       "redirect_uri" -> Seq(redirectUrl),
@@ -67,19 +67,19 @@ class GoogleAuth(config: GoogleAuthSettings, system: String, redirectUrl: String
         ws.url(dd.token_endpoint).post {
           Map(
             "code" -> code,
-            "client_id" -> Seq(config.googleAuthClient),
-            "client_secret" -> Seq(config.googleAuthSecret),
+            "client_id" -> Seq(config.clientId),
+            "client_secret" -> Seq(config.clientSecret),
             "redirect_uri" -> Seq(redirectUrl),
             "grant_type" -> Seq("authorization_code")
           )
         }.flatMap { response =>
-          googleResponse(response) { json =>
+          oAuthResponse(response) { json =>
             val token = Token.fromJson(json)
             val jwt = token.jwt
             ws.url(dd.userinfo_endpoint)
               .withHttpHeaders("Authorization" -> s"Bearer ${token.access_token}")
               .get().map { response =>
-              googleResponse(response) { json =>
+              oAuthResponse(response) { json =>
                 val userInfo = UserInfo.fromJson(json)
                 AuthenticatedUser(
                   user = User(
