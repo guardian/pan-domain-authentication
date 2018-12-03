@@ -2,7 +2,7 @@ import sbt._
 
 object Dependencies {
 
-  val awsDependencies = Seq("com.amazonaws" % "aws-java-sdk-s3" % "1.11.8")
+  val awsDependencies = Seq("com.amazonaws" % "aws-java-sdk-s3" % "1.11.461")
 
   val akkaDependencies = Seq("com.typesafe.akka" %% "akka-agent" % "2.4.20")
 

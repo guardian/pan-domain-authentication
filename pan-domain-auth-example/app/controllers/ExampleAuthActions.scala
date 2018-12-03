@@ -16,5 +16,5 @@ trait ExampleAuthActions extends AuthActions {
 
   override def cacheValidation = false
 
-  override def authCallbackUrl: String = config.get[String]("host") + "/oauthCallback"
+  override def authCallbackUrl: String = "https://" + config.get[String]("host") + "/oauthCallback"
 }

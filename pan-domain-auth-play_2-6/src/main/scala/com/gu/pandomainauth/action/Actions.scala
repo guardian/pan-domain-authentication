@@ -161,18 +161,18 @@ trait AuthActions {
     CookieUtils.parseCookieData(cookie.value, settings.publicKey)
   }
 
-  def readCookie(request: RequestHeader): Option[Cookie] = request.cookies.get(PublicSettings.assymCookieName)
+  def readCookie(request: RequestHeader): Option[Cookie] = request.cookies.get(settings.cookieSettings.assymCookieName)
 
   def generateCookies(authedUser: AuthenticatedUser): List[Cookie] = List(
     Cookie(
-      name = PublicSettings.cookieName,
+      name = settings.cookieSettings.cookieName,
       value = LegacyCookie.generateCookieData(authedUser, settings.secret),
       domain = Some(domain),
       secure = true,
       httpOnly = true
     ),
     Cookie(
-      name = PublicSettings.assymCookieName,
+      name = settings.cookieSettings.assymCookieName,
       value = CookieUtils.generateCookieData(authedUser, settings.privateKey),
       domain = Some(domain),
       secure = true,
@@ -188,12 +188,12 @@ trait AuthActions {
 
   def flushCookie(result: Result): Result = {
     val clearCookie = DiscardingCookie(
-      name = PublicSettings.cookieName,
+      name = settings.cookieSettings.cookieName,
       domain = Some(domain),
       secure = true
     )
     val clearAssymCookie = DiscardingCookie(
-      name = PublicSettings.assymCookieName,
+      name = settings.cookieSettings.assymCookieName,
       domain = Some(domain),
       secure = true
     )
