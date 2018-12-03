@@ -30,14 +30,14 @@ object Token {
   }
 }
 
-case class JwtClaims(iss: String, sub:String, azp: String, email: String, at_hash: String, email_verified: Boolean,
+case class JwtClaims(iss: String, sub: String, azp: Option[String], email: String, at_hash: String, email_verified: Boolean,
                      aud: String, hd: Option[String], iat: Long, exp: Long)
 object JwtClaims {
   implicit val claimsReads = Json.reads[JwtClaims]
 }
 
-case class UserInfo(gender: Option[String], sub: Option[String], name: String, given_name: String, family_name: String,
-                    profile: Option[String], picture: Option[String], email: String, locale: Option[String], hd: Option[String])
+case class UserInfo(sub: Option[String], name: String, given_name: String, family_name: String, profile: Option[String],
+                    picture: Option[String], email: String, locale: Option[String], hd: Option[String])
 object UserInfo {
   implicit val userInfoReads = Json.reads[UserInfo]
 
