@@ -205,7 +205,7 @@ trait AuthActions {
     */
   def extractAuth(request: RequestHeader): AuthenticationStatus = {
     readCookie(request).map { cookie =>
-      PanDomain.authStatus(cookie.value, settings.publicKey) match {
+      PanDomain.authStatus(cookie.value, settings.publicKey, validateUser) match {
         case Expired(authedUser) if authedUser.isInGracePeriod(apiGracePeriod) =>
           GracePeriod(authedUser)
         case authStatus @ Authenticated(authedUser) =>
