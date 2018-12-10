@@ -8,7 +8,7 @@ object PanDomain {
   /**
    * Check the authentication status of the provided credentials by examining the signed cookie data.
    */
-  def authStatus(cookieData: String, publicKey: PublicKey, validateUser: AuthenticatedUser => Boolean = guardianValidation): AuthenticationStatus = {
+  def authStatus(cookieData: String, publicKey: PublicKey, validateUser: AuthenticatedUser => Boolean): AuthenticationStatus = {
     try {
       val authedUser = CookieUtils.parseCookieData(cookieData, publicKey)
       checkStatus(authedUser, validateUser)
@@ -18,7 +18,7 @@ object PanDomain {
     }
   }
 
-  private def checkStatus(authedUser: AuthenticatedUser, validateUser: AuthenticatedUser => Boolean = guardianValidation): AuthenticationStatus = {
+  private def checkStatus(authedUser: AuthenticatedUser, validateUser: AuthenticatedUser => Boolean): AuthenticationStatus = {
     if (authedUser.isExpired) {
       Expired(authedUser)
     } else if (validateUser(authedUser)) {
@@ -26,9 +26,5 @@ object PanDomain {
     } else {
       NotAuthorized(authedUser)
     }
-  }
-
-  val guardianValidation: AuthenticatedUser => Boolean = { authedUser =>
-    (authedUser.user.emailDomain == "guardian.co.uk") && authedUser.multiFactor
   }
 }
