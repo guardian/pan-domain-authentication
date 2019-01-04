@@ -31,7 +31,7 @@ class PanDomainAuthSettingsRefresher(
   bucketName: String,
   actorSystem: ActorSystem,
   awsCredentialsProvider: AWSCredentialsProvider,
-  awsRegion: String,
+  awsRegion: Regions,
   proxyConfiguration: Option[ProxyConfiguration] = None
 ) {
   lazy val bucket = new S3Bucket(bucketName, awsCredentialsProvider, awsRegion, proxyConfiguration)

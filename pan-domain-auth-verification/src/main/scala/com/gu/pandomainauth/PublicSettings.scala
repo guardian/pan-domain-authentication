@@ -26,7 +26,7 @@ import scala.util.Try
  *
  * @param domain     The domain you would like to fetch settings for
  * @param callback   Optionally, a callback called when the data gets fetched, provided to allow you to perform logging
- * @param bucketName The name of the S3 bucket
+ * @param bucketName The name of the S3 bucket where the settings are stored
  * @param scheduler  Optionally, the quartz scheduler instance to use. It defaults to the default scheduler but
  *                   customising it may be useful if you want more control over the scheduler's lifecycle
  * @param client     Implicit instance of dispatch.Http used to make the call to fetch the public settings

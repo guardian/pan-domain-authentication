@@ -4,12 +4,13 @@ import java.util.Properties
 
 import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.AWSCredentialsProvider
+import com.amazonaws.regions.Regions
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
 import com.amazonaws.services.s3.model.GetObjectRequest
 
 import scala.collection.JavaConverters._
 
-class S3Bucket(bucketName: String, credentialsProvider: AWSCredentialsProvider, region: String, proxyConfiguration: Option[ProxyConfiguration] = None) {
+class S3Bucket(bucketName: String, credentialsProvider: AWSCredentialsProvider, region: Regions, proxyConfiguration: Option[ProxyConfiguration] = None) {
   val s3Client = AmazonS3ClientBuilder.standard().withRegion(region).withCredentials(credentialsProvider).build()
 
   def readDomainSettings(domain: String): Map[String, String] = {

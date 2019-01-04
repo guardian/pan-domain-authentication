@@ -1,4 +1,5 @@
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
+import com.amazonaws.regions.Regions
 import com.gu.pandomainauth.PanDomainAuthSettingsRefresher
 import controllers.AdminController
 import play.api.ApplicationLoader.Context
@@ -18,8 +19,6 @@ class AppComponents(context: Context) extends BuiltInComponentsFromContext(conte
   with AhcWSComponents
   with HttpFiltersComponents {
 
-  val awsRegion = "eu-west-1"
-
   // Change this to point to the S3 bucket containing the settings file
   val bucketName = "pan-domain-auth-settings"
 
@@ -28,7 +27,7 @@ class AppComponents(context: Context) extends BuiltInComponentsFromContext(conte
     system = "example",
     bucketName = bucketName,
     actorSystem = actorSystem,
-    awsRegion = awsRegion,
+    awsRegion = Regions.EU_WEST_1,
     // Customise as appropriate depending on how you manage your AWS credentials
     awsCredentialsProvider = DefaultAWSCredentialsProviderChain.getInstance()
   )

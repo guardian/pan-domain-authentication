@@ -165,7 +165,7 @@ trait AuthActions {
 
   def generateCookies(authedUser: AuthenticatedUser): List[Cookie] = List(
     Cookie(
-      name = settings.cookieSettings.cookieName,
+      name = settings.cookieSettings.legacyCookieName,
       value = LegacyCookie.generateCookieData(authedUser, settings.secret),
       domain = Some(domain),
       secure = true,
@@ -188,7 +188,7 @@ trait AuthActions {
 
   def flushCookie(result: Result): Result = {
     val clearCookie = DiscardingCookie(
-      name = settings.cookieSettings.cookieName,
+      name = settings.cookieSettings.legacyCookieName,
       domain = Some(domain),
       secure = true
     )
