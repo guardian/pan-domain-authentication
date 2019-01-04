@@ -1,5 +1,4 @@
-import com.amazonaws.auth.profile.ProfileCredentialsProvider
-import com.amazonaws.auth.{AWSCredentialsProviderChain, DefaultAWSCredentialsProviderChain}
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
 import com.gu.pandomainauth.PanDomainAuthSettingsRefresher
 import controllers.AdminController
 import play.api.ApplicationLoader.Context
@@ -24,20 +23,14 @@ class AppComponents(context: Context) extends BuiltInComponentsFromContext(conte
   // Change this to point to the S3 bucket containing the settings file
   val bucketName = "pan-domain-auth-settings"
 
-  // Prefer profile credentials over static credentials
-  // If you work at the Guardian you can get these credentials from Janus
-  val awsCredentialsProvider = new AWSCredentialsProviderChain(
-    new ProfileCredentialsProvider("workflow"),
-    DefaultAWSCredentialsProviderChain.getInstance()
-  )
-
   val panDomainSettings = new PanDomainAuthSettingsRefresher(
     domain = "local.dev-gutools.co.uk",
     system = "example",
     bucketName = bucketName,
     actorSystem = actorSystem,
     awsRegion = awsRegion,
-    awsCredentialsProvider = awsCredentialsProvider
+    // Customise as appropriate depending on how you manage your AWS credentials
+    awsCredentialsProvider = DefaultAWSCredentialsProviderChain.getInstance()
   )
 
   val controller = new AdminController(controllerComponents, configuration, wsClient, panDomainSettings)
