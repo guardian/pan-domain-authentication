@@ -19,20 +19,22 @@ import scala.concurrent.duration.FiniteDuration
   *
   * @param domain the domain you are authin agains
   * @param system the identifier for your app, typically the same as the subdomain your app runs on
+  * @param bucketName the bucket where the settings are stored
   * @param actorSystem the actor system to create the refresh actor
-  * @param awsCredentialsProvider optional credential provider
-  * @param awsRegion optional region
+  * @param awsCredentialsProvider AWS credential provider
+  * @param awsRegion AWS region
   * @param proxyConfiguration optional proxy configuration
   */
 class PanDomainAuthSettingsRefresher(
   val domain: String,
   val system: String,
+  bucketName: String,
   actorSystem: ActorSystem,
-  awsCredentialsProvider: AWSCredentialsProvider = new DefaultAWSCredentialsProviderChain(),
-  awsRegion: Option[Region] = Option(Region getRegion Regions.EU_WEST_1),
+  awsCredentialsProvider: AWSCredentialsProvider,
+  awsRegion: Regions,
   proxyConfiguration: Option[ProxyConfiguration] = None
 ) {
-  lazy val bucket = new S3Bucket(awsCredentialsProvider, awsRegion, proxyConfiguration)
+  lazy val bucket = new S3Bucket(bucketName, awsCredentialsProvider, awsRegion, proxyConfiguration)
 
   private lazy val settingsMap = bucket.readDomainSettings(domain)
   private lazy val authSettings: Agent[PanDomainAuthSettings] = Agent(PanDomainAuthSettings(settingsMap))

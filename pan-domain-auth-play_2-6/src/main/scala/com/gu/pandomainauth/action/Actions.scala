@@ -42,7 +42,7 @@ trait AuthActions {
     * By default the validity of the user is checked every request. If your validateUser implementation is expensive or has side effects you
     * can override this to true and validity will only be checked the first time the user visits your app after their login is established.
     *
-    * Note the the cache is invalidated after the user's session is re-established with google.
+    * Note the the cache is invalidated after the user's session is re-established with the OAuth provider.
     *
     * @return true if you want to only check the validity of the user once for the lifetime of the user's auth session
     */
@@ -61,14 +61,14 @@ trait AuthActions {
   def apiGracePeriod: Long = 0 // ms
 
   /**
-    * The auth callback url. This is where google will send the user after authentication. This action on this url should
-    * invoke processGoogleCallback
+    * The auth callback url. This is where the OAuth provider will send the user after authentication.
+    * This action on should invoke processOAuthCallback
     *
     * @return
     */
   def authCallbackUrl: String
 
-  val GoogleAuth = new GoogleAuth(settings.googleAuthSettings, system, authCallbackUrl)
+  val OAuth = new OAuth(settings.oAuthSettings, system, authCallbackUrl)
 
   val multifactorChecker: Option[Google2FAGroupChecker] = settings.google2FAGroupSettings.map(new Google2FAGroupChecker(_, panDomainSettings.bucket))
 
@@ -81,12 +81,12 @@ trait AuthActions {
   val ANTI_FORGERY_KEY = "antiForgeryToken"
 
   /**
-    * starts the authentication process for a user. By default this just sends the user off to google for auth
+    * starts the authentication process for a user. By default this just sends the user off to the OAuth provider for auth
     * but if you want to show welcome page with a button on it then override.
     */
   def sendForAuth[A](implicit request: RequestHeader, email: Option[String] = None) = {
-    val antiForgeryToken = GoogleAuth.generateAntiForgeryToken()
-    GoogleAuth.redirectToGoogle(antiForgeryToken, email)(ec, request, wsClient) map { res =>
+    val antiForgeryToken = OAuth.generateAntiForgeryToken()
+    OAuth.redirectToOAuthProvider(antiForgeryToken, email)(ec, request, wsClient) map { res =>
       val originUrl = request.uri
       res.withSession { request.session + (ANTI_FORGERY_KEY -> antiForgeryToken) + (LOGIN_ORIGIN_KEY -> originUrl) }
     }
@@ -118,15 +118,15 @@ trait AuthActions {
     */
   def invalidUserMessage(claimedAuth: AuthenticatedUser) = s"user ${claimedAuth.user.email} not valid for $system"
 
-  def processGoogleCallback()(implicit request: RequestHeader) = {
+  def processOAuthCallback()(implicit request: RequestHeader) = {
     val token =
-      request.session.get(ANTI_FORGERY_KEY).getOrElse(throw new GoogleAuthException("missing anti forgery token"))
+      request.session.get(ANTI_FORGERY_KEY).getOrElse(throw new OAuthException("missing anti forgery token"))
     val originalUrl =
-      request.session.get(LOGIN_ORIGIN_KEY).getOrElse(throw new GoogleAuthException("missing original url"))
+      request.session.get(LOGIN_ORIGIN_KEY).getOrElse(throw new OAuthException("missing original url"))
 
     val existingCookie = readCookie(request) // will be populated if this was a re-auth for expired login
 
-    GoogleAuth.validatedUserIdentity(token)(request, ec, wsClient).map { claimedAuth =>
+    OAuth.validatedUserIdentity(token)(request, ec, wsClient).map { claimedAuth =>
       val authedUserData = existingCookie match {
         case Some(c) =>
           val existingAuth = CookieUtils.parseCookieData(c.value, settings.publicKey)
@@ -161,18 +161,18 @@ trait AuthActions {
     CookieUtils.parseCookieData(cookie.value, settings.publicKey)
   }
 
-  def readCookie(request: RequestHeader): Option[Cookie] = request.cookies.get(PublicSettings.assymCookieName)
+  def readCookie(request: RequestHeader): Option[Cookie] = request.cookies.get(settings.cookieSettings.assymCookieName)
 
   def generateCookies(authedUser: AuthenticatedUser): List[Cookie] = List(
     Cookie(
-      name = PublicSettings.cookieName,
+      name = settings.cookieSettings.legacyCookieName,
       value = LegacyCookie.generateCookieData(authedUser, settings.secret),
       domain = Some(domain),
       secure = true,
       httpOnly = true
     ),
     Cookie(
-      name = PublicSettings.assymCookieName,
+      name = settings.cookieSettings.assymCookieName,
       value = CookieUtils.generateCookieData(authedUser, settings.privateKey),
       domain = Some(domain),
       secure = true,
@@ -188,12 +188,12 @@ trait AuthActions {
 
   def flushCookie(result: Result): Result = {
     val clearCookie = DiscardingCookie(
-      name = PublicSettings.cookieName,
+      name = settings.cookieSettings.legacyCookieName,
       domain = Some(domain),
       secure = true
     )
     val clearAssymCookie = DiscardingCookie(
-      name = PublicSettings.assymCookieName,
+      name = settings.cookieSettings.assymCookieName,
       domain = Some(domain),
       secure = true
     )
@@ -205,7 +205,7 @@ trait AuthActions {
     */
   def extractAuth(request: RequestHeader): AuthenticationStatus = {
     readCookie(request).map { cookie =>
-      PanDomain.authStatus(cookie.value, settings.publicKey) match {
+      PanDomain.authStatus(cookie.value, settings.publicKey, validateUser) match {
         case Expired(authedUser) if authedUser.isInGracePeriod(apiGracePeriod) =>
           GracePeriod(authedUser)
         case authStatus @ Authenticated(authedUser) =>

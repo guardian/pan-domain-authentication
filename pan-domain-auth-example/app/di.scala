@@ -1,11 +1,11 @@
-import com.amazonaws.auth.BasicAWSCredentials
-import com.amazonaws.internal.StaticCredentialsProvider
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
+import com.amazonaws.regions.Regions
 import com.gu.pandomainauth.PanDomainAuthSettingsRefresher
 import controllers.AdminController
-import play.api.{Application, ApplicationLoader, BuiltInComponentsFromContext}
 import play.api.ApplicationLoader.Context
 import play.api.libs.ws.ahc.AhcWSComponents
 import play.api.routing.Router
+import play.api.{Application, ApplicationLoader, BuiltInComponentsFromContext}
 import play.filters.HttpFiltersComponents
 import router.Routes
 
@@ -19,16 +19,17 @@ class AppComponents(context: Context) extends BuiltInComponentsFromContext(conte
   with AhcWSComponents
   with HttpFiltersComponents {
 
-  val awsCredentialsProvider = new StaticCredentialsProvider(new BasicAWSCredentials(
-    configuration.get[String]("aws.keyId"),
-    configuration.get[String]("aws.secret")
-  ))
+  // Change this to point to the S3 bucket containing the settings file
+  val bucketName = "pan-domain-auth-settings"
 
   val panDomainSettings = new PanDomainAuthSettingsRefresher(
     domain = "local.dev-gutools.co.uk",
     system = "example",
+    bucketName = bucketName,
     actorSystem = actorSystem,
-    awsCredentialsProvider = awsCredentialsProvider
+    awsRegion = Regions.EU_WEST_1,
+    // Customise as appropriate depending on how you manage your AWS credentials
+    awsCredentialsProvider = DefaultAWSCredentialsProviderChain.getInstance()
   )
 
   val controller = new AdminController(controllerComponents, configuration, wsClient, panDomainSettings)

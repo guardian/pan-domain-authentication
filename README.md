@@ -1,25 +1,24 @@
-# Pan Domain Authentication 
+# Pan Domain Authentication 
 
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.11/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.11)
 
 Pan domain authentication provides distributed authentication for multiple webapps running in the same domain. Each
-application can authenticate users (currently by using Google's oauth mechanism, but other mechanisms could be added in the future)
-and store the authentication information in a common cookie. Each application can read this cookie and check if the user is allowed
-in the specific application and allow access accordingly.
+application can authenticate users against an OAuth provider and store the authentication information in a common cookie.
+Each application can read this cookie and check if the user is allowed in the specific application and allow access accordingly.
 
 This means that users are only prompted to provide authentication credentials once across the domain and any inter-app
-interactions (e.g javascript CORS or jsonp requests) can be easily secured.
+interactions (e.g javascript cross-origin requests) can be easily secured.
 
 ## How it works
 
 Each application that needs to issue logins is configured with the domain, an application name and an AWS key. The AWS key allows
-the application to connect to an S3 bucket (`pan-domain-auth-settings`) and download the settings for that domain (from a
-`<domain>.settings` file). The downloaded settings configure the public/private keypair used to sign and verify the
-login cookie as well as the credentials needed to authenticate with Google.
+the application to connect to an S3 bucket and download the settings for that domain (from a `<domain>.settings` file).
+The downloaded settings configure the public/private keypair used to sign and verify the login cookie as well as the
+credentials needed to authenticate with the OAuth provider.
 
 Each authenticated request that an application receives is checked to see if there is a auth cookie.
 
-* If the cookie is not present then the user is sent to Google for authentication. Upon returning from Google the use information is
+* If the cookie is not present then the user is sent to the OAuth provider for authentication. Upon their return the use information is
 checked and if the user is allowed in the app then the shared cookie is set marking the user as valid in the application.
 
 * If there is a cookie but te cookie does not indicate that the the user is valid in the application then the user is validated for the application.
@@ -27,8 +26,8 @@ if they are valid then the cookie is updated to indicate this otherwise an error
 
 * If there is a cookie and it indicates the user is valid in this application then the request is processed as normal.
 
-* if there is a cookie but it indicated the the authentication is expired then the user is sent off to Google to renew their session.
-On returning from Google the existing cookie is updated with the new expiry time.
+* if there is a cookie but it indicated the the authentication is expired then the user is sent off to the provider to renew their session.
+On their return the existing cookie is updated with the new expiry time.
 
 ## What's provided
 
@@ -41,13 +40,13 @@ credentials directly, on behalf of the user. Note that this module also includes
 to do the verification (more details below).
 
 The `pan-domain-auth-core` library provides the core utilities to load the domain settings, create and validate the cookie and
-check if the user has mutlifactor auth turned on (see below). Note this does not include the Google oath dance code or cookie setting
+check if the user has mutlifactor auth turned on (see below). Note this does not include the OAuth dance code or cookie setting
 as these vary based on web framework being used by implementing apps.
 
 The `pan-domain-auth-play_2-6` library provide an implementation for play apps. There is an auth action that can be applied to the
-endpoints in your application that will do checking and setting of the cookie and will give you the Google authentication mechanism
-and callback. This is the only framework specific implementation currently (due to play being the framework predominantly used at the
-guardian), this can be used as reference if you need to implement another framework implementation. This library is for applications
+endpoints in your application that will do checking and setting of the cookie and will give you the OAuth authentication mechanism
+and callback. This is the only framework specific implementation currently (due to play being the framework predominantly used at The
+Guardian), this can be used as reference if you need to implement another framework implementation. This library is for applications
 that need to be able to issue and verify logins which is likely to include user-facing applications.
 
 The `pan-domain-auth-example` provides an example app with authentication. This is implemented in play and is used for testing.
@@ -164,8 +163,8 @@ publicKey=example_key
 privateKey=example_key
 cookieName=exampleAuth
 
-googleAuthClientId=example_google_client
-googleAuthSecret=example_google_secret
+clientId=example_google_client
+clientSecret=example_google_secret
 
 googleServiceAccountId=serviceAccount@developer.gserviceaccount.com
 googleServiceAccountCert=name_of_cert_in_bucket.p12
@@ -223,8 +222,8 @@ can be any of:
 * NotAuthorized
 
 Note that the `authStatus` method takes a function you can use to validate the user. Typically this involves checking
-the domain and ensuring the user has 2-factor-auth enabled on their Google account so the default argument
-(guardianValidation) does this for you. If this check fails you will recieve a `NotAuthorized` result.
+the domain and ensuring the user has 2-factor-auth enabled so the default argument (guardianValidation) does this for you.
+If this check fails you will recieve a `NotAuthorized` result.
 
 ### Using the play implementation
 
@@ -233,8 +232,7 @@ If you are using play then use the play library, this provides the actions that 
 Create a pan domain auth actions trait that extends the `AuthActions` trait in the the play lib. This trait will
 provide the config needed to connect to the aws bucket and the domain and app you are using. You will also need to
 add a method here to ensure that any authenticated user is valid in your specific app (and this could be used to create
-users in you app's datastore). You should also provide the full url of the endpoint that will handle the oauth callback
-from Google.
+users in you app's datastore). You should also provide the full url of the endpoint that will handle the oauth callback.
 
 
 ```scala
@@ -262,8 +260,8 @@ trait PanDomainAuthActions extends AuthActions {
 ```
 
 By default the user validation method is called every request. If your validation method has side effects or is expensive then you
-can set `cacheValidation` to true, this will mean that `validateUser` is only called once per system per Google auth (i.e
-validation will only reoccur when the Google session is refreshed)
+can set `cacheValidation` to true, this will mean that `validateUser` is only called once per system per authentication (i.e
+validation will only reoccur when the OAuth session is refreshed)
 
 Create a controller that will handle the oauth callback and logout actions, add these actions to the routes file.
 
@@ -328,10 +326,10 @@ class Application(
 }
 ```
 
-* `AuthAction` is used for endpoints that the user requests and will redirect unauthenticated users to Google for authentication.
+* `AuthAction` is used for endpoints that the user requests and will redirect unauthenticated users to the OAuth provider for authentication.
   Use this for standard page loads etc.
 
-* `ApiAuthAction` is used for api ajax / xhr style requests and will not redirect to Google for auth. This action will either process
+* `ApiAuthAction` is used for api ajax / xhr style requests and will not redirect to the OAuth provider. This action will either process
   the action or return an error code that can be processed by your client javascript (see section on handling expired logins in a single
   page webapp).
 
@@ -348,8 +346,8 @@ class Application(
     * **403** - not authorised - occurs then the user is authenticated but not valid in this app, this can happen when making cross app CORS
             requests
 
-    * **419** - authorisation expired - occurs when the authorisation with Google has expired (after 1 hour), you will need to re auth with
-            Google to reestablish the session, this can typically be done transparently on the next page load request.
+    * **419** - authorisation expired - occurs when the authorisation with the OAuth provider has expired (eg 1 hour for Google).
+                You will need to re auth with the provider. This can typically be done transparently on the next page load request.
 
   See also [Customising error responses for an authenticated API]().
 
@@ -375,23 +373,15 @@ Here's an example of instantiation:
 
 Other scala frameworks exist as well as play. Full framework libraries are not provided for these yet as we predominantly use play at the guardian.
 To use pan domain auth with another framework you will need to provide an equivalent of the user auth checking in the play actions and provide an
-implementation of the Google oauth integration. Have a look at how this is done in the play library and provide your own implementation for
+implementation of the OAuth integration. Have a look at how this is done in the play library and provide your own implementation for
 your framework and http client etc.
 
 More examples and framework clients may be added in the future as they become available.
 
 ### Configuring access to the S3 bucket
 
-Access to the s3 bucket is controlled by overriding the `awsCredentials` and `awsRegion` options in the `PanDomainAuth` trait (or the
-`AuthActions` sub trait in the play implementation).
-
-* **awsCredentialsProvider** defaults to DefaultAWSCredentialsProviderChain - this means that the instance profile of your app running in EC2 will be used. You can configure access to the bucket
-in your cloud formation script. For apps that are not running in EC2 (such as developer environments) you can supply `StaticCredentialsProvider(BasicAWSCredentials)` with a key and secret
-for a user that will grant access to the bucket.
-
-* **awsRegion** defaults to eu-west-1 - This is where the guardian runs the majority of it's aws estate so is a useful default for us.
-
-
+Access to the S3 bucket is controlled by passing an [AWSCredentialsProvider](https://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/com/amazonaws/auth/AWSCredentialsProvider.html)
+and [region](https://docs.aws.amazon.com/general/latest/gr/rande.html) to the `PanDomainAuthSettingsRefresher`.
 
 ### The user object
 
@@ -431,7 +421,7 @@ The fields are:
 * **authenticatingSystem** - the app name of the app that authenticated the user
 * **authenticatedIn** - the set of app names that this user is known to be valid, this prevents revalidation if cacheValidation is set to true
 * **expires** - the authentication session expiry time in milliseconds, after this has passed then the session is invalid and the user will need to
-                be reauthenticated with Google. There is a handy method to check if the authentication is expired `def isExpired = expires < new Date().getTime`
+                be reauthenticated with the provider. There is a handy method to check if the authentication is expired `def isExpired = expires < new Date().getTime`
 * **multiFactor** - true if the user's authentication used a 2 factor type login. This defaults to false
 
 In many cases you will just want to check that the user is on the right domain and that they have 2-factor-auth
@@ -479,13 +469,7 @@ properties:
 ## Dealing with auth expiry in a single page webapp
 
 In a single page webapp there will typically be an initial page load and then all communication with the server will be initiated by JavaScript.
-This causes problems when the auth session expires as you can't redirect the request to Google to reauthenticate the request. To work around this
+This causes problems when the auth session expires as you can't redirect the request to the OAuth provider. To work around this
 all ajax type requests should return 419 responses on auth session expiry and this should be handled by the JavaScript layer.
 
 See also the helper [panda-session](https://github.com/guardian/panda-session) JavaScript library.
-
-
-## A note for guardian developers
-
-At the guardian we are using pan domain auth on our tools domain. To add your tools apps you will need the s3 credentials and the oauth callbacks
-set up in Google for you app. To get this done come and speak to Swells or the tools team.

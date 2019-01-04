@@ -1,0 +1,70 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: >
+  Panda example Cognito user pool. The following are required fields for users:
+    - email (used as the "identity" of the user, there are no separate usernames
+    - name
+    - given_name
+    - family_name
+
+  The following fields are optional:
+    - profile
+    - picture
+    - locale
+
+Parameters:
+  Name:
+    Type: String
+    Description: The name of the user pool
+
+  RefreshTokenValidity:
+    Type: Number
+    Description: The time limit, in days, after which the refresh token is no longer valid.
+
+Resources:
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: true
+      AutoVerifiedAttributes:
+        - email
+      UsernameAttributes:
+        - email
+      UserPoolName: !Ref Name
+      # https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims
+      Schema:
+      - Name: name
+        AttributeDataType: String
+        Mutable: true
+        Required: true
+      - Name: given_name
+        AttributeDataType: String
+        Mutable: true
+        Required: true
+      - Name: family_name
+        AttributeDataType: String
+        Mutable: true
+        Required: true
+      # optional
+      - Name: profile
+        AttributeDataType: String
+        Mutable: true
+        Required: false
+      - Name: picture
+        AttributeDataType: String
+        Mutable: true
+        Required: false
+      - Name: locale
+        AttributeDataType: String
+        Mutable: true
+        Required: false
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ExplicitAuthFlows:
+        - USER_PASSWORD_AUTH
+      GenerateSecret: true
+      RefreshTokenValidity: !Ref RefreshTokenValidity
+      UserPoolId: !Ref UserPool

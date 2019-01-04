@@ -24,14 +24,16 @@ import scala.util.Try
  * you'd rather use your own scheduler you can do so while still using the PublicSettings class by scheduling
  * your own calls to its `refresh` method can also schdule the refresh yourself using the instance's
  *
- * @param domain    The domain you would like to fetch settings for
- * @param callback  Optionally, a callback called when the data gets fetched, provided to allow you to perform logging
- * @param scheduler Optionally, the quartz scheduler instance to use. It defaults to the default scheduler but
- *                  customising it may be useful if you want more control over the scheduler's lifecycle
- * @param client    Implicit instance of dispatch.Http used to make the call to fetch the public settings
- * @param ec        Implicit execution context used to fetch the settings
+ * @param domain     The domain you would like to fetch settings for
+ * @param callback   Optionally, a callback called when the data gets fetched, provided to allow you to perform logging
+ * @param bucketName The name of the S3 bucket where the settings are stored
+ * @param scheduler  Optionally, the quartz scheduler instance to use. It defaults to the default scheduler but
+ *                   customising it may be useful if you want more control over the scheduler's lifecycle
+ * @param client     Implicit instance of dispatch.Http used to make the call to fetch the public settings
+ * @param ec         Implicit execution context used to fetch the settings
  */
-class PublicSettings(domain: String, callback: Try[Map[String, String]] => Unit = _ => (), scheduler: Scheduler = StdSchedulerFactory.getDefaultScheduler())
+class PublicSettings(domain: String, bucketName: String, callback: Try[Map[String, String]] => Unit = _ => (),
+                     scheduler: Scheduler = StdSchedulerFactory.getDefaultScheduler())
                     (implicit client: OkHttpClient, ec: ExecutionContext) {
 
   private val agent = Agent[Map[String, String]](Map.empty)
@@ -63,7 +65,7 @@ class PublicSettings(domain: String, callback: Try[Map[String, String]] => Unit 
     scheduler.deleteJob(job.getKey)
   }
   def refresh() = {
-    val publicFuture = PublicSettings.getPublicSettings(domain)
+    val publicFuture = PublicSettings.getPublicSettings(domain, bucketName)
     publicFuture
       .onComplete(callback)
     publicFuture
@@ -71,9 +73,6 @@ class PublicSettings(domain: String, callback: Try[Map[String, String]] => Unit 
   }
 
   def publicKey = agent.get().get("publicKey")
-  val bucketName = PublicSettings.bucketName
-  val cookieName = PublicSettings.cookieName
-  val assymCookieName = PublicSettings.assymCookieName
 }
 
 /**
@@ -81,12 +80,8 @@ class PublicSettings(domain: String, callback: Try[Map[String, String]] => Unit 
  * public data.
  */
 object PublicSettings {
-  val bucketName = sys.env.getOrElse("PANDA_BUCKET_NAME", "pan-domain-auth-settings")
-  val cookieName = "gutoolsAuth"
-  val assymCookieName = s"$cookieName-assym"
-
-  def getPublicSettings(domain: String)(implicit client: OkHttpClient, ec: ExecutionContext): Future[Map[String, String]] = {
-    fetchSettings(domain) flatMap extractSettings
+  def getPublicSettings(domain: String, bucketName: String)(implicit client: OkHttpClient, ec: ExecutionContext): Future[Map[String, String]] = {
+    fetchSettings(domain, bucketName) flatMap extractSettings
   }
 
   /**
@@ -96,12 +91,12 @@ object PublicSettings {
    * @param client implicit dispatch.Http to use for fetching the key
    * @param ec     implicit execution context to use for fetching the key
    */
-  def getPublicKey(domain: String)(implicit client: OkHttpClient, ec: ExecutionContext): Future[PublicKey] = {
-    getPublicSettings(domain) flatMap extractPublicKey
+  def getPublicKey(domain: String, bucketName: String)(implicit client: OkHttpClient, ec: ExecutionContext): Future[PublicKey] = {
+    getPublicSettings(domain, bucketName) flatMap extractPublicKey
   }
 
   // internal functions for fetching and parsing the responses
-  private def fetchSettings(domain: String)(implicit client: OkHttpClient, ec: ExecutionContext): Future[Either[Throwable, String]] = {
+  private def fetchSettings(domain: String, bucketName: String)(implicit client: OkHttpClient, ec: ExecutionContext): Future[Either[Throwable, String]] = {
     val promise = Promise[Either[Throwable, String]]()
     val req = new Request.Builder().url(s"https://s3-eu-west-1.amazonaws.com/$bucketName/$domain.settings.public").build()
 

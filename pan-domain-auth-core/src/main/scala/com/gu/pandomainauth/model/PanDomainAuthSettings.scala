@@ -1,24 +1,25 @@
 package com.gu.pandomainauth.model
 
-import com.gu.pandomainauth.{PrivateKey, PublicKey, PublicSettings, Secret}
+import com.gu.pandomainauth.{PrivateKey, PublicKey, Secret}
 
 case class PanDomainAuthSettings(
   secret: Secret,
   publicKey: PublicKey,
   privateKey: PrivateKey,
-  googleAuthSettings: GoogleAuthSettings,
+  cookieSettings: CookieSettings,
+  oAuthSettings: OAuthSettings,
   google2FAGroupSettings: Option[Google2FAGroupSettings]
-) {
-  @deprecated("Use com.gu.pandomainauth.PublicSettings.cookieName", "0.2.7")
-  val cookieName = PublicSettings.cookieName
+)
 
-  @deprecated("Use com.gu.pandomainauth.PublicSettings.assymCookieName", "0.2.7")
-  val assymCookieName = PublicSettings.assymCookieName
-}
+case class CookieSettings(
+  legacyCookieName: String,
+  assymCookieName: String
+)
 
-case class GoogleAuthSettings(
-  googleAuthClient: String,
-  googleAuthSecret: String
+case class OAuthSettings(
+  clientId: String,
+  clientSecret: String,
+  discoveryDocumentUrl: String
 )
 
 case class Google2FAGroupSettings(
@@ -31,8 +32,16 @@ case class Google2FAGroupSettings(
 object PanDomainAuthSettings{
 
   def apply(settingMap: Map[String, String]): PanDomainAuthSettings = {
+    val cookieSettings = CookieSettings(
+      legacyCookieName = settingMap("legacyCookieName"),
+      assymCookieName = settingMap("assymCookieName")
+    )
 
-    val googleAuthSettings = GoogleAuthSettings(settingMap("googleAuthClientId"), settingMap("googleAuthSecret"))
+    val oAuthSettings = OAuthSettings(
+      settingMap("clientId"),
+      settingMap("clientSecret"),
+      settingMap("discoveryDocumentUrl")
+    )
 
     val google2faSettings = for(
       serviceAccountId   <- settingMap.get("googleServiceAccountId");
@@ -43,6 +52,13 @@ object PanDomainAuthSettings{
       Google2FAGroupSettings(serviceAccountId, serviceAccountCert, adminUser, group)
     }
 
-    PanDomainAuthSettings(Secret(settingMap("secret")), PublicKey(settingMap("publicKey")), PrivateKey(settingMap("privateKey")), googleAuthSettings, google2faSettings)
+    PanDomainAuthSettings(
+      Secret(settingMap("secret")),
+      PublicKey(settingMap("publicKey")),
+      PrivateKey(settingMap("privateKey")),
+      cookieSettings,
+      oAuthSettings,
+      google2faSettings
+    )
   }
 }

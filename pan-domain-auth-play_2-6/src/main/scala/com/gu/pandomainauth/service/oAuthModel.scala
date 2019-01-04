@@ -7,7 +7,6 @@ import org.apache.commons.codec.binary.Base64
 
 case class DiscoveryDocument(authorization_endpoint: String, token_endpoint: String, userinfo_endpoint: String)
 object DiscoveryDocument {
-  val url = "https://accounts.google.com/.well-known/openid-configuration"
   implicit val discoveryDocumentReads = Json.reads[DiscoveryDocument]
   def fromJson(json: JsValue) = Json.fromJson[DiscoveryDocument](json).getOrElse(
     throw new IllegalArgumentException("Invalid discovery document")
@@ -31,14 +30,14 @@ object Token {
   }
 }
 
-case class JwtClaims(iss: String, sub:String, azp: String, email: String, at_hash: String, email_verified: Boolean,
+case class JwtClaims(iss: String, sub: String, azp: Option[String], email: String, at_hash: String, email_verified: Boolean,
                      aud: String, hd: Option[String], iat: Long, exp: Long)
 object JwtClaims {
   implicit val claimsReads = Json.reads[JwtClaims]
 }
 
-case class UserInfo(gender: Option[String], sub: Option[String], name: String, given_name: String, family_name: String,
-                    profile: Option[String], picture: Option[String], email: String, locale: Option[String], hd: Option[String])
+case class UserInfo(sub: Option[String], name: String, given_name: String, family_name: String, profile: Option[String],
+                    picture: Option[String], email: String, locale: Option[String], hd: Option[String])
 object UserInfo {
   implicit val userInfoReads = Json.reads[UserInfo]
 
