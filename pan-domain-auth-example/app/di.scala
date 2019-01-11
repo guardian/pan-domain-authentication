@@ -1,5 +1,6 @@
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
 import com.amazonaws.regions.Regions
+import com.amazonaws.services.s3.AmazonS3ClientBuilder
 import com.gu.pandomainauth.PanDomainAuthSettingsRefresher
 import controllers.AdminController
 import play.api.ApplicationLoader.Context
@@ -22,14 +23,17 @@ class AppComponents(context: Context) extends BuiltInComponentsFromContext(conte
   // Change this to point to the S3 bucket containing the settings file
   val bucketName = "pan-domain-auth-settings"
 
+  val region = Regions.EU_WEST_1
+  // Customise as appropriate depending on how you manage your AWS credentials
+  val credentials = DefaultAWSCredentialsProviderChain.getInstance()
+  val s3Client = AmazonS3ClientBuilder.standard().withRegion(region).withCredentials(credentials).build()
+
   val panDomainSettings = new PanDomainAuthSettingsRefresher(
     domain = "local.dev-gutools.co.uk",
     system = "example",
     bucketName = bucketName,
-    actorSystem = actorSystem,
-    awsRegion = Regions.EU_WEST_1,
-    // Customise as appropriate depending on how you manage your AWS credentials
-    awsCredentialsProvider = DefaultAWSCredentialsProviderChain.getInstance()
+    settingsFileKey = "local.dev-gutools.co.uk.settings",
+    s3Client = s3Client
   )
 
   val controller = new AdminController(controllerComponents, configuration, wsClient, panDomainSettings)

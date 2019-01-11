@@ -62,54 +62,7 @@ cross compiled for scala 2.11.12 and 2.12.4. to include them via sbt:
 "com.gu" %% "pan-domain-auth-verification" % "0.6.0"
 ```
 
-To verify a login, you'll need to read the user's cookie value and verify its integrity. This is done using the
-`authStatus` method on the `PanDomain` object. This method can optionally take a callback function used to validate the
-authenticated user - by default this enforces two-factor-auth and ensures it is a Guardian user.
-
-```scala
-import com.gu.pandomainauth.PanDomain
-
-PanDomain.authStatus(cookieValue, publicKey)
-```
-
-The way you fetch the cookie value depends on your application but this library includes a way to retrieve the public
-key for the domain you are using. The recommended way is to use the provided akka agent using an instance of
-`PublicSettings`. You can call this instance's `start` method when your application comes up and it will keep the
-publicKey value up to date in the background while your application runs.
-
-```scala
-import com.gu.pandomainauth.PublicSettings
-import scala.concurrent.ExecutionContext.Implicits.global
-import dispatch.Http
-
-// provide a client to use for fetching the required information
-implicit val httpClient = Http
-val publicSettings = new PublicSettings(domain)
-
-// call this when your application comes up to kick off the agent (e.g. Global.onStart in Play)
-publicSettings.start()
-
-// the public key will be None until a value is successfully obtained
-def publicKey: Option[String] = publicSettings.publicKey
-```
-
-You'll need to the public key for your domain before you can verify the pan-domain-auth cookies. The `PublicSettings`
-object contains the cookie name to read from as well as a function that fetches the public key. You should use
-`getPublicKey(domain)` to fetch the public key for the domain you are using. This returns a `Future` containing the
-value fetched from the settings bucket in S3. You might do this at application start, lazily when the check happens, or
-in an agent to keep the value up to date.
-
-You will likely also want to have some logging in place for the calls to fetch the public settings. This can be
-achieved by providing a callback to the publicSettings instance.
-
-```scala
-val publicSettings = new PublicSettings(domain, {
-  case Success(settings) =>
-    Logger.info("successfully updated pan-domain public settings")
-  case Failure(err) =>
-    Logger.warn("failed to update pan-domain public settings", err)
-})
-```
+Example code is provided [here](pan-domain-auth-example/app/VerifyExample.scala)
 
 If you'd rather not use the provided agent you can hook the `PublicSettings` instance up to your own scheduler by
 calling its `refresh` method directly, instead of invoking start. You can also manually fetch the settings using the
@@ -150,7 +103,7 @@ To use pan domain authentication you will need:
     * ensure that you have switched on access to the `Google+ API` for your credentials
     * configure all the oath callbacks used by your apps
 
-* A configuartion file in the S3 bucket named `<domain>.settings`
+* A configuration file in the S3 bucket named `<domain>.settings`
 
 
 ## Setting up your domain configuration
