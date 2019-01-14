@@ -47,6 +47,9 @@ object Dependencies {
     )
   }
 
+  // pin httpclient version to appease Snyk warning (https://app.snyk.io/vuln/SNYK-JAVA-ORGAPACHEHTTPCOMPONENTS-30646)
+  val apacheHttpClient = Seq("org.apache.httpcomponents" % "httpclient" % "4.5.5")
+
   val logback: Seq[ModuleID] = {
     val version = "1.2.3"
     Seq(
