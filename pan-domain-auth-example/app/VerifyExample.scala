@@ -1,7 +1,7 @@
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
-import com.gu.pandomainauth.model.AuthenticatedUser
+import com.gu.pandomainauth.model.{Authenticated, AuthenticatedUser, GracePeriod}
 import com.gu.pandomainauth.{PanDomain, PublicSettings}
 
 object VerifyExample {
@@ -16,8 +16,11 @@ object VerifyExample {
 
   val publicSettings = new PublicSettings(settingsFileKey, bucketName, s3Client)
 
-  // Call the start method when your application starts up to ensure the settings are kept refreshed
+  // Call the start method when your application starts up to ensure the settings are kept up to date
   publicSettings.start()
+
+  // You can integrate with your own scheduler by calling refresh() which will synchronously update the settings
+  publicSettings.refresh()
 
   // `publicKey` will return None if a value has not been successfully obtained
   val publicKey = publicSettings.publicKey.get
@@ -29,7 +32,7 @@ object VerifyExample {
   // their re-authentication with the OAuth provider, especially if this is done by inserting an iframe client-side.
   val apiGracePeriod = 0
 
-  // To verify, call the authStatus method with the encoded cookie data
+  // Check the user is valid for your app by inspecting the fields provided
   // The `PanDomain.guardianValidation` helper should be used for Guardian apps
   def validateUser(authUser: AuthenticatedUser): Boolean = {
     authUser.user.emailDomain == "test.com" && authUser.multiFactor
@@ -40,5 +43,15 @@ object VerifyExample {
   // be false.
   val cacheValidation = false
 
-  PanDomain.authStatus("<<cookie data>>>", publicKey, validateUser, apiGracePeriod, system, cacheValidation)
+  // To verify, call the authStatus method with the encoded cookie data
+  val status = PanDomain.authStatus("<<cookie data>>>", publicKey, validateUser, apiGracePeriod, system, cacheValidation)
+
+  status match {
+    case Authenticated(_) | GracePeriod(_) =>
+      // Continue to handle the request
+
+    case _ =>
+      // The user is not valid. Reject the request.
+      // See `AuthenticationStatus` for the various reasons this can happen.
+  }
 }

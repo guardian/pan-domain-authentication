@@ -14,6 +14,11 @@ trait ExampleAuthActions extends AuthActions {
     PanDomain.guardianValidation(authedUser)
   }
 
+  /**
+    * By default, the user validation method is called every request. If your validation
+    * method has side-effects or is expensive (perhaps hitting a database), setting this
+    * to true will ensure that validateUser is only called when the OAuth session is refreshed
+    */
   override def cacheValidation = false
 
   override def authCallbackUrl: String = "https://" + config.get[String]("host") + "/oauthCallback"

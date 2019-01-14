@@ -11,22 +11,35 @@ interactions (e.g javascript cross-origin requests) can be easily secured.
 
 ## How it works
 
-Each application that needs to issue logins is configured with the domain, an application name and an AWS key. The AWS key allows
-the application to connect to an S3 bucket and download the settings for that domain (from a `<domain>.settings` file).
-The downloaded settings configure the public/private keypair used to sign and verify the login cookie as well as the
-credentials needed to authenticate with the OAuth provider.
+The library can be used in two ways:
 
-Each authenticated request that an application receives is checked to see if there is a auth cookie.
+ - **Verify**: read the Panda cookie and check whether the user is valid for the request
+ - **Issue**: as above but redirecting the user to the OAuth provider to authenticate if the cookie is not present or expired
 
-* If the cookie is not present then the user is sent to the OAuth provider for authentication. Upon their return the use information is
-checked and if the user is allowed in the app then the shared cookie is set marking the user as valid in the application.
+Simply verifying the cookie is useful for APIs that cannot provided a user-facing OAuth dance to acquire credentials. It is also
+useful to minimise the parts of your application that have to have knowledge of the private key.
 
-* If there is a cookie but te cookie does not indicate that the the user is valid in the application then the user is validated for the application.
-if they are valid then the cookie is updated to indicate this otherwise an error page is displayed.
+To ensure the cookie is not tampered with, public/private key pair encryption is use. An issuing application signs the cookie
+using the private key and both verifying and issuing applications verify using the public key.
 
-* If there is a cookie and it indicates the user is valid in this application then the request is processed as normal.
+The cookie contains an expiry time generated at issue after which the user should be redirected to the OAuth provided again.
 
-* if there is a cookie but it indicated the the authentication is expired then the user is sent off to the provider to renew their session.
+All OAuth 2.0 compliant providers are supported. There is additional support for verifying that the user has two-factor login
+enabled when using Google as the provider.
+
+Each authenticated request that an application receives should be checked to see if there is a auth cookie.
+
+* If the cookie is not present then the user should be sent to the OAuth provider for authentication. Upon their return the user
+information should be checked and if the user is allowed in the app then the shared cookie should be set marking the user as valid
+in the application.
+
+* If there is a cookie but the cookie does not indicate that the the user is valid then the user should be validated for the application.
+This is an application-specific concern such as verifying the email address or checking two-factor is enabled. If they are valid then the
+cookie should be updated to indicate this or an error page displayed.
+
+* If there is a cookie and it indicates the user is valid in this application then the request should be processed as normal.
+
+* if there is a cookie but it indicates the the authentication is expired then the user should be sent off to the provider to renew their session.
 On their return the existing cookie is updated with the new expiry time.
 
 ## What's provided
@@ -35,13 +48,9 @@ Pan domain auth is split into 4 modules.
 
 The `pan-domain-auth-verification` library provides the basic functionality for sigining and verifying login cookies. For
 applications that only need to *VERIFY* an existing login (rather than issue logins themselves) this is the library to use.
-In most cases this will be useful for APIs that are unwilling or unable to offer a user-facing OAuth dance to acquire
-credentials directly, on behalf of the user. Note that this module also includes means for obtaining the public key used
-to do the verification (more details below).
 
-The `pan-domain-auth-core` library provides the core utilities to load the domain settings, create and validate the cookie and
-check if the user has mutlifactor auth turned on (see below). Note this does not include the OAuth dance code or cookie setting
-as these vary based on web framework being used by implementing apps.
+The `pan-domain-auth-core` library provides the core utilities to load settings, create and validate the cookie and
+check if the user has mutli-factor auth turned on when usng Google as the provider.
 
 The `pan-domain-auth-play_2-6` library provide an implementation for play apps. There is an auth action that can be applied to the
 endpoints in your application that will do checking and setting of the cookie and will give you the OAuth authentication mechanism
@@ -49,43 +58,16 @@ and callback. This is the only framework specific implementation currently (due 
 Guardian), this can be used as reference if you need to implement another framework implementation. This library is for applications
 that need to be able to issue and verify logins which is likely to include user-facing applications.
 
-The `pan-domain-auth-example` provides an example app with authentication. This is implemented in play and is used for testing.
-Additionally the nginx directory provides an example of how to set up an nginx configuration to allow you to run multiple authenticated
-apps locally as if they were all on the same domain (also useful for testing)
+The `pan-domain-auth-example` provides an example Play 2.6 app with authentication. Additionally the nginx directory provides an example
+of how to set up an nginx configuration to allow you to run multiple authenticated apps locally as if they were all on the same domain which
+is useful during development.
 
-The `pan-domain-auth-verification`, `pan-domain-auth-core` and `pan-domain-auth-play` libraries are available on maven central
-cross compiled for scala 2.11.12 and 2.12.4. to include them via sbt:
-
-### To verify logins
-
-```
-"com.gu" %% "pan-domain-auth-verification" % "0.6.0"
-```
-
-Example code is provided [here](pan-domain-auth-example/app/VerifyExample.scala)
-
-If you'd rather not use the provided agent you can hook the `PublicSettings` instance up to your own scheduler by
-calling its `refresh` method directly, instead of invoking start. You can also manually fetch the settings using the
-provided helper `PublicSettings.getPublicKey(domain)` helper function.
-
-### If your application needs to issue logins
-
-```
-"com.gu" %% "pan-domain-auth-core" % "0.6.0"
-```
-
-or
-
-```
-"com.gu" %% "pan-domain-auth-play_2-6" % "0.6.0"
-```
-
-In both cases you will need to set up a few things, see `Requirements` below.
-
+All libraries are cross compiled for Scala 2.11 and Scala 2.12, apart from the Play integration which requires 2.12.
 
 ## Requirements
 
-To use pan domain authentication you will need:
+If you are adding a new application to an existing deployment of pan-domain-authentication then you can skip to
+[Integrating With Your App](#integrating-with-your-app)
 
 * At least one webapp running on subdomains of a single domain (eg. app1.example.com and app2.example.com)
 
@@ -93,31 +75,34 @@ To use pan domain authentication you will need:
 
 * An AWS S3 bucket where the configuration for your domain will live
 
-    * the name is taken from `PANDA_BUCKET_NAME` environment variable or `pan-domain-auth-settings` is used by default
+* Configuration files in the S3 bucket. A good naming convention to follow is `<domain>.settings` and `<domain>.settings.public`.
 
-* The AWS login credentials for a user that can read from the said bucket (it is recommended that this is the only thing that the user is allowed to do in your s3 account)
+* An OAuth provider to use for authentication
 
-* An app set up in Google with access to the Google+ api (this is used for the actual authentication):
+  * Both a [Client ID and secret](https://www.oauth.com/oauth2-servers/client-registration/client-id-secret/) are required
+  * An OAuth [discovery document](https://tools.ietf.org/html/draft-ietf-oauth-discovery-06) is required
+    * Example Google: `https://accounts.google.com/.well-known/openid-configuration`
+    * Example AWS Cognito: `https://cognito-idp.eu-west-1.amazonaws.com/eu-west-1_nW3FKqRh0/.well-known/openid-configuration`
+  * You must also configure the callback URLs with your provider, one for each application under the domain that will be issuing logins.
 
-    * get a set of API credentials for your app from the [Google Developer Console](https://console.developers.google.com)
-    * ensure that you have switched on access to the `Google+ API` for your credentials
-    * configure all the oath callbacks used by your apps
+* Optionally a Google Service Account to check multi-factor has been enabled when using Google as a provider
 
-* A configuration file in the S3 bucket named `<domain>.settings`
+  * This can be configured from the [Google Developer Console](https://console.developers.google.com)
+  * Ensure that you have switched on access to the `Google+ API` for your credentials
 
 
 ## Setting up your domain configuration
 
-The configuration file is named for the domain and is a simple properties style file. For all apps on the *.example.com
-domain the file would be called example.com.settings. The contents of the file would look something like this:
+The configuration file is named for the domain and is a simple properties style file. A good naming convention to follow
+is for apps on the `*.example.com` domain to name the file `example.com.settings`. The contents of the file would look something like this:
 
 ``` ini
 publicKey=example_key
 privateKey=example_key
 cookieName=exampleAuth
 
-clientId=example_google_client
-clientSecret=example_google_secret
+clientId=example_oauth_client_id
+clientSecret=example_oauth_secret
 
 googleServiceAccountId=serviceAccount@developer.gserviceaccount.com
 googleServiceAccountCert=name_of_cert_in_bucket.p12
@@ -125,7 +110,7 @@ google2faUser=an.admin@example.com
 multifactorGroupId=group@2fa_admin_user
 ```
   
-There is a corresponding (publicly available) file called example.com.settings.public. 
+There is a corresponding (publically available) file called example.com.settings.public. 
 The contents of the file looks like:
  
 ``` ini
@@ -134,17 +119,17 @@ publicKey=example_key
 
 * **secret** - this is the shared secret used to sign the cookie
 
-* **cookieName** - this is what the shared cookie is called
+* **cookieName** - the name of the cookie. This should be unique to each top-level domain.
 
-* **googleAuthClientId** - this is the client id for the Google app you autheniticate with - this is obtained from the Google [Google Developer Console](https://console.developers.google.com)
+* **clientId** - this is the OAuth client id for the provider you are authenticating against
 
-* **googleAuthSecret** - this is the secret for the Google app you autheniticate with - this is obtained from the Google [Google Developer Console](https://console.developers.google.com)
+* **googleAuthSecret** - this is the OAuth secret for the provider
 
-* **googleServiceAccountId, googleServiceAccountCert, google2faUser and multifactorGroupId** - these are optional parameters for using a group based 2 factor auth verification, see explanation below
+* **googleServiceAccountId, googleServiceAccountCert, google2faUser and multifactorGroupId** - these are optional parameters for using a group based 2 factor auth verification
 
-* **privateKey** - this is the private key used to sign the asymmetrical cookie
+* **privateKey** - this is the private key used to sign the cookie
 
-* **publicKey** - this is the public key used to verify the asymmetrical cookie
+* **publicKey** - this is the public key used to verify the cookie
 
 ### Generating Keys
 
@@ -158,126 +143,47 @@ There is a helper script in the root of this project that uses the commands abov
     ./generateKeyPair.sh
 
 Note: you only need to pass the key ie the blob of base64 between the start and end markers in the pem file.
-   
 
 ## Integrating with your app
 
-### Verify-only
+### To verify logins
 
-If your service only needs to verify existing pan-domain-auth cookies use the `pan-domain-auth-verification` library.
-Inside it is a `PanDomain` object which contains an `authStatus` method. You'll just need the pan-domain-auth cookie
-value and the public key for the domain you are on. Calling that function will return an `AuthenticationStatus` which
-can be any of:
+Add the verification library as an SBT dependency to your project, taking care to use the latest version:
 
-* Authenticated
-* Expired
-* InvalidCookie
-* NotAuthorized
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.11/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.11)
 
-Note that the `authStatus` method takes a function you can use to validate the user. Typically this involves checking
-the domain and ensuring the user has 2-factor-auth enabled so the default argument (guardianValidation) does this for you.
-If this check fails you will recieve a `NotAuthorized` result.
-
-### Using the play implementation
-
-If you are using play then use the play library, this provides the actions that allow you to secure your endpoints.
-
-Create a pan domain auth actions trait that extends the `AuthActions` trait in the the play lib. This trait will
-provide the config needed to connect to the aws bucket and the domain and app you are using. You will also need to
-add a method here to ensure that any authenticated user is valid in your specific app (and this could be used to create
-users in you app's datastore). You should also provide the full url of the endpoint that will handle the oauth callback.
-
-
-```scala
-package controllers
-
-import com.gu.pandomainauth.action.AuthActions
-import com.gu.pandomainauth.model.AuthenticatedUser
-import play.api.mvc.ControllerComponents
-import play.api.Configuration
-
-trait PanDomainAuthActions extends AuthActions {
-
-  def config: Configuration
-
-  override def validateUser(authedUser: AuthenticatedUser): Boolean = {
-    (authedUser.user.email endsWith ("@guardian.co.uk")) && authedUser.multiFactor
-  }
-
-  def config: Configuration
-
-  override def cacheValidation = false
-
-  override def authCallbackUrl: String = config.get[String]("host") + "/oauthCallback"
-}
+```
+libraryDependencies += "com.gu" %% "pan-domain-auth-verification" % "<<LATEST_VERSION>>"
 ```
 
-By default the user validation method is called every request. If your validation method has side effects or is expensive then you
-can set `cacheValidation` to true, this will mean that `validateUser` is only called once per system per authentication (i.e
-validation will only reoccur when the OAuth session is refreshed)
+Follow the example code provided [here](pan-domain-auth-example/app/VerifyExample.scala)
 
-Create a controller that will handle the oauth callback and logout actions, add these actions to the routes file.
+Configuration settings are read from an S3 bucket. Follow the steps below if you do not yet have configuration set up.
 
-```scala
-package controllers
+### If your application needs to issue logins
 
-import play.api.mvc._
-import scala.concurrent.Future
-import play.api.Configuration
-import akka.actor.ActorSystem
+Add the core library as an SBT dependency to your project, taking care to use the latest version.
+If you are building your application using the Play framework, use the Play integration.
 
-class Login(
-  override val controllerComponents: ControllerComponents,
-  override val config: Configuration,
-  override val wsClient: WSClient,
-  override val panDomainSettings: PanDomainAuthSettingsRefresher
-) extends AbstractController(controllerComponents) with PanDomainAuthActions {
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.11/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.11)
 
-  def oauthCallback = Action.async { implicit request =>
-    processGoogleCallback()
-  }
-
-  def logout = Action.async { implicit request =>
-    Future(processLogout)
-  }
-}
+```
+libraryDependencies += "com.gu" %% "pan-domain-auth-core" % "<<LATEST_VERSION>"
 ```
 
-Add the `AuthAction` or `ApiAuthAction` to any endpoints you with to require an authenticated user for.
+or
 
-```scala
-package controllers
-
-import lib._
-import play.api.mvc._
-import play.api.Configuration
-import akka.actor.ActorSystem
-
-
-class Application(
-  override val controllerComponents: ControllerComponents,
-  override val config: Configuration,
-  override val wsClient: WSClient,
-  override val panDomainSettings: PanDomainAuthSettingsRefresher
-) extends AbstractController(controllerComponents) with PanDomainAuthActions {
-class Application(
-  override val controllerComponents: ControllerComponents,
-  override val config: Configuration,
-  override val actorSystem: ActorSystem
-) extends AbstractController(controllerComponents) with PanDomainAuthActions {
-
-  def loginStatus = AuthAction { request =>
-    val user = request.user
-    Ok(views.html.loginStatus(user.toJson))
-  }
-
-  def getItems = APIAuthAction { implicit req =>
-    ...
-  }
-
-  ...
-}
 ```
+libraryDependencies += "com.gu" %% "pan-domain-auth-play_2-6" % "<<LATEST_VERSION>"
+```
+
+Example code for the Play Framework is provided [here](./pan-domain-auth-example). In particular:
+
+- [di.scala](./pan-domain-auth-example/di.scala) shows how to construct the settings refresher
+- [ExampleAuthActions](./pan-domain-auth-example/controllers/ExampleAuthActions.scala) shows how to implement user validation
+- [AdminController](./pan-domain-auth-example/controllers/AdminController.scala) shows how to built authenticated request handlers
+
+Ensure you pick the correct request handler for your needs:
 
 * `AuthAction` is used for endpoints that the user requests and will redirect unauthenticated users to the OAuth provider for authentication.
   Use this for standard page loads etc.
@@ -304,82 +210,8 @@ class Application(
 
   See also [Customising error responses for an authenticated API]().
 
-Both the actions add the current user to the request, this is available as `request.user`.
+Example code is not yet provided for web frameworks other than Play.
 
-In order to instantiate your controller you'll need an instance of PanDomainAuthSettingsRefresher. This one cane be manually created during the wiring of your application (application loader).
-Here's an example of instantiation:
-
-```scala
-  val awsCredentialsProvider = ...
-
-  val panDomainSettings = new PanDomainAuthSettingsRefresher(
-    domain = "local.dev-gutools.co.uk",
-    system = "example",
-    actorSystem = actorSystem,
-    awsCredentialsProvider = awsCredentialsProvider // optional as there's a default value to DefaultAWSCredentialsProviderChain
-  )
-
-  val controller = new AdminController(controllerComponents, configuration, wsClient, panDomainSettings)
-```
-
-### Using pan domain auth with another framework
-
-Other scala frameworks exist as well as play. Full framework libraries are not provided for these yet as we predominantly use play at the guardian.
-To use pan domain auth with another framework you will need to provide an equivalent of the user auth checking in the play actions and provide an
-implementation of the OAuth integration. Have a look at how this is done in the play library and provide your own implementation for
-your framework and http client etc.
-
-More examples and framework clients may be added in the future as they become available.
-
-### Configuring access to the S3 bucket
-
-Access to the S3 bucket is controlled by passing an [AWSCredentialsProvider](https://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/com/amazonaws/auth/AWSCredentialsProvider.html)
-and [region](https://docs.aws.amazon.com/general/latest/gr/rande.html) to the `PanDomainAuthSettingsRefresher`.
-
-### The user object
-
-The user object is defined as:
-
-``` scala
-case class User(
-  firstName: String,
-  lastName: String,
-  email: String,
-  avatarUrl: Option[String]
-)
-```
-
-Hopefully the fields are clear as to what they are. There is a budget toJson method on it that will give a json string representation of
-the user which can be consumed by your javascript, this method does no use any json libraries so should work for any framework and library
-choices you've made in you implementing app.
-
-### Validating the user
-
-As different apps may have different requirements on user validity each individual app should provide a user validation mechanism. The validation
-method takes in an `AuthenticatedUser` object which contains the user object and metadata about the authentication.
-
-``` scala
-case class AuthenticatedUser(
-  user: User,
-  authenticatingSystem: String,
-  authenticatedIn: Set[String],
-  expires: Long,
-  multiFactor: Boolean
-)
-```
-
-The fields are:
-
-* **user** - the user object
-* **authenticatingSystem** - the app name of the app that authenticated the user
-* **authenticatedIn** - the set of app names that this user is known to be valid, this prevents revalidation if cacheValidation is set to true
-* **expires** - the authentication session expiry time in milliseconds, after this has passed then the session is invalid and the user will need to
-                be reauthenticated with the provider. There is a handy method to check if the authentication is expired `def isExpired = expires < new Date().getTime`
-* **multiFactor** - true if the user's authentication used a 2 factor type login. This defaults to false
-
-In many cases you will just want to check that the user is on the right domain and that they have 2-factor-auth
-enabled on their Google account. A function that enforces this common use-case is provided for convenience,
-`PanDomain.guardianValidation`.
 
 ### Customising error responses for an authenticated API
 
@@ -401,7 +233,7 @@ object VerboseAPIAuthAction extends AbstractApiAuthAction {
 ```
 
 
-## Using Google group based 2-factor authentication validation
+### Using Google group based 2-factor authentication validation
 
 Some applications may require that a multifactor authentication is used when authenticating a user. Since it is not possible to tell if this happened
 from the standard callback this is checked by asserting that the user is in a Google group that enforces 2 factor auth (this was the workaround suggested
@@ -419,7 +251,7 @@ properties:
 * **multifactorGroupId** - the name of the group that indicates and enforces that 2fa is turned on
 
 
-## Dealing with auth expiry in a single page webapp
+### Dealing with auth expiry in a single page webapp
 
 In a single page webapp there will typically be an initial page load and then all communication with the server will be initiated by JavaScript.
 This causes problems when the auth session expires as you can't redirect the request to the OAuth provider. To work around this
