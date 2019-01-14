@@ -12,8 +12,7 @@ case class PanDomainAuthSettings(
 )
 
 case class CookieSettings(
-  legacyCookieName: String,
-  assymCookieName: String
+  cookieName: String
 )
 
 case class OAuthSettings(
@@ -33,8 +32,8 @@ object PanDomainAuthSettings{
 
   def apply(settingMap: Map[String, String]): PanDomainAuthSettings = {
     val cookieSettings = CookieSettings(
-      legacyCookieName = settingMap("legacyCookieName"),
-      assymCookieName = settingMap("assymCookieName")
+      // Try legacy setting name first for compatibility
+      cookieName = settingMap.getOrElse("assymCookieName", settingMap("cookieName"))
     )
 
     val oAuthSettings = OAuthSettings(

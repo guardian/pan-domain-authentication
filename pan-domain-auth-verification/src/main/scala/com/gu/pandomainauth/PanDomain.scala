@@ -1,7 +1,7 @@
 package com.gu.pandomainauth
 
 import com.gu.pandomainauth.model._
-import com.gu.pandomainauth.service.{LegacyCookie, CookieUtils}
+import com.gu.pandomainauth.service.CookieUtils
 
 
 object PanDomain {

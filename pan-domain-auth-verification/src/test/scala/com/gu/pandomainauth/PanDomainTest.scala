@@ -3,8 +3,8 @@ package com.gu.pandomainauth
 import java.util.Date
 
 import com.gu.pandomainauth.model._
-import com.gu.pandomainauth.service.{LegacyCookie, CookieUtils}
-import org.scalatest.{Inside, Matchers, FreeSpec}
+import com.gu.pandomainauth.service.CookieUtils
+import org.scalatest.{FreeSpec, Inside, Matchers}
 
 class PanDomainTest extends FreeSpec with Matchers with Inside {
   import com.gu.pandomainauth.service.TestKeys._
