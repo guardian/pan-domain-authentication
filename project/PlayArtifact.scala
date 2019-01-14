@@ -1,5 +1,3 @@
-package plugins
-
 import sbt._
 import sbt.Keys._
 import sbtassembly.Plugin._
