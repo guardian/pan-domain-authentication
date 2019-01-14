@@ -39,7 +39,7 @@ object Dependencies {
   * See https://github.com/aws/aws-sdk-java/pull/1373
   * */
   val jackson: Seq[ModuleID] = {
-    val version = "2.9.2"
+    val version = "2.9.8"
     Seq(
       "com.fasterxml.jackson.core" % "jackson-core" % version,
       "com.fasterxml.jackson.core" % "jackson-databind" % version,
