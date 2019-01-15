@@ -146,7 +146,13 @@ lazy val panDomainAuthCore = project("pan-domain-auth-core")
   .dependsOn(panDomainAuthVerification)
   .settings(sonatypeReleaseSettings: _*)
   .settings(
-    libraryDependencies ++= akkaDependencies ++ awsDependencies ++ googleDirectoryApiDependencies ++ cryptoDependencies ++ apacheHttpClient ++ testDependencies,
+    libraryDependencies ++= akkaDependencies
+      ++ awsDependencies
+      ++ googleDirectoryApiDependencies
+      ++ cryptoDependencies
+      ++ apacheHttpClient
+      ++ jackson
+      ++ testDependencies,
     publishArtifact := true
   )
 
