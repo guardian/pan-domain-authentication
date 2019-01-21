@@ -12,8 +12,7 @@ case class PanDomainAuthSettings(
 )
 
 case class CookieSettings(
-  legacyCookieName: String,
-  assymCookieName: String
+  cookieName: String
 )
 
 case class OAuthSettings(
@@ -30,11 +29,11 @@ case class Google2FAGroupSettings(
 )
 
 object PanDomainAuthSettings{
+  private val legacyCookieNameSetting = "assymCookieName"
 
   def apply(settingMap: Map[String, String]): PanDomainAuthSettings = {
     val cookieSettings = CookieSettings(
-      legacyCookieName = settingMap("legacyCookieName"),
-      assymCookieName = settingMap("assymCookieName")
+      cookieName = settingMap.getOrElse(legacyCookieNameSetting, settingMap("cookieName"))
     )
 
     val oAuthSettings = OAuthSettings(

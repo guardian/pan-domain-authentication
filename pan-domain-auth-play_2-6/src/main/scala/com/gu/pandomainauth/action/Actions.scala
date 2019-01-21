@@ -143,9 +143,9 @@ trait AuthActions {
       }
 
       if (validateUser(authedUserData)) {
-        val updatedCookies = generateCookies(authedUserData)
+        val updatedCookie = generateCookie(authedUserData)
         Redirect(originalUrl)
-          .withCookies(updatedCookies: _*)
+          .withCookies(updatedCookie)
           .withSession(session = request.session - ANTI_FORGERY_KEY - LOGIN_ORIGIN_KEY)
       } else {
         showUnauthedMessage(invalidUserMessage(claimedAuth))
@@ -161,43 +161,30 @@ trait AuthActions {
     CookieUtils.parseCookieData(cookie.value, settings.publicKey)
   }
 
-  def readCookie(request: RequestHeader): Option[Cookie] = request.cookies.get(settings.cookieSettings.assymCookieName)
+  def readCookie(request: RequestHeader): Option[Cookie] = request.cookies.get(settings.cookieSettings.cookieName)
 
-  def generateCookies(authedUser: AuthenticatedUser): List[Cookie] = List(
+  def generateCookie(authedUser: AuthenticatedUser): Cookie =
     Cookie(
-      name = settings.cookieSettings.legacyCookieName,
-      value = LegacyCookie.generateCookieData(authedUser, settings.secret),
-      domain = Some(domain),
-      secure = true,
-      httpOnly = true
-    ),
-    Cookie(
-      name = settings.cookieSettings.assymCookieName,
+      name = settings.cookieSettings.cookieName,
       value = CookieUtils.generateCookieData(authedUser, settings.privateKey),
       domain = Some(domain),
       secure = true,
       httpOnly = true
     )
-  )
 
   def includeSystemInCookie(authedUser: AuthenticatedUser)(result: Result): Result = {
     val updatedAuth    = authedUser.copy(authenticatedIn = authedUser.authenticatedIn + system)
-    val updatedCookies = generateCookies(updatedAuth)
-    result.withCookies(updatedCookies: _*)
+    val updatedCookie = generateCookie(updatedAuth)
+    result.withCookies(updatedCookie)
   }
 
   def flushCookie(result: Result): Result = {
     val clearCookie = DiscardingCookie(
-      name = settings.cookieSettings.legacyCookieName,
+      name = settings.cookieSettings.cookieName,
       domain = Some(domain),
       secure = true
     )
-    val clearAssymCookie = DiscardingCookie(
-      name = settings.cookieSettings.assymCookieName,
-      domain = Some(domain),
-      secure = true
-    )
-    result.discardingCookies(clearCookie, clearAssymCookie)
+    result.discardingCookies(clearCookie)
   }
 
   /**
