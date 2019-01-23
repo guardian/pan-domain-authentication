@@ -46,7 +46,7 @@ class PanDomainAuthSettingsRefresher(
   private def refresh(): Unit = {
     loadSettings() match {
       case Right(settings) =>
-        logger.info(s"Updated pan-domain settings for $domain")
+        logger.debug(s"Updated pan-domain settings for $domain")
         authSettings.set(PanDomainAuthSettings(settings))
 
       case Left(err) =>

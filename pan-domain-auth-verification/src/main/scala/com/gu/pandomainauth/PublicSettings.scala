@@ -34,7 +34,7 @@ class PublicSettings(settingsFileKey: String, bucketName: String, s3Client: Amaz
     PublicSettings.getPublicKey(settingsFileKey, bucketName, s3Client) match {
       case Right(publicKey) =>
         agent.set(Some(publicKey))
-        logger.info("Successfully updated pan-domain public settings")
+        logger.debug("Successfully updated pan-domain public settings")
 
       case Left(err) =>
         logger.error("Failed to update pan-domain public settings")
