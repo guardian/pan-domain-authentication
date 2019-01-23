@@ -12,14 +12,12 @@ import xerial.sbt.Sonatype._
 import com.typesafe.sbt.pgp.PgpKeys
 import play.sbt.routes.RoutesKeys._
 
-val scala211 = "2.11.12"
-val scala212 = "2.12.4"
+val scala212 = "2.12.8"
 
 val commonSettings =
   Seq(
     scalaVersion := scala212,
     scalaVersion in ThisBuild := scala212,
-    crossScalaVersions := Seq(scala211, scala212),
     organization := "com.gu",
     fork in Test := false,
     resolvers ++= Seq("Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"),
@@ -96,7 +94,6 @@ lazy val panDomainAuthCore = project("pan-domain-auth-core")
 lazy val panDomainAuthPlay_2_6 = project("pan-domain-auth-play_2-6")
   .settings(sonatypeReleaseSettings: _*)
   .settings(
-    crossScalaVersions := Seq(scala211, scala212),
     libraryDependencies ++= playLibs_2_6,
     publishArtifact := true
   ).dependsOn(panDomainAuthCore)
@@ -112,7 +109,6 @@ lazy val root = Project("pan-domain-auth-root", file(".")).aggregate(
   panDomainAuthPlay_2_6,
   exampleApp
 ).settings(sonatypeReleaseSettings: _*).settings(
-  crossScalaVersions := Seq(scala211, scala212),
   organization := "com.gu",
   publishArtifact := false
 )
