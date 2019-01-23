@@ -1,5 +1,6 @@
 package com.gu.pandomainauth.service
 
+import com.amazonaws.services.s3.AmazonS3
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
 import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.jackson2.JacksonFactory
@@ -10,7 +11,7 @@ import com.google.api.services.admin.directory.{Directory, DirectoryScopes}
 import scala.collection.JavaConverters._
 import com.gu.pandomainauth.model.{AuthenticatedUser, Google2FAGroupSettings}
 
-class GroupChecker(config: Google2FAGroupSettings, bucket: S3Bucket) {
+class GroupChecker(config: Google2FAGroupSettings, bucketName: String, s3Client: AmazonS3) {
   val transport = new NetHttpTransport()
   val jsonFactory = new JacksonFactory()
 
@@ -27,7 +28,7 @@ class GroupChecker(config: Google2FAGroupSettings, bucket: S3Bucket) {
     .setHttpRequestInitializer(credential).build
 
   private def loadServiceAccountPrivateKey = {
-    val certInputStream = bucket.getObjectInputStream(config.serviceAccountCert)
+    val certInputStream = s3Client.getObject(bucketName, config.serviceAccountCert).getObjectContent
     val serviceAccountPrivateKey = SecurityUtils.loadPrivateKeyFromKeyStore(
       SecurityUtils.getPkcs12KeyStore,
       certInputStream,
@@ -51,7 +52,7 @@ class GroupChecker(config: Google2FAGroupSettings, bucket: S3Bucket) {
   }
 }
 
-class GoogleGroupChecker(config: Google2FAGroupSettings, bucket: S3Bucket) extends GroupChecker(config, bucket) {
+class GoogleGroupChecker(config: Google2FAGroupSettings, bucketName: String, s3Client: AmazonS3) extends GroupChecker(config, bucketName, s3Client) {
 
   def checkGroups(authenticatedUser: AuthenticatedUser, groupIds: List[String]): Either[String, Boolean] = {
     val query = directory.groups().list().setUserKey(authenticatedUser.user.email)
@@ -61,7 +62,7 @@ class GoogleGroupChecker(config: Google2FAGroupSettings, bucket: S3Bucket) exten
 
 }
 
-class Google2FAGroupChecker(config: Google2FAGroupSettings, bucket: S3Bucket) extends GroupChecker(config, bucket) {
+class Google2FAGroupChecker(config: Google2FAGroupSettings, bucketName: String, s3Client: AmazonS3) extends GroupChecker(config, bucketName, s3Client) {
 
   def checkMultifactor(authenticatedUser: AuthenticatedUser): Boolean = {
     val query = directory.groups().list().setUserKey(authenticatedUser.user.email)
