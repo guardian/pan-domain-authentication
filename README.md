@@ -1,6 +1,6 @@
 # Pan Domain Authentication 
 
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.11/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.11)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.12/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.12)
 
 Pan domain authentication provides distributed authentication for multiple webapps running in the same domain. Each
 application can authenticate users against an OAuth provider and store the authentication information in a common cookie.
@@ -61,8 +61,6 @@ that need to be able to issue and verify logins which is likely to include user-
 The `pan-domain-auth-example` provides an example Play 2.6 app with authentication. Additionally the nginx directory provides an example
 of how to set up an nginx configuration to allow you to run multiple authenticated apps locally as if they were all on the same domain which
 is useful during development.
-
-All libraries are cross compiled for Scala 2.11 and Scala 2.12, apart from the Play integration which requires 2.12.
 
 ## Requirements
 
@@ -150,7 +148,7 @@ Note: you only need to pass the key ie the blob of base64 between the start and 
 
 Add the verification library as an SBT dependency to your project, taking care to use the latest version:
 
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.11/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.11)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.12/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.12)
 
 ```
 libraryDependencies += "com.gu" %% "pan-domain-auth-verification" % "<<LATEST_VERSION>>"
@@ -165,7 +163,7 @@ Configuration settings are read from an S3 bucket. Follow the steps below if you
 Add the core library as an SBT dependency to your project, taking care to use the latest version.
 If you are building your application using the Play framework, use the Play integration.
 
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.11/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.11)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.12/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.12)
 
 ```
 libraryDependencies += "com.gu" %% "pan-domain-auth-core" % "<<LATEST_VERSION>"
