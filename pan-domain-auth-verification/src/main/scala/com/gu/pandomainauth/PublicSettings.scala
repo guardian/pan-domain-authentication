@@ -27,7 +27,9 @@ class PublicSettings(settingsFileKey: String, bucketName: String, s3Client: Amaz
   implicit private val executionContext: ExecutionContext = ExecutionContext.fromExecutor(scheduler)
 
   def start(interval: FiniteDuration = 60.seconds): Unit = {
-    scheduler.scheduleAtFixedRate(() => refresh(), 0, interval.toMillis, TimeUnit.MILLISECONDS)
+    scheduler.scheduleAtFixedRate(new Runnable {
+      override def run(): Unit = refresh()
+    }, 0, interval.toMillis, TimeUnit.MILLISECONDS)
   }
 
   def refresh(): Unit = {
@@ -59,9 +61,11 @@ object PublicSettings {
    * @param client implicit dispatch.Http to use for fetching the key
    * @param ec     implicit execution context to use for fetching the key
    */
-  def getPublicKey(settingsFileKey: String, bucketName: String, s3Client: AmazonS3): Either[SettingsFailure, PublicKey] = {
-    fetchSettings(settingsFileKey, bucketName, s3Client) flatMap extractSettings flatMap extractPublicKey
-  }
+  def getPublicKey(settingsFileKey: String, bucketName: String, s3Client: AmazonS3): Either[SettingsFailure, PublicKey] = for {
+    settingsFile <- fetchSettings(settingsFileKey, bucketName, s3Client).right
+    settings <- extractSettings(settingsFile).right
+    publicKey <- extractPublicKey(settings).right
+  } yield publicKey
 
   private[pandomainauth] def extractPublicKey(settings: Map[String, String]): Either[SettingsFailure, PublicKey] = for {
     rawKey <- settings.get("publicKey").toRight(PublicKeyNotFoundFailure).right

@@ -35,13 +35,16 @@ class PanDomainAuthSettingsRefresher(
     case Left(err) => throw Settings.errorToThrowable(err)
   })
 
-  scheduler.scheduleAtFixedRate(() => refresh(), 1, 1, TimeUnit.MINUTES)
+  scheduler.scheduleAtFixedRate(new Runnable {
+    override def run(): Unit = refresh()
+  }, 1, 1, TimeUnit.MINUTES)
 
   def settings: PanDomainAuthSettings = authSettings.get()
 
-  private def loadSettings(): Either[SettingsFailure, Map[String, String]] = {
-    Settings.fetchSettings(settingsFileKey, bucketName, s3Client).flatMap(Settings.extractSettings)
-  }
+  private def loadSettings(): Either[SettingsFailure, Map[String, String]] = for {
+    settingsFile <- Settings.fetchSettings(settingsFileKey, bucketName, s3Client).right
+    settings <- Settings.extractSettings(settingsFile).right
+  } yield settings
 
   private def refresh(): Unit = {
     loadSettings() match {
