@@ -46,19 +46,19 @@ On their return the existing cookie is updated with the new expiry time.
 
 Pan domain auth is split into 5 modules.
 
-The `pan-domain-auth-verification` library provides the basic functionality for sigining and verifying login cookies. For
-applications that only need to *VERIFY* an existing login (rather than issue logins themselves) this is the library to use.
+The [pan-domain-auth-verification](###-to-verify-logins) library provides the basic functionality for sigining and verifying login cookies in Scala.
+For JVM applications that only need to *VERIFY* an existing login (rather than issue logins themselves) this is the library to use.
 
 The `pan-domain-auth-core` library provides the core utilities to load settings, create and validate the cookie and
 check if the user has mutli-factor auth turned on when usng Google as the provider.
 
-The `pan-domain-auth-play_2-6` library provide an implementation for play apps. There is an auth action that can be applied to the
-endpoints in your application that will do checking and setting of the cookie and will give you the OAuth authentication mechanism
-and callback. This is the only framework specific implementation currently (due to play being the framework predominantly used at The
+The [pan-domain-auth-play_2-6](###if-your-application-needs-to-issue-logins) library provide an implementation for play apps. There is an auth action
+that can be applied to the endpoints in your application that will do checking and setting of the cookie and will give you the OAuth authentication
+mechanism and callback. This is the only framework specific implementation currently (due to play being the framework predominantly used at The
 Guardian), this can be used as reference if you need to implement another framework implementation. This library is for applications
 that need to be able to issue and verify logins which is likely to include user-facing applications.
 
-The `pan-domain-node` library provides an implementation of *verification only* for node apps.
+The [pan-domain-node](###to-verify-login-in-nodejs) library provides an implementation of *verification only* for node apps.
 
 The `pan-domain-auth-example` provides an example Play 2.6 app with authentication. Additionally the nginx directory provides an example
 of how to set up an nginx configuration to allow you to run multiple authenticated apps locally as if they were all on the same domain which
@@ -144,7 +144,7 @@ There is a helper script in the root of this project that uses the commands abov
 
 Note: you only need to pass the key ie the blob of base64 between the start and end markers in the pem file.
 
-## Integrating with your app
+## Integrating with your Scala app
 
 ### To verify logins
 
@@ -210,7 +210,7 @@ Ensure you pick the correct request handler for your needs:
 
   See also [Customising error responses for an authenticated API]().
 
-Example code is not yet provided for web frameworks other than Play.
+Example Scala code is not yet provided for web frameworks other than Play.
 
 
 ### Customising error responses for an authenticated API
@@ -249,6 +249,48 @@ properties:
 * **googleServiceAccountCert** - the name within the bucket of the certificate used to validate the service account
 * **google2faUser** - the admin user to connect to the directory api as, this is not the service account user but a user in your org who is authorised to access group information
 * **multifactorGroupId** - the name of the group that indicates and enforces that 2fa is turned on
+
+
+### To verify login in NodeJS
+
+[![npm version](https://badge.fury.io/js/pan-domain-node.svg)](https://badge.fury.io/js/pan-domain-node)
+
+```
+npm install --save-dev pan-domain-node
+```
+
+```typescript
+import { PanDomainAuthentication, AuthenticationStatus, User, guardianValidation } from 'pan-domain-node';
+
+const panda = new PanDomainAuthentication(
+  "gutoolsAuth-assym", // cookie name
+  "eu-west-1", // AWS region
+  "pan-domain-auth-settings", // Settings bucket
+  "local.dev-gutools.co.uk.public.settings", // Settings file
+  guardianValidation // customisable user validation function
+);
+
+// alternatively customise the validation function and pass at construction
+function customValidation(user: User): boolean {
+  const isInCorrectDomain = user.email.indexOf('test.com') !== -1;
+  return isInCorrectDomain && user.multifactor;
+}
+
+// when handling a request
+function(request) {
+  // Pass the raw unparsed cookies
+  return panda.verify(request.headers['Cookie']).then(( { status, user }) => {
+    switch(status) {
+      case AuthenticationStatus.Authorised:
+        // Good user, handle the request!
+
+      default:
+        // Bad user. Return 4XX
+    }
+  });
+}
+
+```
 
 
 ### Dealing with auth expiry in a single page webapp

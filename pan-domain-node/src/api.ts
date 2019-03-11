@@ -23,9 +23,9 @@ export interface AuthenticationResult {
     user?: User 
 }
 
-export type ValidateUserFn = (user: User) => Boolean;
+export type ValidateUserFn = (user: User) => boolean;
 
-export function guardianValidation(user: User): Boolean {
+export function guardianValidation(user: User): boolean {
     const isGuardianUser = user.email.indexOf('guardian.co.uk') !== -1;
     return isGuardianUser && user.multifactor;
 }
