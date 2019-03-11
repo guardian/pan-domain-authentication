@@ -3,9 +3,10 @@
   "version": "0.4.0",
   "description": "NodeJs implementation of Guardian pan-domain auth verification",
   "main": "dist/api.js",
+  "types": "dist/src/api.d.ts",
   "repository": {
     "type": "git",
-    "url": "https://github.com/guardian/pan-domain-node.git"
+    "url": "https://github.com/guardian/pan-domain-authentication.git"
   },
   "keywords": [
     "auth",
@@ -15,11 +16,11 @@
     "name": "Guardian Editorial Tools Developers",
     "email": "editorial.tools.dev@guardian.co.uk"
   },
-  "license": "Apache",
+  "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/guardian/pan-domain-node/issues"
+    "url": "https://github.com/guardian/pan-domain-authentication/issues"
   },
-  "homepage": "https://github.com/guardian/pan-domain-node",
+  "homepage": "https://github.com/guardian/pan-domain-authentication",
   "devDependencies": {
     "@types/cookie": "^0.3.2",
     "@types/iniparser": "0.0.29",
