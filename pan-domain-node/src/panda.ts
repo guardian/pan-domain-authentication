@@ -65,6 +65,7 @@ export class PanDomainAuthentication {
 
     publicKey: Promise<PublicKeyHolder>;
     keyCacheTime: number = 60 * 1000; // 1 minute
+    keyUpdateTimer?: NodeJS.Timeout
 
     constructor(cookieName: string, region: string, bucket: string, keyFile: string, validateUser: ValidateUserFn) {
         this.cookieName = cookieName;
@@ -74,6 +75,14 @@ export class PanDomainAuthentication {
         this.validateUser = validateUser;
 
         this.publicKey = fetchPublicKey(region, bucket, keyFile);
+        
+        this.keyUpdateTimer = setInterval(() => this.getPublicKey(), this.keyCacheTime);
+    }
+
+    stop(): void {
+        if(this.keyUpdateTimer) {
+            clearInterval(this.keyUpdateTimer);
+        }
     }
 
     getPublicKey(): Promise<string> {
