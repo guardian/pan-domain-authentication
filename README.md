@@ -267,7 +267,7 @@ const panda = new PanDomainAuthentication(
   "eu-west-1", // AWS region
   "pan-domain-auth-settings", // Settings bucket
   "local.dev-gutools.co.uk.public.settings", // Settings file
-  guardianValidation // customisable user validation function
+  guardianValidation
 );
 
 // alternatively customise the validation function and pass at construction

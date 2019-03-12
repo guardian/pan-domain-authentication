@@ -71,8 +71,8 @@ export function httpGet(path: string): Promise<string> {
                     resolve();
                 } else {
                     // Response might be XML
-					const match = body.match(/<message>(.*)<\/message>/i);
-					const error = new Error(match ? match[1] : 'Invalid public key response');
+                    const match = body.match(/<message>(.*)<\/message>/i);
+                    const error = new Error(match ? match[1] : 'Invalid public key response');
                     
                     reject(error);
                 }
