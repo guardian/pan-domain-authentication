@@ -68,7 +68,7 @@ export function httpGet(path: string): Promise<string> {
                 const body = data.join(''); 
 
                 if(res.statusCode == 200) {
-                    resolve();
+                    resolve(body);
                 } else {
                     // Response might be XML
                     const match = body.match(/<message>(.*)<\/message>/i);
