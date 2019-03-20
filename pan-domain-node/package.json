@@ -26,15 +26,13 @@
     "@types/iniparser": "0.0.29",
     "@types/jest": "^24.0.9",
     "@types/node": "^11.10.5",
-    "@types/qs": "^6.5.2",
     "jest": "^24.3.1",
     "ts-jest": "^24.0.0",
     "typescript": "^3.3.3333"
   },
   "dependencies": {
     "cookie": "^0.3.1",
-    "iniparser": "^1.0.5",
-    "qs": "^6.6.0"
+    "iniparser": "^1.0.5"
   },
   "scripts": {
     "build": "tsc",

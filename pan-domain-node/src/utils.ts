@@ -1,8 +1,8 @@
 import * as crypto from 'crypto';
 import * as https from 'https';
-import qs from 'qs';
 
 import { User } from './api';
+import { URLSearchParams } from 'url';
 
 export function decodeBase64(data: string): string {
     return (new Buffer(data, 'base64')).toString('utf8');
@@ -82,38 +82,40 @@ export function httpGet(path: string): Promise<string> {
 }
 
 export function parseUser(data: string): User {
-    const params = qs.parse(data);
+    const params = new URLSearchParams(data);
 
     function stringField(name: string): string {
-        const value = params[name];
+        const value = params.get(name);
         if(!value ) { throw new Error(`Missing  ${name}`) }
 
         return value;
     }
 
     function numberField(name: string): number {
-        const value = params[name];
+        const value = params.get(name);
         if(!value) { throw new Error(`Missing  ${name}`) }
 
         return parseInt(value);
     }
 
     function booleanField(name: string): boolean {
-        return params[name] === 'true';
+        return params.get(name) === 'true';
     }
 
     function stringListField(name: string): string[] {
-        const value = params[name];
+        const value = params.get(name);
         if(!value) { throw new Error(`Missing ${name}`) }
 
         return value.split(",");
     }
 
+    const avatarUrl = params.get("avatarUrl");
+
     return {
         firstName: stringField("firstName"),
         lastName: stringField("lastName"),
         email: stringField("email"),
-        avatarUrl: <string>params["avatarUrl"],
+        avatarUrl: avatarUrl ? avatarUrl : undefined,
         authenticatingSystem: stringField("system"),
         authenticatedIn: stringListField("authedIn"),
         expires: numberField("expires"),
