@@ -26,7 +26,7 @@ function fetchPublicKey(region: string, bucket: String, keyFile: String): Promis
     });
 }
 
-export function verifyUser(pandaCookie: string | undefined, publicKey: string, now: number, validateUser: ValidateUserFn): AuthenticationResult {
+export function verifyUser(pandaCookie: string | undefined, publicKey: string, currentTimestamp: number, validateUser: ValidateUserFn): AuthenticationResult {
     if(!pandaCookie) {
         return { status: AuthenticationStatus.INVALID_COOKIE };
     }
@@ -39,7 +39,7 @@ export function verifyUser(pandaCookie: string | undefined, publicKey: string, n
 
     try {
         const user: User = parseUser(data);
-        const isExpired = user.expires < now;
+        const isExpired = user.expires < currentTimestamp;
 
         if(isExpired) {
             return { status: AuthenticationStatus.EXPIRED, user };
