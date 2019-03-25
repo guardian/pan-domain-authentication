@@ -15,7 +15,8 @@ test("return invalid cookie for a malformed signature", () => {
 });
 
 test("return expired", () => {
-    expect(verifyUser(sampleCookie, publicKey, 5678, guardianValidation).status).toBe(AuthenticationStatus.EXPIRED);
+    const someTimeInTheFuture = 5678;
+    expect(verifyUser(sampleCookie, publicKey, someTimeInTheFuture, guardianValidation).status).toBe(AuthenticationStatus.EXPIRED);
 });
 
 test("return not authenticated if user fails validation function", () => {

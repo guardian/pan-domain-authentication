@@ -82,14 +82,14 @@ export function parseUser(data: string): User {
 
     function stringField(name: string): string {
         const value = params.get(name);
-        if(!value ) { throw new Error(`Missing  ${name}`) }
+        if(!value ) { throw new Error(`Missing ${name}`) }
 
         return value;
     }
 
     function numberField(name: string): number {
         const value = params.get(name);
-        if(!value) { throw new Error(`Missing  ${name}`) }
+        if(!value) { throw new Error(`Missing ${name}`) }
 
         return parseInt(value);
     }

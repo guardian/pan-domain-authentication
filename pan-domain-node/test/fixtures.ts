@@ -7,6 +7,8 @@ export const encodedPrivateKey = "MIIJKAIBAAKCAgEAur0hOjhB2QWjwOopCR+Qo27AYv97BJ
 export const encodedPublicKey = "MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAur0hOjhB2QWjwOopCR+Qo27AYv97BJkVaKWPXpj9RfvY1wtpIratDN6tkXN9WCRPzVX8+5qaW034Kvf9WwBZD1ntS8iHYwY1YUaU8Mrp2sRT3K0RqyBlTswIH3HIqpASqv7ZtwDHdhk7Cbd13P5aomJSOjYFhCDUi3sRbjJP1kb6uQLdkZj8fIU518HzSR7Kw7p2mbDqSrGbnaeHWd0Tr3BvDHp9Pi0KpSAVm2qWAXix+BcjMA4ar7kLU1Pre0lt4K4DlSvq5XoHdX9/yvS6KGf+8pXDR9bY6dgRPSG4mzKpiKfkv1eXE8WKs0q3217QZItaSjocw4d0o47vSN+/MAh9V5Zewyb6ogs8JicX3Y3FPG29I1g8iLf3kBZ7V4mUimGuOq/L+1YVvyOTb2zWWMjNmECO2lrxXJc5LWRs5FmSJyCdilRktDE0WTGUo89O+DcF2752qtpUmlV2fllU1LXIAn0TJKiAZspKakamifrgYFIzZK4oZ8wDeFesQB/a/U7wtyv85vknzCtMLI28dnpGQ/ZFHNqWYVaHoHsnEmWion7lgMctnpY5pwKFfUSfZecl2Xqwjk1HZj71A9TFNQj+/x4z957cNtx+utAkGinK3eZF+H1o5YnSgjg4hN41kbXttk8nADerPdF7hDS6np7xzUl6qOicJhEOJ5x0c18CAwEAAQ==";
 export const publicKey = base64ToPEM(encodedPublicKey);
 
+// The comments above each fixture are the Scala case classe representation used to generate the encoded cookie
+
 /*
     val user = AuthenticatedUser(
         User("Test", "User", "test.user@guardian.co.uk", None),
