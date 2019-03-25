@@ -14,7 +14,7 @@ setupNvm() {
     popd
 }
 
-node() {
+nodeBuild() {
     pushd pan-domain-node
 
     npm install
@@ -24,14 +24,14 @@ node() {
     popd
 }
 
-riffRaffUpload() {
-    sbt clean compile test riffRaffUpload
+sbtBuild() {
+    sbt clean test
 }
 
 main() {
     setupNvm
-    node
-    riffRaffUpload
+    nodeBuild
+    sbtBuild
 }
 
 main
