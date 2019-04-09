@@ -3,7 +3,6 @@ package com.gu.pandomainauth.model
 import com.gu.pandomainauth.{PrivateKey, PublicKey, Secret}
 
 case class PanDomainAuthSettings(
-  secret: Secret,
   publicKey: PublicKey,
   privateKey: PrivateKey,
   cookieSettings: CookieSettings,
@@ -52,7 +51,6 @@ object PanDomainAuthSettings{
     }
 
     PanDomainAuthSettings(
-      Secret(settingMap("secret")),
       PublicKey(settingMap("publicKey")),
       PrivateKey(settingMap("privateKey")),
       cookieSettings,

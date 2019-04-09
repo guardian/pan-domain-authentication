@@ -97,7 +97,6 @@ cookieName=${cookie_name}
 clientId=${client_id}
 clientSecret=${client_secret}
 discoveryDocumentUrl=https://cognito-idp.${REGION}.amazonaws.com/${user_pool_id}/.well-known/openid-configuration
-secret=not-used
 END
 )
 
