@@ -21,6 +21,10 @@ Parameters:
     Type: Number
     Description: The time limit, in days, after which the refresh token is no longer valid.
 
+  CookieName:
+    Type: String
+    Description: The name of the cookie that will be shared across all Panda-enabled applications
+
 Resources:
   UserPool:
     Type: AWS::Cognito::UserPool
@@ -68,3 +72,24 @@ Resources:
       GenerateSecret: true
       RefreshTokenValidity: !Ref RefreshTokenValidity
       UserPoolId: !Ref UserPool
+
+  SettingsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+
+Outputs:
+  UserPoolId:
+    Value: !Ref UserPool
+
+  UserPoolClientId:
+    Value: !Ref UserPoolClient
+
+  SettingsBucket:
+    Value: !Ref SettingsBucket
+
+  CookieName:
+    Value: !Ref CookieName
