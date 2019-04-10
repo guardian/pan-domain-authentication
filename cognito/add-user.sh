@@ -34,5 +34,7 @@ user_pool_id=$(aws cloudformation describe-stacks \
 aws cognito-idp admin-create-user \
     --user-pool-id ${user_pool_id} \
     --username ${EMAIL} \
+    --desired-delivery-mediums EMAIL \
+    --user-attributes Name=email,Value=${EMAIL} Name=email_verified,Value=True \
     --region ${REGION} \
     ${profile_args}
