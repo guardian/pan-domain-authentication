@@ -90,7 +90,7 @@ You will need:
 - The AWS CLI and credentials for your AWS account
 - An OAuth callback URL for each application that will be issuing logins
 
-Run the folllowing commands:
+Run the following commands:
 
 - Deploy the [CloudFormation Template](./cognito/cognito.yaml)
 - Configure the user pool
