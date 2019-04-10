@@ -25,6 +25,18 @@ Parameters:
     Type: String
     Description: The name of the cookie that will be shared across all Panda-enabled applications
 
+  DomainName:
+    Type: String
+    Description: The name of the domain on which the cookie will be placed
+
+  CognitoDomainPrefix:
+    Type: String
+    Description: The domain prefix used for hosting the Cognito login UI (https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-pools-assign-domain.html)
+
+  OAuthCallbacks:
+    Type: String
+    Description: Comma-separated list of OAuth callback URLS - one for each application issuing logins
+
 Resources:
   UserPool:
     Type: AWS::Cognito::UserPool
@@ -93,3 +105,15 @@ Outputs:
 
   CookieName:
     Value: !Ref CookieName
+
+  PublicSettingsFile:
+    Value: !Sub ${DomainName}.settings.public
+
+  PrivateSettingsFile:
+    Value: !Sub ${DomainName}.settings
+
+  CognitoDomainPrefix:
+    Value: !Ref CognitoDomainPrefix
+
+  OAuthCallbacks:
+    Value: !Ref OAuthCallbacks

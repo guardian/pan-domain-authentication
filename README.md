@@ -73,25 +73,45 @@ If you are adding a new application to an existing deployment of pan-domain-auth
 
 * The apps must be using https - the cookie set by pan domain auth are set to secure and http only
 
-* An AWS S3 bucket where the configuration for your domain will live
-
-* Configuration files in the S3 bucket. A good naming convention to follow is `<domain>.settings` and `<domain>.settings.public`.
-
 * An OAuth provider to use for authentication
 
-  * Both a [Client ID and secret](https://www.oauth.com/oauth2-servers/client-registration/client-id-secret/) are required
+## Setting up your domain configuration
+
+Panda is compatible with all OAuth2 providers, automatically discovering endpoints using a
+[discovery document](https://tools.ietf.org/html/draft-ietf-oauth-discovery-06).
+
+### AWS Cognito
+
+Follow these steps to create a new [Cognito User Pool](https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-identity-pools.html).
+This allows you to manage your users entirely within AWS.
+
+You will need:
+
+- The AWS CLI and credentials for your AWS account
+- An OAuth callback URL for each application that will be issuing logins
+
+Run the folllowing commands:
+
+- Deploy the [CloudFormation Template](./cognito/cognito.yaml)
+- Configure the user pool
+  - `./cognito/configure.sh ${CLOUDFORMATION_STACK} ${REGION}`
+- Generate settings and public/private keys
+  - `./cognito/generate-settings.sh ${CLOUDFORMATION_STACK} ${REGION}` 
+  - This will also upload them to the configuration bucket
+- Add users
+  - `./cognito/add-user.sh ${CLOUDFORMATION_STACK} ${USER_EMAIL} ${REGION}`
+  - They will receive an email invite with a temporary password
+
+### Generic OAuth2 Provider 
+
+You will need:
+
+* An AWS S3 bucket where the configuration for your domain will live
+* Both a [Client ID and secret](https://www.oauth.com/oauth2-servers/client-registration/client-id-secret/) are required
   * An OAuth [discovery document](https://tools.ietf.org/html/draft-ietf-oauth-discovery-06) is required
     * Example Google: `https://accounts.google.com/.well-known/openid-configuration`
     * Example AWS Cognito: `https://cognito-idp.eu-west-1.amazonaws.com/eu-west-1_nW3FKqRh0/.well-known/openid-configuration`
   * You must also configure the callback URLs with your provider, one for each application under the domain that will be issuing logins.
-
-* Optionally a Google Service Account to check multi-factor has been enabled when using Google as a provider
-
-  * This can be configured from the [Google Developer Console](https://console.developers.google.com)
-  * Ensure that you have switched on access to the `Google+ API` for your credentials
-
-
-## Setting up your domain configuration
 
 The configuration file is named for the domain and is a simple properties style file. A good naming convention to follow
 is for apps on the `*.example.com` domain to name the file `example.com.settings`. The contents of the file would look something like this:
@@ -116,8 +136,6 @@ The contents of the file looks like:
 ``` ini
 publicKey=example_key
 ```
-
-* **secret** - this is the shared secret used to sign the cookie
 
 * **cookieName** - the name of the cookie. This should be unique to each top-level domain.
 

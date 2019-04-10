@@ -17,7 +17,7 @@ PROFILE=$3
 
 if [ -z ${STACK_NAME} ];
 then
-    echo "generate-settings.sh STACK_NAME {PROFILE}"
+    echo "generate-settings.sh STACK_NAME {REGION} {PROFILE}"
     exit 1
 fi
 
@@ -68,6 +68,20 @@ cookie_name=$(aws cloudformation describe-stacks \
     --region ${REGION} \
     ${profile_args})
 
+private_settings_file=$(aws cloudformation describe-stacks \
+    --stack-name ${STACK_NAME} \
+    --query 'Stacks[0].Outputs[?OutputKey==`PrivateSettingsFile`].OutputValue' \
+    --output text \
+    --region ${REGION} \
+    ${profile_args})
+
+public_settings_file=$(aws cloudformation describe-stacks \
+    --stack-name ${STACK_NAME} \
+    --query 'Stacks[0].Outputs[?OutputKey==`PublicSettingsFile`].OutputValue' \
+    --output text \
+    --region ${REGION} \
+    ${profile_args})
+
 client_id=$(aws cognito-idp describe-user-pool-client \
     --user-pool-id ${user_pool_id} \
     --client-id ${user_pool_client_id} \
@@ -97,9 +111,17 @@ cookieName=${cookie_name}
 clientId=${client_id}
 clientSecret=${client_secret}
 discoveryDocumentUrl=https://cognito-idp.${REGION}.amazonaws.com/${user_pool_id}/.well-known/openid-configuration
+secret=todo-remove-not-used
 END
 )
 
-echo "$private_settings"
+public_settings=$(cat <<END
+publicKey=${public_key}
+END
+)
 
-# echo $settings_bucket
+echo "$private_settings" > "/tmp/${private_settings_file}"
+echo "$public_settings" > "/tmp/${public_settings_file}"
+
+aws s3 cp "/tmp/${private_settings_file}" s3://${settings_bucket}/${private_settings_file} --region ${REGION} ${profile_args}
+aws s3 cp "/tmp/${public_settings_file}" s3://${settings_bucket}/${public_settings_file} --region ${REGION} ${profile_args}
