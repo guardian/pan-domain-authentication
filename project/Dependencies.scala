@@ -12,7 +12,17 @@ object Dependencies {
       "commons-codec" % "commons-codec" % "1.10",
       "joda-time" % "joda-time" % "2.9.9",
       "org.joda" % "joda-convert" % "1.9.2"
+    )
+  }
 
+  val playLibs_2_7 = {
+    val version = "2.7.1"
+    Seq(
+      "com.typesafe.play" %% "play" % version % "provided",
+      "com.typesafe.play" %% "play-ws" % version % "provided",
+      "commons-codec" % "commons-codec" % "1.10",
+      "joda-time" % "joda-time" % "2.9.9",
+      "org.joda" % "joda-convert" % "1.9.2"
     )
   }
 
