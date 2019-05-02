@@ -49,9 +49,6 @@ Pan domain auth is split into 5 modules.
 The [pan-domain-auth-verification](###-to-verify-logins) library provides the basic functionality for sigining and verifying login cookies in Scala.
 For JVM applications that only need to *VERIFY* an existing login (rather than issue logins themselves) this is the library to use.
 
-The `pan-domain-auth-core` library provides the core utilities to load settings, create and validate the cookie and
-check if the user has mutli-factor auth turned on when usng Google as the provider.
-
 The [pan-domain-auth-play_2-6](###if-your-application-needs-to-issue-logins) library provide an implementation for play apps. There is an auth action
 that can be applied to the endpoints in your application that will do checking and setting of the cookie and will give you the OAuth authentication
 mechanism and callback. This is the only framework specific implementation currently (due to play being the framework predominantly used at The
