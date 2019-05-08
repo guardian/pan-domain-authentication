@@ -105,6 +105,9 @@ lazy val exampleApp = project("pan-domain-auth-example")
   .enablePlugins(PlayScala)
   .settings(libraryDependencies ++= (awsDependencies :+ ws))
   .dependsOn(panDomainAuthPlay_2_7)
+  .settings(
+    publishArtifact := false
+  )
 
 lazy val root = Project("pan-domain-auth-root", file(".")).aggregate(
   panDomainAuthVerification,
