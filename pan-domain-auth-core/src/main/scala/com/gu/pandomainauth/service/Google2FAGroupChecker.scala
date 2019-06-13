@@ -11,7 +11,7 @@ import com.google.api.services.admin.directory.{Directory, DirectoryScopes}
 import scala.collection.JavaConverters._
 import com.gu.pandomainauth.model.{AuthenticatedUser, Google2FAGroupSettings}
 
-class GroupChecker(config: Google2FAGroupSettings, bucketName: String, s3Client: AmazonS3) {
+class GroupChecker(config: Google2FAGroupSettings, bucketName: String, s3Client: AmazonS3, appName: String) {
   val transport = new NetHttpTransport()
   val jsonFactory = new JacksonFactory()
 
@@ -25,6 +25,7 @@ class GroupChecker(config: Google2FAGroupSettings, bucketName: String, s3Client:
     .build()
 
   val directory = new Directory.Builder(transport, jsonFactory, null)
+    .setApplicationName(appName)
     .setHttpRequestInitializer(credential).build
 
   private def loadServiceAccountPrivateKey = {
@@ -52,7 +53,7 @@ class GroupChecker(config: Google2FAGroupSettings, bucketName: String, s3Client:
   }
 }
 
-class GoogleGroupChecker(config: Google2FAGroupSettings, bucketName: String, s3Client: AmazonS3) extends GroupChecker(config, bucketName, s3Client) {
+class GoogleGroupChecker(config: Google2FAGroupSettings, bucketName: String, s3Client: AmazonS3, appName: String) extends GroupChecker(config, bucketName, s3Client, appName) {
 
   def checkGroups(authenticatedUser: AuthenticatedUser, groupIds: List[String]): Either[String, Boolean] = {
     val query = directory.groups().list().setUserKey(authenticatedUser.user.email)
@@ -62,7 +63,7 @@ class GoogleGroupChecker(config: Google2FAGroupSettings, bucketName: String, s3C
 
 }
 
-class Google2FAGroupChecker(config: Google2FAGroupSettings, bucketName: String, s3Client: AmazonS3) extends GroupChecker(config, bucketName, s3Client) {
+class Google2FAGroupChecker(config: Google2FAGroupSettings, bucketName: String, s3Client: AmazonS3, appName: String) extends GroupChecker(config, bucketName, s3Client, appName) {
 
   def checkMultifactor(authenticatedUser: AuthenticatedUser): Boolean = {
     val query = directory.groups().list().setUserKey(authenticatedUser.user.email)
