@@ -70,9 +70,14 @@ trait AuthActions {
 
   val OAuth = new OAuth(settings.oAuthSettings, system, authCallbackUrl)
 
-  val multifactorChecker: Option[Google2FAGroupChecker] = settings.google2FAGroupSettings.map(new Google2FAGroupChecker(_, panDomainSettings.bucketName, panDomainSettings.s3Client))
+  /**
+    * Application name used for initialising Google API clients for directory group checking
+    */
+  val applicationName: String = s"pan-domain-authentication-$system"
 
-  val groupChecker: Option[GoogleGroupChecker] = settings.google2FAGroupSettings.map(new GoogleGroupChecker(_, panDomainSettings.bucketName, panDomainSettings.s3Client))
+  val multifactorChecker: Option[Google2FAGroupChecker] = settings.google2FAGroupSettings.map {
+    new Google2FAGroupChecker(_, panDomainSettings.bucketName, panDomainSettings.s3Client, applicationName)
+  }
 
   /**
     * A Play session key that stores the target URL that was being accessed when redirected for authentication
