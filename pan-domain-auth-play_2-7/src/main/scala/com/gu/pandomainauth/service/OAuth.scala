@@ -85,7 +85,7 @@ class OAuth(config: OAuthSettings, system: String, redirectUrl: String) {
                   user = User(
                     userInfo.given_name,
                     userInfo.family_name,
-                    jwt.claims.email,
+                    jwt.claims.email.getOrElse(userInfo.email),
                     userInfo.picture
                   ),
                   authenticatingSystem = system,
