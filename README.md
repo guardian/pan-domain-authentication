@@ -93,8 +93,6 @@ You will need:
 Run the following commands:
 
 - Deploy the [CloudFormation Template](./cognito/cognito.yaml)
-- Configure the user pool
-  - `./cognito/configure.sh ${CLOUDFORMATION_STACK} ${REGION}`
 - Generate settings and public/private keys
   - `./cognito/generate-settings.sh ${CLOUDFORMATION_STACK} ${REGION}` 
   - This will also upload them to the configuration bucket
