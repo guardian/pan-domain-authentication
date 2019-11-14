@@ -76,14 +76,29 @@ Resources:
         Mutable: true
         Required: false
 
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      UserPoolId: !Ref UserPool
+      Domain: !Ref CognitoDomainPrefix
+
   UserPoolClient:
     Type: AWS::Cognito::UserPoolClient
     Properties:
+      AllowedOAuthFlows:
+        - code
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthScopes:
+        - email
+        - openid
+        - profile
       ExplicitAuthFlows:
         - USER_PASSWORD_AUTH
       GenerateSecret: true
       RefreshTokenValidity: !Ref RefreshTokenValidity
       UserPoolId: !Ref UserPool
+      SupportedIdentityProviders:
+        - COGNITO
 
   SettingsBucket:
     Type: AWS::S3::Bucket
@@ -111,9 +126,3 @@ Outputs:
 
   PrivateSettingsFile:
     Value: !Sub ${DomainName}.settings
-
-  CognitoDomainPrefix:
-    Value: !Ref CognitoDomainPrefix
-
-  OAuthCallbacks:
-    Value: !Ref OAuthCallbacks
