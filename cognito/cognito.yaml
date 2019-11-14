@@ -92,6 +92,7 @@ Resources:
         - email
         - openid
         - profile
+      CallbackURLs: !Split [',', !Ref OAuthCallbacks]
       ExplicitAuthFlows:
         - USER_PASSWORD_AUTH
       GenerateSecret: true
