@@ -1,8 +1,8 @@
 import * as iniparser from 'iniparser';
 import * as cookie from 'cookie';
 
-import { httpGet, base64ToPEM, parseCookie, verifySignature, parseUser } from './utils';
-import { ValidateUserFn, AuthenticationStatus, User, AuthenticationResult } from './api';
+import {base64ToPEM, httpGet, parseCookie, parseUser, verifySignature} from './utils';
+import {AuthenticationStatus, User, AuthenticationResult, ValidateUserFn} from './api';
 
 interface PublicKeyHolder {
     key: string,
@@ -14,7 +14,7 @@ function fetchPublicKey(region: string, bucket: String, keyFile: String): Promis
 
     return httpGet(path).then(response => {
         const config: { publicKey?: string} = iniparser.parseString(response);
-        
+
         if(config.publicKey) {
             return {
                 key: base64ToPEM(config.publicKey),
@@ -24,6 +24,22 @@ function fetchPublicKey(region: string, bucket: String, keyFile: String): Promis
             throw new Error("Missing publicKey setting from config");
         }
     });
+}
+
+export function createCookie(user: User, privateKey: string): string {
+    let queryParams = []
+
+
+    queryParams.push("firstName=" + user.firstName);
+    queryParams.push("lastName=" + user.lastName);
+    queryParams.push("email=" + user.email);
+    user.avatarUrl && queryParams.push("avatarUrl=" + user.avatarUrl);
+    queryParams.push("system=" + user.authenticatingSystem);
+    queryParams.push("authedIn=" + user.authenticatedIn.join(","));
+    queryParams.push("expires=" + user.expires.toString());
+    queryParams.push("multifactor=" + String(user.multifactor));
+
+    return Buffer.from(queryParams.join("&")).toString('base64')
 }
 
 export function verifyUser(pandaCookie: string | undefined, publicKey: string, currentTimestamp: number, validateUser: ValidateUserFn): AuthenticationResult {
@@ -75,7 +91,7 @@ export class PanDomainAuthentication {
         this.validateUser = validateUser;
 
         this.publicKey = fetchPublicKey(region, bucket, keyFile);
-        
+
         this.keyUpdateTimer = setInterval(() => this.getPublicKey(), this.keyCacheTime);
     }
 
