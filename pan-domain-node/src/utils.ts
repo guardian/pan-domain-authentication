@@ -28,11 +28,20 @@ export function verifySignature(message: string, signature: string, pandaPublicK
         .verify(pandaPublicKey, signature, 'base64');
 }
 
-const ASCII_NEW_LINE = String.fromCharCode(10);
-const PEM_HEADER = '-----BEGIN PUBLIC KEY-----';
-const PEM_FOOTER = '-----END PUBLIC KEY-----';
+export function sign(message: string, privateKey: string): string {
+    const sign = crypto.createSign("sha256WithRSAEncryption");
+    sign.write(message);
+    sign.end();
 
-export function base64ToPEM (key: string): string {
+    return sign.sign(privateKey, 'base64');
+}
+
+const ASCII_NEW_LINE = String.fromCharCode(10);
+
+export function base64ToPEM (key: string, headerFooter: string): string {
+    const PEM_HEADER = `-----BEGIN ${headerFooter} KEY-----`;
+    const PEM_FOOTER = `-----END ${headerFooter} KEY-----`;
+
 	let tmp = [];
     const ret = [new Buffer(PEM_HEADER).toString('ascii')];
 
@@ -61,7 +70,7 @@ export function httpGet(path: string): Promise<string> {
             res.on('error', err => reject(err));
 
             res.on('end', () => {
-                const body = data.join(''); 
+                const body = data.join('');
 
                 if(res.statusCode == 200) {
                     resolve(body);
@@ -69,7 +78,7 @@ export function httpGet(path: string): Promise<string> {
                     // Response might be XML
                     const match = body.match(/<message>(.*)<\/message>/i);
                     const error = new Error(match ? match[1] : 'Invalid public key response');
-                    
+
                     reject(error);
                 }
             });

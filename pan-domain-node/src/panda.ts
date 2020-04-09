@@ -1,7 +1,7 @@
 import * as iniparser from 'iniparser';
 import * as cookie from 'cookie';
 
-import {base64ToPEM, httpGet, parseCookie, parseUser, verifySignature} from './utils';
+import {base64ToPEM, httpGet, parseCookie, parseUser, sign, verifySignature} from './utils';
 import {AuthenticationStatus, User, AuthenticationResult, ValidateUserFn} from './api';
 
 interface PublicKeyHolder {
@@ -17,7 +17,7 @@ function fetchPublicKey(region: string, bucket: String, keyFile: String): Promis
 
         if(config.publicKey) {
             return {
-                key: base64ToPEM(config.publicKey),
+                key: base64ToPEM(config.publicKey, "PUBLIC"),
                 lastUpdated: new Date()
             };
         } else {
@@ -27,8 +27,7 @@ function fetchPublicKey(region: string, bucket: String, keyFile: String): Promis
 }
 
 export function createCookie(user: User, privateKey: string): string {
-    let queryParams = []
-
+    let queryParams: string[] = [];
 
     queryParams.push("firstName=" + user.firstName);
     queryParams.push("lastName=" + user.lastName);
@@ -38,8 +37,13 @@ export function createCookie(user: User, privateKey: string): string {
     queryParams.push("authedIn=" + user.authenticatedIn.join(","));
     queryParams.push("expires=" + user.expires.toString());
     queryParams.push("multifactor=" + String(user.multifactor));
+    const combined = queryParams.join("&");
 
-    return Buffer.from(queryParams.join("&")).toString('base64')
+    const queryParamsString = Buffer.from(combined).toString('base64');
+
+    const signature = sign(combined, privateKey);
+
+    return queryParamsString + "." + signature
 }
 
 export function verifyUser(pandaCookie: string | undefined, publicKey: string, currentTimestamp: number, validateUser: ValidateUserFn): AuthenticationResult {
@@ -81,7 +85,7 @@ export class PanDomainAuthentication {
 
     publicKey: Promise<PublicKeyHolder>;
     keyCacheTime: number = 60 * 1000; // 1 minute
-    keyUpdateTimer?: NodeJS.Timeout
+    keyUpdateTimer?: NodeJS.Timeout;
 
     constructor(cookieName: string, region: string, bucket: string, keyFile: string, validateUser: ValidateUserFn) {
         this.cookieName = cookieName;
