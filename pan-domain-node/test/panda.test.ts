@@ -50,10 +50,8 @@ describe('createCookie', function () {
             multifactor: true
         };
 
-        // console.log(privateKey)
         const cookie = createCookie(user, privateKey);
 
-        // TODO: Work out why decodeBase64() removes the tail of the cookie (ie the bit after the `.`)
         expect(decodeBase64(cookie)).toEqual(decodeBase64(sampleCookie));
         expect(cookie).toEqual(sampleCookie)
     });
