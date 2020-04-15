@@ -1,11 +1,11 @@
 import * as crypto from 'crypto';
 import * as https from 'https';
 
-import { User } from './api';
-import { URLSearchParams } from 'url';
+import {User} from './api';
+import {URLSearchParams} from 'url';
 
 export function decodeBase64(data: string): string {
-    return (new Buffer(data, 'base64')).toString('utf8');
+    return Buffer.from(data, 'base64').toString('utf8');
 }
 
 /**
@@ -43,7 +43,7 @@ export function base64ToPEM (key: string, headerFooter: string): string {
     const PEM_FOOTER = `-----END ${headerFooter} KEY-----`;
 
 	let tmp = [];
-    const ret = [new Buffer(PEM_HEADER).toString('ascii')];
+    const ret = [Buffer.from(PEM_HEADER).toString('ascii')];
 
     for (let i = 0, len = key.length; i < len; i++) {
 
@@ -56,7 +56,7 @@ export function base64ToPEM (key: string, headerFooter: string): string {
     }
 
     ret.push(tmp.join(''));
-    ret.push(new Buffer(PEM_FOOTER).toString('ascii'));
+    ret.push(Buffer.from(PEM_FOOTER).toString('ascii'));
 
     return ret.join(ASCII_NEW_LINE);
 }
