@@ -269,14 +269,14 @@ properties:
 
 ### To verify login in NodeJS
 
-[![npm version](https://badge.fury.io/js/pan-domain-node.svg)](https://badge.fury.io/js/pan-domain-node)
+[![npm version](https://badge.fury.io/js/%40guardian%2Fpan-domain-node.svg)](https://badge.fury.io/js/%40guardian%2Fpan-domain-node)
 
 ```
-npm install --save-dev pan-domain-node
+npm install --save-dev @guardian/pan-domain-node
 ```
 
 ```typescript
-import { PanDomainAuthentication, AuthenticationStatus, User, guardianValidation } from 'pan-domain-node';
+import { PanDomainAuthentication, AuthenticationStatus, User, guardianValidation } from '@guardian/pan-domain-node';
 
 const panda = new PanDomainAuthentication(
   "gutoolsAuth-assym", // cookie name
