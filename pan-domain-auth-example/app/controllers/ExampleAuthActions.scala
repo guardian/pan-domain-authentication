@@ -3,14 +3,16 @@ package controllers
 import com.gu.pandomainauth.PanDomain
 import com.gu.pandomainauth.action.AuthActions
 import com.gu.pandomainauth.model.AuthenticatedUser
-import play.api.{Configuration, Logger}
+import org.slf4j.LoggerFactory
+import play.api.{Configuration}
 
 trait ExampleAuthActions extends AuthActions {
+  private val logger = LoggerFactory.getLogger(this.getClass)
 
   def config: Configuration
 
   override def validateUser(authedUser: AuthenticatedUser): Boolean = {
-    Logger.info(s"validating user $authedUser")
+    logger.info(s"validating user $authedUser")
     PanDomain.guardianValidation(authedUser)
   }
 
