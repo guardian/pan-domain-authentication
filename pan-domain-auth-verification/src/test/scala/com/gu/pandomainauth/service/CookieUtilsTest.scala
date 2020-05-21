@@ -3,10 +3,11 @@ package com.gu.pandomainauth.service
 import java.util.Date
 
 import com.gu.pandomainauth.model.{AuthenticatedUser, CookieParseException, CookieSignatureInvalidException, User}
-import org.scalatest.{FreeSpec, Matchers}
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.should.Matchers
 
 
-class CookieUtilsTest extends FreeSpec with Matchers {
+class CookieUtilsTest extends AnyFreeSpec with Matchers {
   import TestKeys._
 
   val authUser = AuthenticatedUser(User("test", "üsér", "test.user@example.com", None), "testsuite", Set("testsuite", "another"), new Date().getTime + 86400, multiFactor = true)
