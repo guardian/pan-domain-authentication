@@ -8,7 +8,7 @@ import xerial.sbt.Sonatype.SonatypeKeys
 import xerial.sbt.Sonatype._
 import com.typesafe.sbt.pgp.PgpKeys
 
-val scala212 = "2.12.8"
+val scala212 = "2.12.11"
 
 val commonSettings =
   Seq(
@@ -101,10 +101,17 @@ lazy val panDomainAuthPlay_2_7 = project("pan-domain-auth-play_2-7")
     publishArtifact := true
   ).dependsOn(panDomainAuthCore)
 
+lazy val panDomainAuthPlay_2_8 = project("pan-domain-auth-play_2-8")
+  .settings(sonatypeReleaseSettings: _*)
+  .settings(
+    libraryDependencies ++= playLibs_2_8,
+    publishArtifact := true
+  ).dependsOn(panDomainAuthCore)
+
 lazy val exampleApp = project("pan-domain-auth-example")
   .enablePlugins(PlayScala)
   .settings(libraryDependencies ++= (awsDependencies :+ ws))
-  .dependsOn(panDomainAuthPlay_2_7)
+  .dependsOn(panDomainAuthPlay_2_8)
   .settings(sonatypeReleaseSettings: _*)
   .settings(
     publishArtifact := false
@@ -115,6 +122,7 @@ lazy val root = Project("pan-domain-auth-root", file(".")).aggregate(
   panDomainAuthCore,
   panDomainAuthPlay_2_6,
   panDomainAuthPlay_2_7,
+  panDomainAuthPlay_2_8,
   exampleApp
 ).settings(sonatypeReleaseSettings: _*).settings(
   organization := "com.gu",

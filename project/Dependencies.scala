@@ -20,6 +20,14 @@ object Dependencies {
     )
   }
 
+  val playLibs_2_8 = {
+    val version = "2.8.1"
+    Seq(
+      "com.typesafe.play" %% "play" % version % "provided",
+      "com.typesafe.play" %% "play-ws" % version % "provided"
+    )
+  }
+
   val googleDirectoryApiDependencies = Seq(
     "com.google.api-client" % "google-api-client" % "1.28.0",
     "com.google.apis" % "google-api-services-admin" % "directory_v1-rev32-1.16.0-rc"
