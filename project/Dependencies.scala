@@ -2,7 +2,7 @@ import sbt._
 
 object Dependencies {
 
-  val awsDependencies = Seq("com.amazonaws" % "aws-java-sdk-s3" % "1.11.480")
+  val awsDependencies = Seq("com.amazonaws" % "aws-java-sdk-s3" % "1.11.787")
 
   val playLibs_2_6 = {
     val version = "2.6.11"
@@ -29,23 +29,23 @@ object Dependencies {
   }
 
   val googleDirectoryApiDependencies = Seq(
-    "com.google.api-client" % "google-api-client" % "1.28.0",
-    "com.google.apis" % "google-api-services-admin" % "directory_v1-rev32-1.16.0-rc"
+    "com.google.auth" % "google-auth-library-oauth2-http" % "0.20.0",
+    "com.google.apis" % "google-api-services-admin-directory" % "directory_v1-rev118-1.25.0"
   )
 
   val cryptoDependencies = Seq(
-    "org.bouncycastle" % "bcprov-jdk15on" % "1.60",
-    "commons-codec" % "commons-codec" % "1.10"
+    "org.bouncycastle" % "bcprov-jdk15on" % "1.65",
+    "commons-codec" % "commons-codec" % "1.14"
   )
 
-  val testDependencies = Seq("org.scalatest" %% "scalatest" % "3.0.4" % "test")
+  val testDependencies = Seq("org.scalatest" %% "scalatest" % "3.1.2" % "test")
 
   /*
   * Pull in an updated version of jackson and logback libraries as the ones AWS use have security vulnerabilities.
   * See https://github.com/aws/aws-sdk-java/pull/1373
   * */
   val jackson: Seq[ModuleID] = {
-    val version = "2.9.8"
+    val version = "2.11.0"
     Seq(
       "com.fasterxml.jackson.core" % "jackson-core" % version,
       "com.fasterxml.jackson.core" % "jackson-databind" % version,
@@ -53,8 +53,5 @@ object Dependencies {
     )
   }
 
-  // pin httpclient version to appease Snyk warning (https://app.snyk.io/vuln/SNYK-JAVA-ORGAPACHEHTTPCOMPONENTS-30646)
-  val apacheHttpClient = Seq("org.apache.httpcomponents" % "httpclient" % "4.5.5")
-
-  val loggingDependencies = Seq("org.slf4j" % "slf4j-api" % "1.7.25")
+  val loggingDependencies = Seq("org.slf4j" % "slf4j-api" % "1.7.30")
 }
