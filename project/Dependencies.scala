@@ -41,11 +41,13 @@ object Dependencies {
   val testDependencies = Seq("org.scalatest" %% "scalatest" % "3.2.0" % "test")
 
   /*
-  * Pull in an updated version of jackson and logback libraries as the ones AWS use have security vulnerabilities.
-  * See https://github.com/aws/aws-sdk-java/pull/1373
-  * */
+   * Pull in an updated version of jackson and logback libraries as the ones AWS use have security vulnerabilities.
+   * See https://github.com/aws/aws-sdk-java/pull/1373
+   *
+   * We also cannot upgrade beyond Jackson 2.10 as Akka depends on the Jackson Scala integration and requires < 2.11
+   */
   val jackson: Seq[ModuleID] = {
-    val version = "2.11.2"
+    val version = "2.10.5"
     Seq(
       "com.fasterxml.jackson.core" % "jackson-core" % version,
       "com.fasterxml.jackson.core" % "jackson-databind" % version,

@@ -4,8 +4,9 @@ import Dependencies._
 import sbtrelease._
 import ReleaseStateTransformations._
 import xerial.sbt.Sonatype._
+import play.sbt.PlayImport.PlayKeys._
 
-val scala212 = "2.12.11"
+val scala212 = "2.12.12"
 
 val commonSettings =
   Seq(
