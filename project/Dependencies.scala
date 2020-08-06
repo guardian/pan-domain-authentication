@@ -29,8 +29,9 @@ object Dependencies {
   }
 
   val googleDirectoryApiDependencies = Seq(
-    "com.google.auth" % "google-auth-library-oauth2-http" % "0.21.1",
-    "com.google.apis" % "google-api-services-admin-directory" % "directory_v1-rev118-1.25.0"
+    "com.google.apis" % "google-api-services-admin-directory" % "directory_v1-rev118-1.25.0",
+    // Normally transitive from the above, pull up manually to fix https://app.snyk.io/vuln/SNYK-JAVA-COMGOOGLEOAUTHCLIENT-575276
+    "com.google.oauth-client" % "google-oauth-client" % "1.31.0"
   )
 
   val cryptoDependencies = Seq(
