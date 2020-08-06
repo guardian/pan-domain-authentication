@@ -111,7 +111,8 @@ lazy val exampleApp = project("pan-domain-auth-example")
   .dependsOn(panDomainAuthPlay_2_8)
   .settings(sonatypeReleaseSettings: _*)
   .settings(
-    publishArtifact := false
+    publishArtifact := false,
+    playDefaultPort := 9500
   )
 
 lazy val root = Project("pan-domain-auth-root", file(".")).aggregate(
