@@ -19,7 +19,8 @@ val commonSettings =
     publishArtifact := false
   )
 
-val sonatypeReleaseSettings =
+val sonatypeReleaseSettings = {
+  publishTo := Some("Sonatype Nexus" at "https://oss.sonatype.org/content/repositories/releases")
   sonatypeSettings ++ Seq(
     licenses := Seq("Apache V2" -> url("http://www.apache.org/licenses/LICENSE-2.0.html")),
     scmInfo := Some(ScmInfo(
@@ -63,6 +64,7 @@ val sonatypeReleaseSettings =
       pushChanges
     )
   )
+}
 
 lazy val panDomainAuthVerification = project("pan-domain-auth-verification")
   .settings(sonatypeReleaseSettings: _*)
