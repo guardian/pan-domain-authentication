@@ -21,7 +21,7 @@ val commonSettings =
 
 val sonatypeReleaseSettings = {
   sonatypeSettings ++ Seq(
-    publishTo := Some("Sonatype Nexus" at "https://oss.sonatype.org/content/repositories/releases"),
+    publishTo := sonatypePublishTo.value,
     licenses := Seq("Apache V2" -> url("http://www.apache.org/licenses/LICENSE-2.0.html")),
     scmInfo := Some(ScmInfo(
       url("https://github.com/guardian/pan-domain-authentication"),
@@ -46,21 +46,10 @@ val sonatypeReleaseSettings = {
       setReleaseVersion,
       commitReleaseVersion,
       tagRelease,
-      ReleaseStep(
-        action = { state =>
-          val extracted = Project.extract(state)
-          val ref = extracted.get(Keys.thisProjectRef)
-
-          extracted.runAggregated(PgpKeys.publishSigned in Global in ref, state)
-        },
-        enableCrossBuild = true
-      ),
+      releaseStepCommand("publishSigned"),
       setNextVersion,
       commitNextVersion,
-      ReleaseStep(
-        action = state => Project.extract(state).runTask(sonatypeBundleRelease, state)._1,
-        enableCrossBuild = false
-      ),
+      releaseStepCommand("sonatypeReleaseAll"),
       pushChanges
     )
   )
