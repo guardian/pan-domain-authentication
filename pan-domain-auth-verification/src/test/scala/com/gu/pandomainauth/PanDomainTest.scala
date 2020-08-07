@@ -4,9 +4,11 @@ import java.util.Date
 
 import com.gu.pandomainauth.model._
 import com.gu.pandomainauth.service.CookieUtils
-import org.scalatest.{FreeSpec, Inside, Matchers}
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.Inside
+import org.scalatest.matchers.should.Matchers
 
-class PanDomainTest extends FreeSpec with Matchers with Inside {
+class PanDomainTest extends AnyFreeSpec with Matchers with Inside {
   import com.gu.pandomainauth.service.TestKeys._
 
   def authStatus(cookieData: String, validateUser: AuthenticatedUser => Boolean = _ => true, apiGracePeriod: Long = 0,

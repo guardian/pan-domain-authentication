@@ -1,4 +1,5 @@
-import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
+import com.amazonaws.auth.profile.ProfileCredentialsProvider
+import com.amazonaws.auth.{AWSCredentialsProviderChain, DefaultAWSCredentialsProviderChain}
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
 import com.gu.pandomainauth.PanDomainAuthSettingsRefresher
@@ -24,8 +25,13 @@ class AppComponents(context: Context) extends BuiltInComponentsFromContext(conte
   val bucketName = "pan-domain-auth-settings"
 
   val region = Regions.EU_WEST_1
+
   // Customise as appropriate depending on how you manage your AWS credentials
-  val credentials = DefaultAWSCredentialsProviderChain.getInstance()
+  val credentials = new AWSCredentialsProviderChain(
+    new ProfileCredentialsProvider("workflow"),
+    DefaultAWSCredentialsProviderChain.getInstance()
+  )
+
   val s3Client = AmazonS3ClientBuilder.standard().withRegion(region).withCredentials(credentials).build()
 
   val panDomainSettings = new PanDomainAuthSettingsRefresher(

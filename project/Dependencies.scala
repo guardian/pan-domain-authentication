@@ -2,10 +2,10 @@ import sbt._
 
 object Dependencies {
 
-  val awsDependencies = Seq("com.amazonaws" % "aws-java-sdk-s3" % "1.11.480")
+  val awsDependencies = Seq("com.amazonaws" % "aws-java-sdk-s3" % "1.11.835")
 
   val playLibs_2_6 = {
-    val version = "2.6.11"
+    val version = "2.6.25"
     Seq(
       "com.typesafe.play" %% "play" % version % "provided",
       "com.typesafe.play" %% "play-ws" % version % "provided"
@@ -13,7 +13,7 @@ object Dependencies {
   }
 
   val playLibs_2_7 = {
-    val version = "2.7.1"
+    val version = "2.7.5"
     Seq(
       "com.typesafe.play" %% "play" % version % "provided",
       "com.typesafe.play" %% "play-ws" % version % "provided"
@@ -21,7 +21,7 @@ object Dependencies {
   }
 
   val playLibs_2_8 = {
-    val version = "2.8.1"
+    val version = "2.8.2"
     Seq(
       "com.typesafe.play" %% "play" % version % "provided",
       "com.typesafe.play" %% "play-ws" % version % "provided"
@@ -29,23 +29,26 @@ object Dependencies {
   }
 
   val googleDirectoryApiDependencies = Seq(
-    "com.google.api-client" % "google-api-client" % "1.28.0",
-    "com.google.apis" % "google-api-services-admin" % "directory_v1-rev32-1.16.0-rc"
+    "com.google.apis" % "google-api-services-admin-directory" % "directory_v1-rev118-1.25.0",
+    // Normally transitive from the above, pull up manually to fix https://app.snyk.io/vuln/SNYK-JAVA-COMGOOGLEOAUTHCLIENT-575276
+    "com.google.oauth-client" % "google-oauth-client" % "1.31.0"
   )
 
   val cryptoDependencies = Seq(
-    "org.bouncycastle" % "bcprov-jdk15on" % "1.60",
-    "commons-codec" % "commons-codec" % "1.10"
+    "org.bouncycastle" % "bcprov-jdk15on" % "1.66",
+    "commons-codec" % "commons-codec" % "1.14"
   )
 
-  val testDependencies = Seq("org.scalatest" %% "scalatest" % "3.0.4" % "test")
+  val testDependencies = Seq("org.scalatest" %% "scalatest" % "3.2.0" % "test")
 
   /*
-  * Pull in an updated version of jackson and logback libraries as the ones AWS use have security vulnerabilities.
-  * See https://github.com/aws/aws-sdk-java/pull/1373
-  * */
+   * Pull in an updated version of jackson and logback libraries as the ones AWS use have security vulnerabilities.
+   * See https://github.com/aws/aws-sdk-java/pull/1373
+   *
+   * We also cannot upgrade beyond Jackson 2.10 as Akka depends on the Jackson Scala integration and requires < 2.11
+   */
   val jackson: Seq[ModuleID] = {
-    val version = "2.9.8"
+    val version = "2.10.5"
     Seq(
       "com.fasterxml.jackson.core" % "jackson-core" % version,
       "com.fasterxml.jackson.core" % "jackson-databind" % version,
@@ -53,8 +56,5 @@ object Dependencies {
     )
   }
 
-  // pin httpclient version to appease Snyk warning (https://app.snyk.io/vuln/SNYK-JAVA-ORGAPACHEHTTPCOMPONENTS-30646)
-  val apacheHttpClient = Seq("org.apache.httpcomponents" % "httpclient" % "4.5.5")
-
-  val loggingDependencies = Seq("org.slf4j" % "slf4j-api" % "1.7.25")
+  val loggingDependencies = Seq("org.slf4j" % "slf4j-api" % "1.7.30")
 }

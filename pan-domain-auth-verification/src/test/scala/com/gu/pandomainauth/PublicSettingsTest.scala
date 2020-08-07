@@ -2,10 +2,12 @@ package com.gu.pandomainauth
 
 import com.gu.pandomainauth.service.TestKeys
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{EitherValues, FreeSpec, Matchers}
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.EitherValues
+import org.scalatest.matchers.should.Matchers
 
 
-class PublicSettingsTest extends FreeSpec with Matchers with EitherValues with ScalaFutures {
+class PublicSettingsTest extends AnyFreeSpec with Matchers with EitherValues with ScalaFutures {
   "validateKey" - {
     "returns an error if the key looks invalid" in {
       val invalidKey = PublicKey("not a valid key")

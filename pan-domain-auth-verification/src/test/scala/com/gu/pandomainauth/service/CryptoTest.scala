@@ -1,9 +1,10 @@
 package com.gu.pandomainauth.service
 
-import org.scalatest.{FunSuite, Matchers}
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 
 
-class CryptoTest extends FunSuite with Matchers {
+class CryptoTest extends AnyFunSuite with Matchers {
   import TestKeys._
 
   test("a valid signature can be successfully verified") {
