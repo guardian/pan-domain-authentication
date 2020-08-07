@@ -20,8 +20,8 @@ val commonSettings =
   )
 
 val sonatypeReleaseSettings = {
-  publishTo := Some("Sonatype Nexus" at "https://oss.sonatype.org/content/repositories/releases")
   sonatypeSettings ++ Seq(
+    publishTo := Some("Sonatype Nexus" at "https://oss.sonatype.org/content/repositories/releases"),
     licenses := Seq("Apache V2" -> url("http://www.apache.org/licenses/LICENSE-2.0.html")),
     scmInfo := Some(ScmInfo(
       url("https://github.com/guardian/pan-domain-authentication"),
