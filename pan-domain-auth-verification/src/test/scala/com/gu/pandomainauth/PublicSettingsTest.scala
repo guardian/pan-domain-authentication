@@ -16,13 +16,13 @@ class PublicSettingsTest extends AnyFreeSpec with Matchers with EitherValues wit
 
     "returns the key if it is valid" in {
       val key = TestKeys.testPublicKey
-      PublicSettings.validateKey(key).right.value shouldEqual key
+      PublicSettings.validateKey(key) shouldEqual Right(key)
     }
   }
 
   "extractPublicKey" - {
     "will get a public key from a valid settings map" in {
-      PublicSettings.extractPublicKey(Map("publicKey" -> TestKeys.testPublicKey.key)).right.value shouldEqual TestKeys.testPublicKey
+      PublicSettings.extractPublicKey(Map("publicKey" -> TestKeys.testPublicKey.key)) shouldEqual Right(TestKeys.testPublicKey)
     }
 
     "will reject a key that is not correctly formatted" in {
@@ -41,7 +41,7 @@ class PublicSettingsTest extends AnyFreeSpec with Matchers with EitherValues wit
           |foo=bar
         """.stripMargin
 
-      Settings.extractSettings(body).right.value shouldEqual Map("key" -> "value", "foo" -> "bar")
+      Settings.extractSettings(body) shouldEqual Right(Map("key" -> "value", "foo" -> "bar"))
     }
   }
 }
