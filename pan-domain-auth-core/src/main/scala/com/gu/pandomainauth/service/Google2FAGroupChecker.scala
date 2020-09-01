@@ -8,7 +8,7 @@ import com.google.api.client.util.SecurityUtils
 import com.google.api.services.admin.directory.model.Groups
 import com.google.api.services.admin.directory.{Directory, DirectoryScopes}
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import com.gu.pandomainauth.model.{AuthenticatedUser, Google2FAGroupSettings}
 
 class GroupChecker(config: Google2FAGroupSettings, bucketName: String, s3Client: AmazonS3, appName: String) {

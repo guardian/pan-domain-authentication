@@ -7,11 +7,13 @@ import xerial.sbt.Sonatype._
 import play.sbt.PlayImport.PlayKeys._
 
 val scala212 = "2.12.12"
+val scala213 = "2.13.1"
 
 val commonSettings =
   Seq(
     scalaVersion := scala212,
     scalaVersion in ThisBuild := scala212,
+    crossScalaVersions := Seq(scalaVersion.value, scala213),
     organization := "com.gu",
     fork in Test := false,
     resolvers ++= Seq("Typesafe Repository" at "https://repo.typesafe.com/typesafe/releases/"),
@@ -63,7 +65,8 @@ lazy val panDomainAuthVerification = project("pan-domain-auth-verification")
       ++ awsDependencies
       ++ testDependencies
       ++ jackson
-      ++ loggingDependencies,
+      ++ loggingDependencies
+      ++ scalaCollectionCompatDependencies,
     publishArtifact := true
   )
 
@@ -72,28 +75,30 @@ lazy val panDomainAuthCore = project("pan-domain-auth-core")
   .dependsOn(panDomainAuthVerification)
   .settings(sonatypeReleaseSettings: _*)
   .settings(
-    libraryDependencies ++= awsDependencies ++ googleDirectoryApiDependencies ++ cryptoDependencies ++ testDependencies,
+    libraryDependencies
+      ++= awsDependencies
+      ++ googleDirectoryApiDependencies
+      ++ cryptoDependencies
+      ++ testDependencies
+      ++ scalaCollectionCompatDependencies,
     publishArtifact := true
   )
-
-lazy val panDomainAuthPlay_2_6 = project("pan-domain-auth-play_2-6")
-  .settings(sonatypeReleaseSettings: _*)
-  .settings(
-    libraryDependencies ++= playLibs_2_6,
-    publishArtifact := true
-  ).dependsOn(panDomainAuthCore)
 
 lazy val panDomainAuthPlay_2_7 = project("pan-domain-auth-play_2-7")
   .settings(sonatypeReleaseSettings: _*)
   .settings(
-    libraryDependencies ++= playLibs_2_7,
+    libraryDependencies
+      ++= playLibs_2_7
+      ++ scalaCollectionCompatDependencies,
     publishArtifact := true
   ).dependsOn(panDomainAuthCore)
 
 lazy val panDomainAuthPlay_2_8 = project("pan-domain-auth-play_2-8")
   .settings(sonatypeReleaseSettings: _*)
   .settings(
-    libraryDependencies ++= playLibs_2_8,
+    libraryDependencies
+      ++= playLibs_2_8
+      ++ scalaCollectionCompatDependencies,
     publishArtifact := true
   ).dependsOn(panDomainAuthCore)
 
@@ -110,7 +115,6 @@ lazy val exampleApp = project("pan-domain-auth-example")
 lazy val root = Project("pan-domain-auth-root", file(".")).aggregate(
   panDomainAuthVerification,
   panDomainAuthCore,
-  panDomainAuthPlay_2_6,
   panDomainAuthPlay_2_7,
   panDomainAuthPlay_2_8,
   exampleApp

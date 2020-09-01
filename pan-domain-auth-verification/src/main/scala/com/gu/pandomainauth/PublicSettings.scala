@@ -64,8 +64,8 @@ object PublicSettings {
   }
 
   private[pandomainauth] def extractPublicKey(settings: Map[String, String]): Either[SettingsFailure, PublicKey] = for {
-    rawKey <- settings.get("publicKey").toRight(PublicKeyNotFoundFailure).right
-    publicKey <- validateKey(PublicKey(rawKey)).right
+    rawKey <- settings.get("publicKey").toRight(PublicKeyNotFoundFailure)
+    publicKey <- validateKey(PublicKey(rawKey))
   } yield publicKey
 
   private[pandomainauth] def validateKey(pubKey: PublicKey): Either[SettingsFailure, PublicKey] = {

@@ -28,7 +28,7 @@ object CookieUtils {
     AuthenticatedUser(
       user = User(data("firstName"), data("lastName"), data("email"), data.get("avatarUrl")),
       authenticatingSystem = data("system"),
-      authenticatedIn = Set(data("authedIn").split(",") :_*),
+      authenticatedIn = Set(data("authedIn").split(",").toSeq :_*),
       expires = data("expires").toLong,
       multiFactor = data("multifactor").toBoolean
     )

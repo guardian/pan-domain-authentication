@@ -4,14 +4,6 @@ object Dependencies {
 
   val awsDependencies = Seq("com.amazonaws" % "aws-java-sdk-s3" % "1.11.835")
 
-  val playLibs_2_6 = {
-    val version = "2.6.25"
-    Seq(
-      "com.typesafe.play" %% "play" % version % "provided",
-      "com.typesafe.play" %% "play-ws" % version % "provided"
-    )
-  }
-
   val playLibs_2_7 = {
     val version = "2.7.5"
     Seq(
@@ -57,4 +49,8 @@ object Dependencies {
   }
 
   val loggingDependencies = Seq("org.slf4j" % "slf4j-api" % "1.7.30")
+
+  // provide compatibility between scala 2.12 and 2.13
+  // see https://github.com/scala/scala-collection-compat/issues/208
+  val scalaCollectionCompatDependencies = Seq("org.scala-lang.modules" %% "scala-collection-compat" % "2.1.6")
 }

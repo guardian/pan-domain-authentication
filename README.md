@@ -60,7 +60,7 @@ that need to be able to issue and verify logins which is likely to include user-
 
 The [pan-domain-node](###to-verify-login-in-nodejs) library provides an implementation of *verification only* for node apps.
 
-The `pan-domain-auth-example` provides an example Play 2.6 app with authentication. Additionally the nginx directory provides an example
+The `pan-domain-auth-example` provides an example Play 2.8 app with authentication. Additionally the nginx directory provides an example
 of how to set up an nginx configuration to allow you to run multiple authenticated apps locally as if they were all on the same domain which
 is useful during development.
 
@@ -180,6 +180,8 @@ Configuration settings are read from an S3 bucket. Follow the steps below if you
 
 Add the core library as an SBT dependency to your project, taking care to use the latest version.
 If you are building your application using the Play framework, use the Play integration.
+Play versions 2.7 and 2.8 are supported on Scala 2.12 and 2.13.
+Play version 2.6 is supported up until v0.9.2. 
 
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.12/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.12)
 

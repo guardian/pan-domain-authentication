@@ -8,7 +8,7 @@ import com.amazonaws.util.IOUtils
 import org.slf4j.Logger
 
 import scala.util.control.NonFatal
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 sealed trait SettingsFailure
 case class SettingsDownloadFailure(cause: Throwable) extends SettingsFailure
