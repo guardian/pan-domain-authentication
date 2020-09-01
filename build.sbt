@@ -48,7 +48,7 @@ val sonatypeReleaseSettings = {
       setReleaseVersion,
       commitReleaseVersion,
       tagRelease,
-      releaseStepCommand("publishSigned"),
+      releaseStepCommand("+publishSigned"),
       setNextVersion,
       commitNextVersion,
       releaseStepCommand("sonatypeReleaseAll"),
