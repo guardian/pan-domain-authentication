@@ -48,10 +48,11 @@ val sonatypeReleaseSettings = {
       setReleaseVersion,
       commitReleaseVersion,
       tagRelease,
-      releaseStepCommand("+publishSigned"),
+      // For non cross-build projects, use releaseStepCommand("publishSigned")
+      releaseStepCommandAndRemaining("+publishSigned"),
+      releaseStepCommand("sonatypeBundleRelease"),
       setNextVersion,
       commitNextVersion,
-      releaseStepCommand("sonatypeReleaseAll"),
       pushChanges
     )
   )
