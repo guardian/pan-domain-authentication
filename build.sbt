@@ -23,7 +23,7 @@ val commonSettings =
 
 val sonatypeReleaseSettings = {
   sonatypeSettings ++ Seq(
-    publishTo := sonatypePublishTo.value,
+    publishTo := sonatypePublishToBundle.value,
     licenses := Seq("Apache V2" -> url("http://www.apache.org/licenses/LICENSE-2.0.html")),
     scmInfo := Some(ScmInfo(
       url("https://github.com/guardian/pan-domain-authentication"),
