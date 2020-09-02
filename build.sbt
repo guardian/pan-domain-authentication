@@ -110,6 +110,7 @@ lazy val exampleApp = project("pan-domain-auth-example")
   .settings(sonatypeReleaseSettings: _*)
   .settings(
     publishArtifact := false,
+    skip in publish := true,
     playDefaultPort := 9500
   )
 
@@ -121,7 +122,8 @@ lazy val root = Project("pan-domain-auth-root", file(".")).aggregate(
   exampleApp
 ).settings(sonatypeReleaseSettings: _*).settings(
   organization := "com.gu",
-  publishArtifact := false
+  publishArtifact := false,
+  skip in publish := true,
 )
 
 def project(path: String): Project =
