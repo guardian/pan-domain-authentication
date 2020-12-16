@@ -284,7 +284,7 @@ const panda = new PanDomainAuthentication(
   "gutoolsAuth-assym", // cookie name
   "eu-west-1", // AWS region
   "pan-domain-auth-settings", // Settings bucket
-  "local.dev-gutools.co.uk.public.settings", // Settings file
+  "local.dev-gutools.co.uk.settings.public", // Settings file
   guardianValidation
 );
 
