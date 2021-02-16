@@ -22,6 +22,7 @@ class GroupChecker(config: Google2FAGroupSettings, bucketName: String, s3Client:
     .setServiceAccountScopes(List(DirectoryScopes.ADMIN_DIRECTORY_GROUP_READONLY).asJavaCollection)
     .setServiceAccountUser(config.adminUserEmail)
     .setServiceAccountPrivateKey(loadServiceAccountPrivateKey)
+    .setApplicationName(appName)
     .build()
 
   val directory = new Directory.Builder(transport, jsonFactory, null)
