@@ -6,8 +6,8 @@ import ReleaseStateTransformations._
 import xerial.sbt.Sonatype._
 import play.sbt.PlayImport.PlayKeys._
 
-val scala212 = "2.12.12"
-val scala213 = "2.13.1"
+val scala212 = "2.12.15"
+val scala213 = "2.13.8"
 
 val commonSettings =
   Seq(
