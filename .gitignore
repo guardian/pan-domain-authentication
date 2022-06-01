@@ -1,6 +1,7 @@
 logs
 project/project
 project/target
+project/.bloop/
 target
 tmp
 .history
