@@ -31,7 +31,7 @@ object Dependencies {
   )
 
   val cryptoDependencies = Seq(
-    "org.bouncycastle" % "bcprov-jdk15on" % "1.66",
+    "org.bouncycastle" % "bcprov-jdk15on" % "1.69",
     "commons-codec" % "commons-codec" % "1.14"
   )
 
@@ -44,11 +44,10 @@ object Dependencies {
    * We also cannot upgrade beyond Jackson 2.10 as Akka depends on the Jackson Scala integration and requires < 2.11
    */
   val jackson: Seq[ModuleID] = {
-    val version = "2.10.5"
     Seq(
-      "com.fasterxml.jackson.core" % "jackson-core" % version,
-      "com.fasterxml.jackson.core" % "jackson-databind" % version,
-      "com.fasterxml.jackson.dataformat" % "jackson-dataformat-cbor" % version
+      "com.fasterxml.jackson.core" % "jackson-core" % "2.10.5",
+      "com.fasterxml.jackson.core" % "jackson-databind" % "2.10.5.1",
+      "com.fasterxml.jackson.dataformat" % "jackson-dataformat-cbor" % "2.10.5"
     )
   }
 
