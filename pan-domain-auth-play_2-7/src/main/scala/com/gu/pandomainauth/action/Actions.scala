@@ -81,10 +81,26 @@ trait AuthActions {
   }
 
   /**
-    * A Play session key that stores the target URL that was being accessed when redirected for authentication
+    * A cookie key that stores the target URL that was being accessed when redirected for authentication
     */
-  val LOGIN_ORIGIN_KEY = "loginOriginUrl"
-  val ANTI_FORGERY_KEY = "antiForgeryToken"
+  val LOGIN_ORIGIN_KEY = "panda-loginOriginUrl"
+  val ANTI_FORGERY_KEY = "panda-antiForgeryToken"
+
+  private def cookie(name: String, value: String): Cookie =
+    Cookie(
+      name,
+      value = value,
+      secure = true,
+      httpOnly = true,
+      // Chrome will pass back SameSite=Lax cookies, but Firefox requires
+      // SameSite=None, since the cookies are to be returned on a redirect
+      // from a 3rd party
+      sameSite = Some(Cookie.SameSite.None)
+    )
+  private lazy val discardCookies = Seq(
+    DiscardingCookie(LOGIN_ORIGIN_KEY, secure = true),
+    DiscardingCookie(ANTI_FORGERY_KEY, secure = true)
+  )
 
   /**
     * starts the authentication process for a user. By default this just sends the user off to the OAuth provider for auth
@@ -94,7 +110,7 @@ trait AuthActions {
     val antiForgeryToken = OAuth.generateAntiForgeryToken()
     OAuth.redirectToOAuthProvider(antiForgeryToken, email)(ec, request, wsClient) map { res =>
       val originUrl = request.uri
-      res.withSession { request.session + (ANTI_FORGERY_KEY -> antiForgeryToken) + (LOGIN_ORIGIN_KEY -> originUrl) }
+      res.withCookies(cookie(ANTI_FORGERY_KEY, antiForgeryToken), cookie(LOGIN_ORIGIN_KEY, originUrl))
     }
   }
 
@@ -124,11 +140,11 @@ trait AuthActions {
     */
   def invalidUserMessage(claimedAuth: AuthenticatedUser) = s"user ${claimedAuth.user.email} not valid for $system"
 
-  def processOAuthCallback()(implicit request: RequestHeader) = {
+  def processOAuthCallback()(implicit request: RequestHeader): Future[Result] = {
     val token =
-      request.session.get(ANTI_FORGERY_KEY).getOrElse(throw new OAuthException("missing anti forgery token"))
+      request.cookies.get(ANTI_FORGERY_KEY).getOrElse(throw new OAuthException("missing anti forgery token")).value
     val originalUrl =
-      request.session.get(LOGIN_ORIGIN_KEY).getOrElse(throw new OAuthException("missing original url"))
+      request.cookies.get(LOGIN_ORIGIN_KEY).getOrElse(throw new OAuthException("missing original url")).value
 
     val existingCookie = readCookie(request) // will be populated if this was a re-auth for expired login
 
@@ -152,7 +168,7 @@ trait AuthActions {
         val updatedCookie = generateCookie(authedUserData)
         Redirect(originalUrl)
           .withCookies(updatedCookie)
-          .withSession(session = request.session - ANTI_FORGERY_KEY - LOGIN_ORIGIN_KEY)
+          .discardingCookies(discardCookies:_*)
       } else {
         showUnauthedMessage(invalidUserMessage(claimedAuth))
       }
