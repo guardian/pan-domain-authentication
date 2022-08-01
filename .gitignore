@@ -74,3 +74,5 @@ com_crashlytics_export_strings.xml
 # Frontend
 **/node_modules/*
 */public/jspm_packages/*
+.bloop
+project/metals.sbt
