@@ -52,7 +52,7 @@ class OAuth(config: OAuthSettings, system: String, redirectUrl: String) {
       "scope" -> Seq("openid email profile"),
       "redirect_uri" -> Seq(redirectUrl),
       "state" -> Seq(antiForgeryToken)
-    ) ++ email.map("login_hint" -> Seq(_))
+    ) ++ email.map("login_hint" -> Seq(_)) ++ config.organizationDomain.map("hd" -> Seq(_))
 
     discoveryDocument.map(dd => Redirect(s"${dd.authorization_endpoint}", queryString))
   }

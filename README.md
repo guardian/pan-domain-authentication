@@ -121,6 +121,7 @@ cookieName=exampleAuth
 
 clientId=example_oauth_client_id
 clientSecret=example_oauth_secret
+organizationDomain=example.com
 
 googleServiceAccountId=serviceAccount@developer.gserviceaccount.com
 googleServiceAccountCert=name_of_cert_in_bucket.p12
@@ -139,7 +140,11 @@ publicKey=example_key
 
 * **clientId** - this is the OAuth client id for the provider you are authenticating against
 
-* **googleAuthSecret** - this is the OAuth secret for the provider
+* **clientSecret** - this is the OAuth secret for the provider
+
+* **organizationDomain** - OPTIONAL: this is the domain where users are registered, for services which support it. If user's emails are in the format `user@example.com`, then this should be set to `example.com`.
+  * Known services with support: 
+    * Google
 
 * **googleServiceAccountId, googleServiceAccountCert, google2faUser and multifactorGroupId** - these are optional parameters for using a group based 2 factor auth verification
 

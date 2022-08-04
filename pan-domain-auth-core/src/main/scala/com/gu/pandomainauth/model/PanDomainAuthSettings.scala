@@ -17,7 +17,8 @@ case class CookieSettings(
 case class OAuthSettings(
   clientId: String,
   clientSecret: String,
-  discoveryDocumentUrl: String
+  discoveryDocumentUrl: String,
+  organizationDomain: Option[String]
 )
 
 case class Google2FAGroupSettings(
@@ -38,7 +39,8 @@ object PanDomainAuthSettings{
     val oAuthSettings = OAuthSettings(
       settingMap("clientId"),
       settingMap("clientSecret"),
-      settingMap("discoveryDocumentUrl")
+      settingMap("discoveryDocumentUrl"),
+      settingMap.get("organizationDomain")
     )
 
     val google2faSettings = for(
