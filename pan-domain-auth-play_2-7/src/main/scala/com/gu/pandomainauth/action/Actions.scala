@@ -9,6 +9,8 @@ import play.api.mvc.Results._
 import play.api.mvc._
 
 import scala.concurrent.{ExecutionContext, Future}
+import java.net.URLEncoder
+import java.net.URLDecoder
 
 class UserRequest[A](val user: User, request: Request[A]) extends WrappedRequest[A](request)
 
@@ -89,7 +91,7 @@ trait AuthActions {
   private def cookie(name: String, value: String): Cookie =
     Cookie(
       name,
-      value = value,
+      value = URLEncoder.encode(value, "UTF-8"),
       secure = true,
       httpOnly = true,
       // Chrome will pass back SameSite=Lax cookies, but Firefox requires
@@ -142,9 +144,9 @@ trait AuthActions {
 
   def processOAuthCallback()(implicit request: RequestHeader): Future[Result] = {
     val token =
-      request.cookies.get(ANTI_FORGERY_KEY).getOrElse(throw new OAuthException("missing anti forgery token")).value
+      request.cookies.get(ANTI_FORGERY_KEY).map(cookie => URLDecoder.decode(cookie.value, "UTF-8")).getOrElse(throw new OAuthException("missing anti forgery token"))
     val originalUrl =
-      request.cookies.get(LOGIN_ORIGIN_KEY).getOrElse(throw new OAuthException("missing original url")).value
+      request.cookies.get(LOGIN_ORIGIN_KEY).map(cookie => URLDecoder.decode(cookie.value, "UTF-8")).getOrElse(throw new OAuthException("missing original url"))
 
     val existingCookie = readCookie(request) // will be populated if this was a re-auth for expired login
 
