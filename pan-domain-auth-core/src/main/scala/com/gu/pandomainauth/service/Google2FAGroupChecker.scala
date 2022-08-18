@@ -46,6 +46,7 @@ class GroupChecker(config: Google2FAGroupSettings, bucketName: String, s3Client:
     val hasGroupOnPage = Option(groupsResponse.getGroups).exists(_.asScala.exists(_.getEmail == groupId))
     hasGroupOnPage || (if(hasMoreGroups(groupsResponse)) hasGroup( query.setPageToken(groupsResponse.getNextPageToken), groupId ) else false)
   }
+  protected def hasGroup(userEmail: String, groupId: String): Boolean = directory.members().hasMember(groupId, userEmail).execute().getIsMember()
 
   private def hasMoreGroups(groupsResponse: Groups): Boolean = {
     val token = groupsResponse.getNextPageToken
@@ -66,8 +67,7 @@ class GoogleGroupChecker(config: Google2FAGroupSettings, bucketName: String, s3C
 class Google2FAGroupChecker(config: Google2FAGroupSettings, bucketName: String, s3Client: AmazonS3, appName: String) extends GroupChecker(config, bucketName, s3Client, appName) {
 
   def checkMultifactor(authenticatedUser: AuthenticatedUser): Boolean = {
-    val query = directory.groups().list().setUserKey(authenticatedUser.user.email)
-    hasGroup(query, config.multifactorGroupId)
+    hasGroup(authenticatedUser.user.email, config.multifactorGroupId)
   }
 
 }
