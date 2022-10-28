@@ -1,0 +1,11 @@
+{
+  "name": "@guardian/pan-domain-node-root",
+  "private": true,
+  "workspaces": [
+    "pan-domain-node",
+    "pan-domain-node-express"
+  ],
+  "dependencies": {
+    "@guardian/pan-domain-node-express": "file:pan-domain-node-express"
+  }
+}
