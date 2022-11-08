@@ -1,10 +1,11 @@
-export { PanDomainAuthentication } from './panda';
+export { PanDomainAuthentication, Refreshable, verifyUser } from './panda';
 
 export enum AuthenticationStatus {
     INVALID_COOKIE = 'Invalid Cookie',
     EXPIRED = 'Expired',
     NOT_AUTHORISED = 'Not Authorised',
-    AUTHORISED = 'Authorised'
+    AUTHORISED = 'Authorised',
+    NOT_AUTHENTICATED = 'Not Authenticated',
 }
 
 export interface User {
