@@ -28,6 +28,7 @@ class OAuth(config: OAuthSettings, system: String, redirectUrl: String) {
 
   val random = new SecureRandom()
 
+  // https://developers.google.com/identity/openid-connect/openid-connect#createxsrftoken
   def generateAntiForgeryToken() = new BigInteger(130, random).toString(32)
 
   def oAuthResponse[T](r: WSResponse)(block: JsValue => T): T = {

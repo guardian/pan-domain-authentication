@@ -1,9 +1,12 @@
-import { Response, Router } from "express";
+import { Request, Response, Router } from "express";
 import type { Handler } from "express";
 import { PanDomainAuthenticationIssuer } from ".";
 import { AuthenticationStatus } from "@guardian/pan-domain-node";
+import crypto from 'crypto';
 
-type ResponsePlan = (res: Response) => void;
+import fetch from 'node-fetch';
+
+type ResponsePlan = (req: Request, res: Response) => void;
 
 type Args = {
   onUnauthenticated: ResponsePlan;
@@ -16,9 +19,30 @@ type Logger = {
   error: (msg: string) => void;
 }
 
+type DiscoveryDocument = {
+  authorization_endpoint: string;
+  token_endpoint: string;
+  userinfo_endpoint: string;
+};
+
+const LOGIN_ORIGIN_KEY = "panda-loginOriginUrl"
+const ANTI_FORGERY_KEY = "panda-antiForgeryToken"
+
+const cookieOpts = {
+  secure: true,
+  httpOnly: true,
+  sameSite: 'none'
+} as const;
+
 export const build = (panda: PanDomainAuthenticationIssuer, logger: Logger, system: string) => {
 
-  const buildAuthHandler = ({onUnauthenticated, onExpired}: Args): Handler =>
+  const discoveryDocument: Promise<DiscoveryDocument> = panda.get().then(pandaSettings =>
+    fetch(pandaSettings.discoveryDocumentUrl)
+      .then(dd => dd.json() as Promise<DiscoveryDocument>)
+  );
+
+
+  const buildAuthHandler = ({ onUnauthenticated, onExpired }: Args): Handler =>
     async (req, res, next) => {
       const authed = await panda.verify(req.headers.cookie ?? '');
 
@@ -27,9 +51,10 @@ export const build = (panda: PanDomainAuthenticationIssuer, logger: Logger, syst
           req.panda = { user: authed.user };
           return next();
         case AuthenticationStatus.EXPIRED:
-          return onExpired(res);
+          req.panda = { user: authed.user };
+          return onExpired(req, res);
         case AuthenticationStatus.NOT_AUTHENTICATED:
-          return onUnauthenticated(res);
+          return onUnauthenticated(req, res);
         case AuthenticationStatus.NOT_AUTHORISED:
           const message = authed.user
             ? `User ${authed.user.email} is not authorised to use ${system}`
@@ -40,17 +65,44 @@ export const build = (panda: PanDomainAuthenticationIssuer, logger: Logger, syst
       }
     }
 
-  const sendForAuthentication = (res: Response) => {
+  // https://developers.google.com/identity/openid-connect/openid-connect#createxsrftoken
+  const generateAntiforgeryToken = (): string =>
+    crypto.randomBytes(30).toString('base64url')
 
+  const sendForAuthentication = async (req: Request, res: Response) => {
+    const antiforgeryToken = generateAntiforgeryToken();
+    const pandaSettings = await panda.get();
+
+    const queryParams: Record<string, string> = {
+      client_id: pandaSettings.clientId,
+      response_type: 'code',
+      scope: 'openid email profile',
+      redirect_uri: 'TODO',
+      state: antiforgeryToken,
+    }
+    if (req?.panda?.user) {
+      queryParams.login_hint = req.panda.user.email;
+    }
+    if (pandaSettings.organizationDomain) {
+      queryParams.hd = pandaSettings.organizationDomain;
+    }
+
+    const query = new URLSearchParams(queryParams).toString();
+
+    const loginUri = (await discoveryDocument).authorization_endpoint + '?' + query;
+
+    res.cookie(LOGIN_ORIGIN_KEY, req.originalUrl, cookieOpts)
+      .cookie(ANTI_FORGERY_KEY, antiforgeryToken, cookieOpts)
+      .redirect(loginUri);
   };
 
   const protect: Handler = buildAuthHandler({
-    onUnauthenticated: res => sendForAuthentication(res),
-    onExpired: res => sendForAuthentication(res),
+    onUnauthenticated: (req, res) => sendForAuthentication(req, res),
+    onExpired: (req, res) => sendForAuthentication(req, res),
   });
   const protectApi: Handler = buildAuthHandler({
-    onUnauthenticated: res => res.status(401).send(),
-    onExpired: res => res.status(419).send(),
+    onUnauthenticated: (_, res) => res.status(401).send(),
+    onExpired: (_, res) => res.status(419).send(),
   });
 
   const authEndpoints = Router();
