@@ -1,6 +1,6 @@
 export { PanDomainAuthentication, Refreshable, verifyUser } from './panda';
 
-export { serialiseUser } from './utils';
+export { base64ToPEM, serialiseUser, sign } from './utils';
 
 export enum AuthenticationStatus {
   INVALID_COOKIE = 'Invalid Cookie',
@@ -32,4 +32,3 @@ export function guardianValidation(user: User): boolean {
   const isGuardianUser = user.email.indexOf('guardian.co.uk') !== -1;
   return isGuardianUser && user.multifactor;
 }
-

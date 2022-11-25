@@ -54,7 +54,7 @@ const cookieOpts = {
   sameSite: 'none'
 } as const;
 
-export const build = (panda: PanDomainAuthenticationIssuer, logger: Logger, system: string) => {
+export const buildRouter = (panda: PanDomainAuthenticationIssuer, logger: Logger, system: string) => {
 
   const discoveryDocument: Promise<DiscoveryDocument> = panda.get().then(pandaSettings =>
     fetch(pandaSettings.discoveryDocumentUrl)
@@ -69,6 +69,9 @@ export const build = (panda: PanDomainAuthenticationIssuer, logger: Logger, syst
   const buildAuthHandler = ({ onUnauthenticated, onExpired }: Args): Handler => {
     return async (req, res, next) => {
       const authed = await panda.verify(req.headers.cookie ?? '');
+
+      console.log(authed.status);
+      console.log(authed.user);
 
       switch (authed.status) {
         case AuthenticationStatus.AUTHORISED:
@@ -138,17 +141,27 @@ export const build = (panda: PanDomainAuthenticationIssuer, logger: Logger, syst
   });
 
   const makeAuthorizationRequest = async (code: string, pandaSettings: PanDomainSettings, discoveryDoc: DiscoveryDocument) => {
-    const queryParams = {
+    const bodyParams = new URLSearchParams({
       code: code,
       client_id: pandaSettings.clientId,
       client_secret: pandaSettings.clientSecret,
       redirect_uri: panda.redirectUrl,
       grant_type: 'authorization_code',
-    };
+    });
 
-    const url = discoveryDoc.token_endpoint + '?' + new URLSearchParams(queryParams).toString();
+    const url = discoveryDoc.token_endpoint;// + '?' + new URLSearchParams(queryParams).toString();
 
-    const authorization = await (await fetch(url)).json() as TokenResponse;
+    const authorization_resp = await fetch(url, { method: 'POST', body: bodyParams });
+
+    let authorization;
+    console.log(authorization_resp.status);
+    console.log(url);
+    try {
+      authorization = await authorization_resp.json() as TokenResponse;
+    } catch (e) {
+      console.log(await authorization_resp.text());
+      throw e;
+    }
 
     const { payload } = await jose.jwtVerify(authorization.id_token, await jwks, {
       issuer: discoveryDoc.issuer,
@@ -168,7 +181,7 @@ export const build = (panda: PanDomainAuthenticationIssuer, logger: Logger, syst
 
 
   const validateUserIdentity = async (expectedAntiForgeryToken: string, req: Request, panda: PanDomainSettings): Promise<User> => {
-    if (req.query.state === expectedAntiForgeryToken) {
+    if (req.query.state !== expectedAntiForgeryToken) {
       throw new Error('Anti forgery token did not match');
     }
 
@@ -185,7 +198,7 @@ export const build = (panda: PanDomainAuthenticationIssuer, logger: Logger, syst
       avatarUrl: userInfo.picture,
       authenticatingSystem: system,
       authenticatedIn: [system],
-      expires: jwtPayload.exp as number,
+      expires: jwtPayload.exp as number * 1000,
       multifactor: false
     };
   };
@@ -215,16 +228,21 @@ export const build = (panda: PanDomainAuthenticationIssuer, logger: Logger, syst
     }
 
     // FIXME check 2fa here
+    //
+    if (!authenticatedUser.multifactor) {
+      authenticatedUser.multifactor = true;
+    }
 
     if (panda.validateUser(authenticatedUser)) {
-      res.cookie(panda.cookieName, panda.generateCookie(authenticatedUser), {
+      res.cookie(panda.cookieName, await panda.generateCookie(authenticatedUser), {
         domain: panda.domain,
         secure: true,
         httpOnly: true,
+        encode: s => s
       })
-      .clearCookie(ANTI_FORGERY_KEY)
-      .clearCookie(LOGIN_ORIGIN_KEY)
-      .redirect(originalUrl);
+        .clearCookie(ANTI_FORGERY_KEY)
+        .clearCookie(LOGIN_ORIGIN_KEY)
+        .redirect(originalUrl);
     } else {
       res.status(403).send()
     }

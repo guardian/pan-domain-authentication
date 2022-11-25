@@ -1,6 +1,6 @@
-import { ValidateUserFn, Refreshable, AuthenticationResult, verifyUser, serialiseUser, User } from "@guardian/pan-domain-node";
+import { ValidateUserFn, Refreshable, AuthenticationResult, verifyUser, serialiseUser, User, base64ToPEM } from "@guardian/pan-domain-node";
 import { GetObjectCommand, GetObjectCommandOutput, S3Client } from "@aws-sdk/client-s3"
-import { consumers } from "node:stream";
+import { text } from "node:stream/consumers";
 import * as iniparser from 'iniparser';
 import * as cookie from 'cookie';
 import assert from "node:assert";
@@ -56,6 +56,9 @@ export class PanDomainAuthenticationIssuer extends Refreshable<PanDomainSettings
     assert(settings.publicKey !== undefined, 'Failed to parse publicKey from panda settings file!');
     assert(settings.privateKey !== undefined, 'Failed to parse privateKey from panda settings file!');
 
+    settings.publicKey = base64ToPEM(settings.publicKey, 'PUBLIC');
+    settings.privateKey = base64ToPEM(settings.privateKey, 'RSA PRIVATE');
+
     if (settings.google2FAGroupSettings !== undefined) {
       assert(settings.google2FAGroupSettings.google2faUser !== undefined, 'Failed to parse google2faUser from panda settings file!');
       assert(settings.google2FAGroupSettings.googleServiceAccountCert !== undefined, 'Failed to parse googleServiceAccountCert from panda settings file!');
@@ -72,8 +75,9 @@ export class PanDomainAuthenticationIssuer extends Refreshable<PanDomainSettings
       Key: this.keyFile,
     });
     const obj: GetObjectCommandOutput = await this.s3.send(getObj);
-    const text = await consumers.text(obj.Body);
-    const settings: Partial<PanDomainSettings> = iniparser.parseString(text);
+    if (!obj.Body) throw new Error('no body on s3 response!');
+    const textBody = await text(obj.Body as NodeJS.ReadableStream);
+    const settings: Partial<PanDomainSettings> = iniparser.parseString(textBody);
 
     return this.validateSettingsFile(settings);
   }
@@ -83,7 +87,7 @@ export class PanDomainAuthenticationIssuer extends Refreshable<PanDomainSettings
     const publicKey = settings.publicKey;
     const cookies = cookie.parse(requestCookies);
     const pandaCookie = cookies[this.cookieName];
-    const now = new Date().getMilliseconds();
+    const now = new Date().getTime();
     return verifyUser(pandaCookie, publicKey, now, this.validateUser);
   }
 
@@ -98,3 +102,5 @@ export class PanDomainAuthenticationIssuer extends Refreshable<PanDomainSettings
   };
 
 }
+
+export { buildRouter } from './router';
