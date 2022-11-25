@@ -1,9 +1,10 @@
-import { ValidateUserFn, Refreshable, AuthenticationResult, verifyUser } from "@guardian/pan-domain-node";
+import { ValidateUserFn, Refreshable, AuthenticationResult, verifyUser, serialiseUser, User } from "@guardian/pan-domain-node";
 import { GetObjectCommand, GetObjectCommandOutput, S3Client } from "@aws-sdk/client-s3"
 import { consumers } from "node:stream";
 import * as iniparser from 'iniparser';
 import * as cookie from 'cookie';
 import assert from "node:assert";
+import crypto from 'node:crypto';
 
 
 type Google2FAGroupSettings = {
@@ -12,7 +13,7 @@ type Google2FAGroupSettings = {
   google2faUser: string;
   multifactorGroupId: string;
 }
-type PanDomainSettings = {
+export type PanDomainSettings = {
   cookieName: string;
   clientId: string;
   clientSecret: string;
@@ -29,10 +30,12 @@ export class PanDomainAuthenticationIssuer extends Refreshable<PanDomainSettings
   keyFile: string;
   validateUser: ValidateUserFn;
   s3: S3Client;
+  domain: string;
+  redirectUrl: string;
 
   static settingsCacheTime: number = 60 * 1000;
 
-  constructor(cookieName: string, region: string, bucket: string, keyFile: string, validateUser: ValidateUserFn, s3: S3Client) {
+  constructor(cookieName: string, region: string, bucket: string, keyFile: string, validateUser: ValidateUserFn, s3: S3Client, domain: string, redirectUrl: string) {
     super(PanDomainAuthenticationIssuer.settingsCacheTime);
 
     this.cookieName = cookieName;
@@ -41,6 +44,8 @@ export class PanDomainAuthenticationIssuer extends Refreshable<PanDomainSettings
     this.keyFile = keyFile;
     this.validateUser = validateUser;
     this.s3 = s3;
+    this.domain = domain;
+    this.redirectUrl = redirectUrl;
   }
 
   private validateSettingsFile(settings: Partial<PanDomainSettings>): PanDomainSettings {
@@ -81,5 +86,15 @@ export class PanDomainAuthenticationIssuer extends Refreshable<PanDomainSettings
     const now = new Date().getMilliseconds();
     return verifyUser(pandaCookie, publicKey, now, this.validateUser);
   }
+
+  async generateCookie(user: User): Promise<string> {
+    const data = Buffer.from(serialiseUser(user), 'utf8');
+    const encodedData = data.toString('base64');
+
+    const signedData = crypto.sign('sha256WithRSAEncryption', data, (await this.get()).privateKey);
+    const encodedSignature = signedData.toString('base64');
+
+    return encodedData + '.' + encodedSignature;
+  };
 
 }

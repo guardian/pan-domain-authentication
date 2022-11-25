@@ -24,6 +24,7 @@
   "devDependencies": {
     "@aws-sdk/client-s3": "^3.198.0",
     "@types/cookie": "^0.5.1",
+    "@types/cookie-parser": "^1.4.3",
     "@types/express": "^4.17.14",
     "@types/iniparser": "^0.0.29",
     "@types/jest": "^26.0.24",
@@ -35,7 +36,9 @@
   "dependencies": {
     "@guardian/pan-domain-node": "^0.4.2",
     "cookie": "^0.5.0",
+    "cookie-parser": "^1.4.6",
     "iniparser": "^1.0.5",
+    "jose": "^4.11.1",
     "node-fetch": "^3.3.0"
   },
   "scripts": {

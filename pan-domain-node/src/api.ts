@@ -1,32 +1,35 @@
 export { PanDomainAuthentication, Refreshable, verifyUser } from './panda';
 
+export { serialiseUser } from './utils';
+
 export enum AuthenticationStatus {
-    INVALID_COOKIE = 'Invalid Cookie',
-    EXPIRED = 'Expired',
-    NOT_AUTHORISED = 'Not Authorised',
-    AUTHORISED = 'Authorised',
-    NOT_AUTHENTICATED = 'Not Authenticated',
+  INVALID_COOKIE = 'Invalid Cookie',
+  EXPIRED = 'Expired',
+  NOT_AUTHORISED = 'Not Authorised',
+  AUTHORISED = 'Authorised',
+  NOT_AUTHENTICATED = 'Not Authenticated',
 }
 
 export interface User {
-    firstName: string,
-    lastName: string,
-    email: string,
-    avatarUrl?: string,
-    authenticatingSystem: string,
-    authenticatedIn: string[],
-    expires: number,
-    multifactor: boolean
+  firstName: string,
+  lastName: string,
+  email: string,
+  avatarUrl?: string,
+  authenticatingSystem: string,
+  authenticatedIn: string[],
+  expires: number,
+  multifactor: boolean
 }
 
 export interface AuthenticationResult {
-    status: AuthenticationStatus,
-    user?: User 
+  status: AuthenticationStatus,
+  user?: User
 }
 
 export type ValidateUserFn = (user: User) => boolean;
 
 export function guardianValidation(user: User): boolean {
-    const isGuardianUser = user.email.indexOf('guardian.co.uk') !== -1;
-    return isGuardianUser && user.multifactor;
+  const isGuardianUser = user.email.indexOf('guardian.co.uk') !== -1;
+  return isGuardianUser && user.multifactor;
 }
+
