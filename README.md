@@ -1,6 +1,6 @@
 # Pan Domain Authentication 
 
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.12/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.12)
+[![pan-domain-auth-core Scala version support](https://index.scala-lang.org/guardian/pan-domain-authentication/pan-domain-auth-core/latest-by-scala-version.svg?platform=jvm)](https://index.scala-lang.org/guardian/pan-domain-authentication/pan-domain-auth-core)
 
 Pan domain authentication provides distributed authentication for multiple webapps running in the same domain. Each
 application can authenticate users against an OAuth provider and store the authentication information in a common cookie.
