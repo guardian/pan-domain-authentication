@@ -23,10 +23,8 @@
   "homepage": "https://github.com/guardian/pan-domain-authentication",
   "devDependencies": {
     "@aws-sdk/client-s3": "^3.198.0",
-    "@types/cookie": "^0.5.1",
     "@types/cookie-parser": "^1.4.3",
     "@types/express": "^4.17.14",
-    "@types/iniparser": "^0.0.29",
     "@types/jest": "^26.0.24",
     "@types/node": "^16.18.2",
     "@types/node-fetch": "^2.6.2",
@@ -36,9 +34,7 @@
   },
   "dependencies": {
     "@guardian/pan-domain-node": "^0.4.2",
-    "cookie": "^0.5.0",
     "cookie-parser": "^1.4.6",
-    "iniparser": "^1.0.5",
     "jose": "^4.11.1",
     "node-fetch": "^2.6.7"
   },

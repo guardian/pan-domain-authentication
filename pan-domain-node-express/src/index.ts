@@ -1,106 +1,180 @@
-import { ValidateUserFn, Refreshable, AuthenticationResult, verifyUser, serialiseUser, User, base64ToPEM } from "@guardian/pan-domain-node";
-import { GetObjectCommand, GetObjectCommandOutput, S3Client } from "@aws-sdk/client-s3"
-import { text } from "node:stream/consumers";
-import * as iniparser from 'iniparser';
-import * as cookie from 'cookie';
-import assert from "node:assert";
-import crypto from 'node:crypto';
+import { Request, Response, Router } from "express";
+import type { Handler } from "express";
+import { PanDomainAuthenticationIssuer } from "@guardian/pan-domain-node";
+import { AuthenticationStatus, User } from "@guardian/pan-domain-node";
+import crypto from 'crypto';
+
+import fetch from 'node-fetch';
+import cookieParser from 'cookie-parser';
+
+import * as jose from 'jose';
+import { DiscoveryDocument, Logger } from "../types/express-panda";
+import { validateUserIdentity } from "./utils";
+
+type ResponsePlan = (req: Request, res: Response) => void;
+
+type Args = {
+  onUnauthenticated: ResponsePlan;
+  onExpired: ResponsePlan;
+};
+
+const LOGIN_ORIGIN_KEY = "panda-loginOriginUrl"
+const ANTI_FORGERY_KEY = "panda-antiForgeryToken"
+
+const cookieOpts = {
+  secure: true,
+  httpOnly: true,
+  sameSite: 'none'
+} as const;
+
+export const pandaExpress = (panda: PanDomainAuthenticationIssuer, logger: Logger) => {
+
+  const discoveryDocument: Promise<DiscoveryDocument> = panda.get()
+    .then(pandaSettings => fetch(pandaSettings.discoveryDocumentUrl))
+    .then(dd => dd.json() as Promise<DiscoveryDocument>);
+
+  const jwks = discoveryDocument.then(dd =>
+    jose.createRemoteJWKSet(new URL(dd.jwks_uri))
+  );
 
 
-type Google2FAGroupSettings = {
-  googleServiceAccountId: string;
-  googleServiceAccountCert: string;
-  google2faUser: string;
-  multifactorGroupId: string;
-}
-export type PanDomainSettings = {
-  cookieName: string;
-  clientId: string;
-  clientSecret: string;
-  discoveryDocumentUrl: string;
-  organizationDomain?: string;
-  google2FAGroupSettings?: Google2FAGroupSettings;
-  publicKey: string;
-  privateKey: string;
-}
-export class PanDomainAuthenticationIssuer extends Refreshable<PanDomainSettings> {
-  cookieName: string;
-  region: string;
-  bucket: string;
-  keyFile: string;
-  validateUser: ValidateUserFn;
-  s3: S3Client;
-  domain: string;
-  redirectUrl: string;
+  const buildAuthHandler = ({ onUnauthenticated, onExpired }: Args): Handler => {
+    return async (req, res, next) => {
+      const authed = await panda.verify(req.headers.cookie ?? '');
 
-  static settingsCacheTime: number = 60 * 1000;
-
-  constructor(cookieName: string, region: string, bucket: string, keyFile: string, validateUser: ValidateUserFn, s3: S3Client, domain: string, redirectUrl: string) {
-    super(PanDomainAuthenticationIssuer.settingsCacheTime);
-
-    this.cookieName = cookieName;
-    this.region = region;
-    this.bucket = bucket;
-    this.keyFile = keyFile;
-    this.validateUser = validateUser;
-    this.s3 = s3;
-    this.domain = domain;
-    this.redirectUrl = redirectUrl;
-  }
-
-  private validateSettingsFile(settings: Partial<PanDomainSettings>): PanDomainSettings {
-    assert(settings.cookieName !== undefined, 'Failed to parse cookieName from panda settings file!');
-    assert(settings.clientId !== undefined, 'Failed to parse clientId from panda settings file!');
-    assert(settings.clientSecret !== undefined, 'Failed to parse clientSecret from panda settings file!');
-    assert(settings.discoveryDocumentUrl !== undefined, 'Failed to parse discoveryDocumentUrl from panda settings file!');
-    assert(settings.publicKey !== undefined, 'Failed to parse publicKey from panda settings file!');
-    assert(settings.privateKey !== undefined, 'Failed to parse privateKey from panda settings file!');
-
-    settings.publicKey = base64ToPEM(settings.publicKey, 'PUBLIC');
-    settings.privateKey = base64ToPEM(settings.privateKey, 'RSA PRIVATE');
-
-    if (settings.google2FAGroupSettings !== undefined) {
-      assert(settings.google2FAGroupSettings.google2faUser !== undefined, 'Failed to parse google2faUser from panda settings file!');
-      assert(settings.google2FAGroupSettings.googleServiceAccountCert !== undefined, 'Failed to parse googleServiceAccountCert from panda settings file!');
-      assert(settings.google2FAGroupSettings.googleServiceAccountId !== undefined, 'Failed to parse googleServiceAccountId from panda settings file!');
-      assert(settings.google2FAGroupSettings.multifactorGroupId !== undefined, 'Failed to parse multifactorGroupId from panda settings file!');
+      switch (authed.status) {
+        case AuthenticationStatus.AUTHORISED:
+          req.panda = { user: authed.user };
+          return next();
+        case AuthenticationStatus.EXPIRED:
+          req.panda = { user: authed.user };
+          return onExpired(req, res);
+        case AuthenticationStatus.NOT_AUTHENTICATED:
+          return onUnauthenticated(req, res);
+        case AuthenticationStatus.NOT_AUTHORISED:
+          const message = authed.user
+            ? `User ${authed.user.email} is not authorised to use ${panda.system}`
+            : `Unknown user is not authorised to use ${panda.system}`;
+          return res.status(403).send(message);
+        default:
+          return next(new Error(`Authenticating user failed with an unexpected cause. Authentication status was ${authed.status}`));
+      }
     }
-
-    return settings as PanDomainSettings;
-  }
-
-  override async refresh(): Promise<PanDomainSettings> {
-    const getObj = new GetObjectCommand({
-      Bucket: this.bucket,
-      Key: this.keyFile,
-    });
-    const obj: GetObjectCommandOutput = await this.s3.send(getObj);
-    if (!obj.Body) throw new Error('no body on s3 response!');
-    const textBody = await text(obj.Body as NodeJS.ReadableStream);
-    const settings: Partial<PanDomainSettings> = iniparser.parseString(textBody);
-
-    return this.validateSettingsFile(settings);
-  }
-
-  async verify(requestCookies: string): Promise<AuthenticationResult> {
-    const settings = await this.get();
-    const publicKey = settings.publicKey;
-    const cookies = cookie.parse(requestCookies);
-    const pandaCookie = cookies[this.cookieName];
-    const now = new Date().getTime();
-    return verifyUser(pandaCookie, publicKey, now, this.validateUser);
-  }
-
-  async generateCookie(user: User): Promise<string> {
-    const data = Buffer.from(serialiseUser(user), 'utf8');
-    const encodedData = data.toString('base64');
-
-    const signedData = crypto.sign('sha256WithRSAEncryption', data, (await this.get()).privateKey);
-    const encodedSignature = signedData.toString('base64');
-
-    return encodedData + '.' + encodedSignature;
   };
 
-}
+  // https://developers.google.com/identity/openid-connect/openid-connect#createxsrftoken
+  const generateAntiforgeryToken = (): string =>
+    crypto.randomBytes(30).toString('base64url')
 
-export { buildRouter } from './router';
+  const sendForAuthentication = async (req: Request, res: Response) => {
+    const antiforgeryToken = generateAntiforgeryToken();
+    const pandaSettings = await panda.get();
+
+    const queryParams: Record<string, string> = {
+      client_id: pandaSettings.clientId,
+      response_type: 'code',
+      scope: 'openid email profile',
+      redirect_uri: panda.redirectUrl,
+      state: antiforgeryToken,
+    }
+    if (req?.panda?.user) {
+      queryParams.login_hint = req.panda.user.email;
+    }
+    if (pandaSettings.organizationDomain) {
+      queryParams.hd = pandaSettings.organizationDomain;
+    }
+
+    const query = new URLSearchParams(queryParams).toString();
+
+    const loginUri = (await discoveryDocument).authorization_endpoint + '?' + query;
+
+    res.cookie(LOGIN_ORIGIN_KEY, req.originalUrl, cookieOpts)
+      .cookie(ANTI_FORGERY_KEY, antiforgeryToken, cookieOpts)
+      .redirect(loginUri);
+  };
+
+  const auth: Handler = buildAuthHandler({
+    onUnauthenticated: (req, res) => sendForAuthentication(req, res),
+    onExpired: (req, res) => sendForAuthentication(req, res),
+  });
+  const authApi: Handler = buildAuthHandler({
+    onUnauthenticated: (_, res) => res.status(401).send(),
+    onExpired: (_, res) => res.status(419).send(),
+  });
+
+  const authEndpoints = Router();
+
+  authEndpoints.get("/auth/status", auth, (req, res) => {
+    logger.info(`User ${req.panda?.user ?? 'unknown'} is successfully authenticated`);
+    res.status(200).send("You are logged in.");
+  });
+
+
+  authEndpoints.get("/oauthCallback", cookieParser(), async (req, res) => {
+    const pandaSettings = await panda.get();
+    const antiForgeryToken = req.cookies[ANTI_FORGERY_KEY];
+    const originalUrl = req.cookies[LOGIN_ORIGIN_KEY];
+
+    const oldCookie = req.cookies[pandaSettings.cookieName];
+
+    const authenticatedUser = await validateUserIdentity({
+      expectedAntiForgeryToken: antiForgeryToken,
+      state: req.query.state as string,
+      authorizationCode: req.query.code as string,
+      pandaSettings,
+      discoveryDocument: await discoveryDocument,
+      redirectUrl: panda.redirectUrl,
+      jwks: await jwks,
+      system: panda.system,
+      logger
+    });
+
+    const existingAuth = await readOldAuthData(oldCookie);
+
+    const existingAuthHasSystem = existingAuth?.authenticatedIn.includes(panda.system);
+
+    if (existingAuth) {
+      authenticatedUser.authenticatedIn = existingAuth.authenticatedIn;
+      if (!existingAuthHasSystem) {
+        authenticatedUser.authenticatedIn.push(panda.system);
+      }
+
+      if (existingAuth.multifactor) {
+        authenticatedUser.multifactor = true;
+      }
+    }
+
+    // FIXME check 2fa here
+    if (!authenticatedUser.multifactor) {
+      authenticatedUser.multifactor = true;
+    }
+
+    if (panda.validateUser(authenticatedUser)) {
+      res.cookie(panda.cookieName, await panda.generateCookie(authenticatedUser), {
+        domain: panda.domain,
+        secure: true,
+        httpOnly: true,
+      })
+        .clearCookie(ANTI_FORGERY_KEY)
+        .clearCookie(LOGIN_ORIGIN_KEY)
+        .redirect(originalUrl);
+    } else {
+      res.status(403).send()
+    }
+  });
+
+  const readOldAuthData = async (oldCookie: string | undefined): Promise<User | undefined> => {
+    if (!oldCookie) return;
+    try {
+      return (await panda.verify(oldCookie)).user;
+    } catch {
+      return;
+    }
+  };
+
+  return {
+    authEndpoints,
+    auth,
+    authApi
+  }
+}
