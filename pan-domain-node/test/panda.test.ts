@@ -12,8 +12,8 @@ import { AuthenticationStatus, User } from '../src/types';
 
 describe('verifyUser', function() {
 
-  test("return invalid cookie if missing", () => {
-    expect(verifyUser(undefined, "", 0, guardianValidation).status).toBe(AuthenticationStatus.INVALID_COOKIE);
+  test("return not authenticated if cookie is missing", () => {
+    expect(verifyUser(undefined, "", 0, guardianValidation).status).toBe(AuthenticationStatus.NOT_AUTHENTICATED);
   });
 
   test("return invalid cookie for a malformed signature", () => {
@@ -28,7 +28,7 @@ describe('verifyUser', function() {
     expect(verifyUser(sampleCookie, publicKey, someTimeInTheFuture, guardianValidation).status).toBe(AuthenticationStatus.EXPIRED);
   });
 
-  test("return not authenticated if user fails validation function", () => {
+  test("return not authorised if user fails validation function", () => {
     expect(verifyUser(sampleCookieWithoutMultifactor, publicKey, 0, guardianValidation).status).toBe(AuthenticationStatus.NOT_AUTHORISED);
     expect(verifyUser(sampleNonGuardianCookie, publicKey, 0, guardianValidation).status).toBe(AuthenticationStatus.NOT_AUTHORISED);
   });
