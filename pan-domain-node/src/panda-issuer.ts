@@ -36,6 +36,8 @@ export class PanDomainAuthenticationIssuer extends Refreshable<PanDomainSettings
 
   static settingsCacheTime: number = 60 * 1000;
 
+  // TODO construct with object to get named params
+  // TODO documentation
   constructor(
     cookieName: string,
     region: string,
@@ -107,6 +109,7 @@ export class PanDomainAuthenticationIssuer extends Refreshable<PanDomainSettings
     const data = Buffer.from(serialiseUser(user), 'utf8');
     const encodedData = data.toString('base64');
 
+    // TODO already exists - replace with utils.sign
     const signedData = crypto.sign('sha256WithRSAEncryption', data, (await this.get()).privateKey);
     const encodedSignature = signedData.toString('base64');
 

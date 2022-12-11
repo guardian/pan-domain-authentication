@@ -3,10 +3,7 @@
   "private": true,
   "workspaces": [
     "pan-domain-node",
-    "pan-domain-node-example",
-    "pan-domain-node-express"
-  ],
-  "dependencies": {
-    "@guardian/pan-domain-node-express": "file:pan-domain-node-express"
-  }
+    "pan-domain-node-express",
+    "pan-domain-node-example"
+  ]
 }
