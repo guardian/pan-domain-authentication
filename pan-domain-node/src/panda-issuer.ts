@@ -1,10 +1,10 @@
 import { ValidateUserFn, Refreshable, AuthenticationResult, verifyUser, serialiseUser, User, base64ToPEM } from "./api";
+import * as utils from "./utils";
 import { GetObjectCommand, GetObjectCommandOutput, S3Client } from "@aws-sdk/client-s3"
 import { text } from "node:stream/consumers";
 import * as iniparser from 'iniparser';
 import * as cookie from 'cookie';
 import assert from "node:assert";
-import crypto from 'node:crypto';
 
 
 type Google2FAGroupSettings = {
@@ -23,6 +23,19 @@ export type PanDomainSettings = {
   publicKey: string;
   privateKey: string;
 }
+
+export type PanDomainAuthenticationIssuerParams = {
+    cookieName: string,
+    region: string,
+    bucket: string,
+    keyFile: string,
+    validateUser: ValidateUserFn,
+    s3: S3Client,
+    domain: string,
+    redirectUrl: string,
+    system: string
+};
+
 export class PanDomainAuthenticationIssuer extends Refreshable<PanDomainSettings> {
   cookieName: string;
   region: string;
@@ -36,19 +49,18 @@ export class PanDomainAuthenticationIssuer extends Refreshable<PanDomainSettings
 
   static settingsCacheTime: number = 60 * 1000;
 
-  // TODO construct with object to get named params
   // TODO documentation
-  constructor(
-    cookieName: string,
-    region: string,
-    bucket: string,
-    keyFile: string,
-    validateUser: ValidateUserFn,
-    s3: S3Client,
-    domain: string,
-    redirectUrl: string,
-    system: string
-  ) {
+  constructor({
+    cookieName,
+    region,
+    bucket,
+    keyFile,
+    validateUser,
+    s3,
+    domain,
+    redirectUrl,
+    system
+  }: PanDomainAuthenticationIssuerParams) {
     super(PanDomainAuthenticationIssuer.settingsCacheTime);
 
     this.cookieName = cookieName;
@@ -106,12 +118,11 @@ export class PanDomainAuthenticationIssuer extends Refreshable<PanDomainSettings
   }
 
   async generateCookie(user: User): Promise<string> {
-    const data = Buffer.from(serialiseUser(user), 'utf8');
+    const serialisedUser = serialiseUser(user);
+    const data = Buffer.from(serialisedUser, 'utf8');
     const encodedData = data.toString('base64');
 
-    // TODO already exists - replace with utils.sign
-    const signedData = crypto.sign('sha256WithRSAEncryption', data, (await this.get()).privateKey);
-    const encodedSignature = signedData.toString('base64');
+    const encodedSignature = utils.sign(serialisedUser, (await this.get()).privateKey);
 
     return encodedData + '.' + encodedSignature;
   };

@@ -3,7 +3,7 @@ import express from "express";
 import { S3Client } from '@aws-sdk/client-s3'
 import { fromIni } from '@aws-sdk/credential-providers';
 
-import { buildRouter } from '@guardian/pan-domain-node-express';
+import { pandaExpress } from '@guardian/pan-domain-node-express';
 import { guardianValidation, PanDomainAuthenticationIssuer } from "@guardian/pan-domain-node";
 
 const app = express();
@@ -13,17 +13,17 @@ const s3 = new S3Client({
   credentials: fromIni({ profile: 'media-service' }),
 });
 
-const panda = new PanDomainAuthenticationIssuer(
-  'gutoolsAuth-assym',
-  'eu-west-1',
-  'pan-domain-auth-settings',
-  'local.dev-gutools.co.uk.settings',
-  guardianValidation,
-  s3,
-  '.local.dev-gutools.co.uk',
-  'https://example.local.dev-gutools.co.uk/oauthCallback',
-  "panda-node-example"
-)
+const panda = new PanDomainAuthenticationIssuer({
+  cookieName: 'gutoolsAuth-assym',
+  region: 'eu-west-1',
+  bucket: 'pan-domain-auth-settings',
+  keyFile: 'local.dev-gutools.co.uk.settings',
+  validateUser: guardianValidation,
+  s3: s3,
+  domain: '.local.dev-gutools.co.uk',
+  redirectUrl: 'https://example.local.dev-gutools.co.uk/oauthCallback',
+  system: "panda-node-example"
+});
 
 const logger = {
   info: console.log,
@@ -31,19 +31,21 @@ const logger = {
   error: console.error,
 };
 
-const authRouter = buildRouter(panda, logger);
+const pandaMiddleware = pandaExpress(panda, logger);
 
-app.use(authRouter.authEndpoints);
+app.use(pandaMiddleware.authEndpoints);
 
 app.get('/', (req, res) => {
   res.send('hello world');
 });
 
-app.get('/authed/api', authRouter.authApi, (req, res) => {
+app.get('/authed/api', pandaMiddleware.authApi, (req, res) => {
   res.send('authed on an api endpoint! yay! you are ' + req.panda?.user?.email);
 });
-app.get('/authed', authRouter.auth, (req, res) => {
-  res.send('authed an html endpoint! yayer! you are ' + req.panda?.user?.avatarUrl);
+app.get('/authed', pandaMiddleware.auth, (req, res) => {
+  res.send(`<p>
+    authed on an html endpoint! wheeee! you are ${req.panda?.user?.email} <img src="${req.panda?.user?.avatarUrl}" />
+  </p>`);
 });
 
 app.listen(7734, () => {

@@ -78,11 +78,12 @@ export abstract class Refreshable<T> {
   cacheTime: number;
 
   constructor(cacheTime: number) {
-    // this.refreshFn = () => refreshFn().then(res => ({ value: res, lastUpdated: new Date() }));
     this.cacheTime = cacheTime;
 
     this.updateTimer = setInterval(() => {
-      this.value = this.refresh()
+      this.refresh().then(result => {
+        this.value = Promise.resolve(result);
+      });
     }, this.cacheTime);
   }
 
