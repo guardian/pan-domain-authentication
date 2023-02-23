@@ -2,6 +2,7 @@ package com.gu.pandomainauth.service
 
 import com.amazonaws.services.s3.AmazonS3
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
+import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.jackson2.JacksonFactory
 import com.google.api.client.util.SecurityUtils
@@ -10,8 +11,11 @@ import com.google.api.services.admin.directory.{Directory, DirectoryScopes}
 
 import scala.jdk.CollectionConverters._
 import com.gu.pandomainauth.model.{AuthenticatedUser, Google2FAGroupSettings}
+import org.slf4j.LoggerFactory
 
 class GroupChecker(config: Google2FAGroupSettings, bucketName: String, s3Client: AmazonS3, appName: String) {
+  private val logger = LoggerFactory.getLogger(this.getClass)
+
   val transport = new NetHttpTransport()
   val jsonFactory = new JacksonFactory()
 
@@ -41,12 +45,27 @@ class GroupChecker(config: Google2FAGroupSettings, bucketName: String, s3Client:
     serviceAccountPrivateKey
   }
 
-  protected def hasGroup(query: Directory#Groups#List, groupId: String): Boolean = {
-    val groupsResponse = query.execute()
-    val hasGroupOnPage = Option(groupsResponse.getGroups).exists(_.asScala.exists(_.getEmail == groupId))
-    hasGroupOnPage || (if(hasMoreGroups(groupsResponse)) hasGroup( query.setPageToken(groupsResponse.getNextPageToken), groupId ) else false)
+  private def withGoogle4xxErrorHandling(f: => Boolean): Boolean = {
+    try {
+      f
+    } catch {
+      case e: GoogleJsonResponseException if e.getStatusCode >= 400 && e.getStatusCode < 500 =>
+        logger.error("Received 4xx error response from Google API", e)
+        false
+    }
   }
-  protected def hasGroup(userEmail: String, groupId: String): Boolean = directory.members().hasMember(groupId, userEmail).execute().getIsMember()
+
+  protected def hasGroup(query: Directory#Groups#List, groupId: String): Boolean =
+    withGoogle4xxErrorHandling {
+      val groupsResponse = query.execute()
+      val hasGroupOnPage = Option(groupsResponse.getGroups).exists(_.asScala.exists(_.getEmail == groupId))
+      hasGroupOnPage || (if(hasMoreGroups(groupsResponse)) hasGroup( query.setPageToken(groupsResponse.getNextPageToken), groupId ) else false)
+    }
+
+  protected def hasGroup(userEmail: String, groupId: String): Boolean =
+    withGoogle4xxErrorHandling {
+      directory.members().hasMember(groupId, userEmail).execute().getIsMember()
+    }
 
   private def hasMoreGroups(groupsResponse: Groups): Boolean = {
     val token = groupsResponse.getNextPageToken
