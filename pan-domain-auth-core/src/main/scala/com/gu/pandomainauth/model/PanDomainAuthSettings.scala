@@ -23,7 +23,8 @@ case class OAuthSettings(
 
 case class Google2FAGroupSettings(
   serviceAccountId: String,
-  serviceAccountCert: String,
+  // The S3 key that contains the Google Service Account JSON credentials.
+  serviceAccountJson: String,
   adminUserEmail: String,
   multifactorGroupId: String
 )
@@ -45,11 +46,11 @@ object PanDomainAuthSettings{
 
     val google2faSettings = for(
       serviceAccountId   <- settingMap.get("googleServiceAccountId");
-      serviceAccountCert <- settingMap.get("googleServiceAccountCert");
+      serviceAccountJson <- settingMap.get("googleServiceAccountJson");
       adminUser          <- settingMap.get("google2faUser");
       group              <- settingMap.get("multifactorGroupId")
     ) yield {
-      Google2FAGroupSettings(serviceAccountId, serviceAccountCert, adminUser, group)
+      Google2FAGroupSettings(serviceAccountId, serviceAccountJson, adminUser, group)
     }
 
     PanDomainAuthSettings(

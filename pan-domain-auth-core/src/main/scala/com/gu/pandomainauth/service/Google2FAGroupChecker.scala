@@ -1,13 +1,15 @@
 package com.gu.pandomainauth.service
 
 import com.amazonaws.services.s3.AmazonS3
-import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
+import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
-import com.google.api.client.http.javanet.NetHttpTransport
-import com.google.api.client.json.jackson2.JacksonFactory
-import com.google.api.client.util.SecurityUtils
-import com.google.api.services.admin.directory.model.Groups
-import com.google.api.services.admin.directory.{Directory, DirectoryScopes}
+import com.google.api.client.http.HttpRequestInitializer
+import com.google.api.client.json.gson.GsonFactory
+import com.google.api.services.directory.Directory
+import com.google.api.services.directory.model.Groups
+import com.google.api.services.directory.DirectoryScopes
+import com.google.auth.http.HttpCredentialsAdapter
+import com.google.auth.oauth2.ServiceAccountCredentials
 
 import scala.jdk.CollectionConverters._
 import com.gu.pandomainauth.model.{AuthenticatedUser, Google2FAGroupSettings}
@@ -16,34 +18,21 @@ import org.slf4j.LoggerFactory
 class GroupChecker(config: Google2FAGroupSettings, bucketName: String, s3Client: AmazonS3, appName: String) {
   private val logger = LoggerFactory.getLogger(this.getClass)
 
-  val transport = new NetHttpTransport()
-  val jsonFactory = new JacksonFactory()
+  private val transport = GoogleNetHttpTransport.newTrustedTransport()
+  private val jsonFactory = GsonFactory.getDefaultInstance()
 
-  val credential = new GoogleCredential.Builder()
-    .setTransport(transport)
-    .setJsonFactory(jsonFactory)
-    .setServiceAccountId(config.serviceAccountId)
-    .setServiceAccountScopes(List(DirectoryScopes.ADMIN_DIRECTORY_GROUP_READONLY).asJavaCollection)
-    .setServiceAccountUser(config.adminUserEmail)
-    .setServiceAccountPrivateKey(loadServiceAccountPrivateKey)
-    .build()
+  private val credentials = ServiceAccountCredentials
+    .fromStream(loadServiceAccountJsonCredentials)
+    .createScoped(List(DirectoryScopes.ADMIN_DIRECTORY_GROUP_READONLY).asJava)
 
-  val directory = new Directory.Builder(transport, jsonFactory, null)
+  private val httpCredentialsAdapter = new HttpCredentialsAdapter(credentials)
+
+  protected val directory = new Directory.Builder(transport, jsonFactory, httpCredentialsAdapter)
     .setApplicationName(appName)
-    .setHttpRequestInitializer(credential).build
+    .build
 
-  private def loadServiceAccountPrivateKey = {
-    val certInputStream = s3Client.getObject(bucketName, config.serviceAccountCert).getObjectContent
-    val serviceAccountPrivateKey = SecurityUtils.loadPrivateKeyFromKeyStore(
-      SecurityUtils.getPkcs12KeyStore,
-      certInputStream,
-      "notasecret", "privatekey", "notasecret"
-    )
-
-    try { certInputStream.close() } catch { case _ : Throwable => }
-
-    serviceAccountPrivateKey
-  }
+  private def loadServiceAccountJsonCredentials =
+    s3Client.getObject(bucketName, config.serviceAccountJson).getObjectContent
 
   private def withGoogle4xxErrorHandling(f: => Boolean): Boolean = {
     try {
