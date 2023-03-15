@@ -12,10 +12,10 @@ val scala213 = "2.13.8"
 val commonSettings =
   Seq(
     scalaVersion := scala212,
-    scalaVersion in ThisBuild := scala212,
+    ThisBuild / scalaVersion  := scala212,
     crossScalaVersions := Seq(scalaVersion.value, scala213),
     organization := "com.gu",
-    fork in Test := false,
+    Test / fork := false,
     resolvers ++= Seq("Typesafe Repository" at "https://repo.typesafe.com/typesafe/releases/"),
     scalacOptions ++= Seq("-feature", "-deprecation", "-language:higherKinds", "-Xfatal-warnings"),
     publishArtifact := false
@@ -110,7 +110,7 @@ lazy val exampleApp = project("pan-domain-auth-example")
   .settings(sonatypeReleaseSettings: _*)
   .settings(
     publishArtifact := false,
-    skip in publish := true,
+    publish / skip := true,
     playDefaultPort := 9500
   )
 
@@ -123,7 +123,7 @@ lazy val root = Project("pan-domain-auth-root", file(".")).aggregate(
 ).settings(sonatypeReleaseSettings: _*).settings(
   organization := "com.gu",
   publishArtifact := false,
-  skip in publish := true,
+  publish / skip := true,
 )
 
 def project(path: String): Project =
