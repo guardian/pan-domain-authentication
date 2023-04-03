@@ -1,10 +1,11 @@
-import { ValidateUserFn, Refreshable, AuthenticationResult, verifyUser, serialiseUser, User, base64ToPEM } from "./api";
+import { ValidateUserFn, AuthenticationResult, verifyUser, serialiseUser, User, base64ToPEM } from "./api";
 import * as utils from "./utils";
 import { GetObjectCommand, GetObjectCommandOutput, S3Client } from "@aws-sdk/client-s3"
 import { text } from "node:stream/consumers";
 import * as iniparser from 'iniparser';
 import * as cookie from 'cookie';
 import assert from "node:assert";
+import { Refreshable } from "./refreshable";
 
 
 type Google2FAGroupSettings = {

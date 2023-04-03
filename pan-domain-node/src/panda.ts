@@ -4,6 +4,7 @@ import * as cookie from 'cookie';
 import { base64ToPEM, httpGet, parseCookie, parseUser, sign, verifySignature } from './utils';
 import { AuthenticationStatus } from './types';
 import type { User, AuthenticationResult, ValidateUserFn } from './types';
+import { Refreshable } from './refreshable';
 
 function fetchPublicKey(region: string, bucket: String, keyFile: String): Promise<PublicKey> {
   const path = `https://s3.${region}.amazonaws.com/${bucket}/${keyFile}`;
@@ -68,33 +69,6 @@ export function verifyUser(pandaCookie: string | undefined, publicKey: string, c
   } catch (error) {
     console.error(error);
     return { status: AuthenticationStatus.INVALID_COOKIE };
-  }
-}
-
-export abstract class Refreshable<T> {
-  value?: Promise<T>;
-  updateTimer?: NodeJS.Timeout;
-
-  cacheTime: number;
-
-  constructor(cacheTime: number) {
-    this.cacheTime = cacheTime;
-
-    this.updateTimer = setInterval(() => {
-      this.refresh().then(result => {
-        this.value = Promise.resolve(result);
-      });
-    }, this.cacheTime);
-  }
-
-  abstract refresh(): Promise<T>;
-
-  get(): Promise<T> {
-    if (this.value)
-      return this.value;
-
-    this.value = this.refresh();
-    return this.value;
   }
 }
 

@@ -1,4 +1,4 @@
-export { PanDomainAuthentication, Refreshable, verifyUser, guardianValidation } from './panda';
+export { PanDomainAuthentication, verifyUser, guardianValidation } from './panda';
 
 export { base64ToPEM, serialiseUser, sign } from './utils';
 
