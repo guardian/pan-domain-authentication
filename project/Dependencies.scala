@@ -13,7 +13,7 @@ object Dependencies {
   }
 
   val playLibs_2_8 = {
-    val version = "2.8.2"
+    val version = "2.8.19"
     Seq(
       "com.typesafe.play" %% "play" % version % "provided",
       "com.typesafe.play" %% "play-ws" % version % "provided"
