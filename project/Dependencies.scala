@@ -2,7 +2,7 @@ import sbt._
 
 object Dependencies {
 
-  val awsDependencies = Seq("com.amazonaws" % "aws-java-sdk-s3" % "1.11.835")
+  val awsDependencies = Seq("com.amazonaws" % "aws-java-sdk-s3" % "1.12.470")
 
   val playLibs_2_7 = {
     val version = "2.7.5"
@@ -13,7 +13,7 @@ object Dependencies {
   }
 
   val playLibs_2_8 = {
-    val version = "2.8.2"
+    val version = "2.8.19"
     Seq(
       "com.typesafe.play" %% "play" % version % "provided",
       "com.typesafe.play" %% "play-ws" % version % "provided"
@@ -38,20 +38,6 @@ object Dependencies {
   )
 
   val testDependencies = Seq("org.scalatest" %% "scalatest" % "3.2.0" % "test")
-
-  /*
-   * Pull in an updated version of jackson and logback libraries as the ones AWS use have security vulnerabilities.
-   * See https://github.com/aws/aws-sdk-java/pull/1373
-   *
-   * We also cannot upgrade beyond Jackson 2.10 as Akka depends on the Jackson Scala integration and requires < 2.11
-   */
-  val jackson: Seq[ModuleID] = {
-    Seq(
-      "com.fasterxml.jackson.core" % "jackson-core" % "2.10.5",
-      "com.fasterxml.jackson.core" % "jackson-databind" % "2.10.5.1",
-      "com.fasterxml.jackson.dataformat" % "jackson-dataformat-cbor" % "2.10.5"
-    )
-  }
 
   val loggingDependencies = Seq("org.slf4j" % "slf4j-api" % "1.7.30")
 

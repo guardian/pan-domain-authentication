@@ -65,7 +65,6 @@ lazy val panDomainAuthVerification = project("pan-domain-auth-verification")
       ++= cryptoDependencies
       ++ awsDependencies
       ++ testDependencies
-      ++ jackson
       ++ loggingDependencies
       ++ scalaCollectionCompatDependencies,
     publishArtifact := true
