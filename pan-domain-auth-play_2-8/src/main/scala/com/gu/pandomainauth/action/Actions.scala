@@ -14,6 +14,8 @@ import java.net.URLDecoder
 
 class UserRequest[A](val user: User, request: Request[A]) extends WrappedRequest[A](request)
 
+case class PandomainCookie(cookie: Cookie, forceExpiry: Boolean)
+
 trait AuthActions {
   private val logger = LoggerFactory.getLogger(this.getClass)
 
@@ -87,6 +89,7 @@ trait AuthActions {
     */
   val LOGIN_ORIGIN_KEY = "panda-loginOriginUrl"
   val ANTI_FORGERY_KEY = "panda-antiForgeryToken"
+  private val FORCE_EXPIRY_KEY = "panda-forceExpiry"
 
   private def cookie(name: String, value: String): Cookie =
     Cookie(
@@ -101,7 +104,8 @@ trait AuthActions {
     )
   private lazy val discardCookies = Seq(
     DiscardingCookie(LOGIN_ORIGIN_KEY, secure = true),
-    DiscardingCookie(ANTI_FORGERY_KEY, secure = true)
+    DiscardingCookie(ANTI_FORGERY_KEY, secure = true),
+    DiscardingCookie(FORCE_EXPIRY_KEY, secure = true)
   )
 
   /**
@@ -178,10 +182,15 @@ trait AuthActions {
   }
 
   def readAuthenticatedUser(request: RequestHeader): Option[AuthenticatedUser] = readCookie(request) map { cookie =>
-    CookieUtils.parseCookieData(cookie.value, settings.publicKey)
+    CookieUtils.parseCookieData(cookie.cookie.value, settings.publicKey)
   }
 
-  def readCookie(request: RequestHeader): Option[Cookie] = request.cookies.get(settings.cookieSettings.cookieName)
+  def readCookie(request: RequestHeader): Option[PandomainCookie] = {
+    request.cookies.get(settings.cookieSettings.cookieName).map { cookie =>
+      val forceExpiry = request.cookies.get(FORCE_EXPIRY_KEY).exists(_.value != "0")
+      PandomainCookie(cookie, forceExpiry)
+    }
+  }
 
   def generateCookie(authedUser: AuthenticatedUser): Cookie =
     Cookie(
@@ -212,7 +221,7 @@ trait AuthActions {
     */
   def extractAuth(request: RequestHeader): AuthenticationStatus = {
     readCookie(request).map { cookie =>
-      PanDomain.authStatus(cookie.value, settings.publicKey, validateUser, apiGracePeriod, system, cacheValidation)
+      PanDomain.authStatus(cookie.cookie.value, settings.publicKey, validateUser, apiGracePeriod, system, cacheValidation, cookie.forceExpiry)
     } getOrElse NotAuthenticated
   }
 

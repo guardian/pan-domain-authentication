@@ -11,9 +11,11 @@ import org.scalatest.matchers.should.Matchers
 class PanDomainTest extends AnyFreeSpec with Matchers with Inside {
   import com.gu.pandomainauth.service.TestKeys._
 
+  val forceExpiry = false
+
   def authStatus(cookieData: String, validateUser: AuthenticatedUser => Boolean = _ => true, apiGracePeriod: Long = 0,
                  system: String = "testsuite", cacheValidation: Boolean = false) = {
-    PanDomain.authStatus(cookieData, testPublicKey, validateUser, apiGracePeriod, system, cacheValidation)
+    PanDomain.authStatus(cookieData, testPublicKey, validateUser, apiGracePeriod, system, cacheValidation, forceExpiry)
   }
 
   "authStatus" - {
