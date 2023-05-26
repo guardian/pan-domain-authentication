@@ -88,7 +88,14 @@ trait AuthActions {
     * A cookie key that stores the target URL that was being accessed when redirected for authentication
     */
   val LOGIN_ORIGIN_KEY = "panda-loginOriginUrl"
+  /*
+   * Cookie key containing an anti-forgery token; helps to validate that the oauth callback arrived in response to the correct oauth request
+   */
   val ANTI_FORGERY_KEY = "panda-antiForgeryToken"
+  /*
+   * Cookie that will make panda behave as if the cookie has expired.
+   * NOTE: This cookie is for debugging only! It should _not_ be set by any application code to expire the cookie!! Use the `processLogout` action instead!!
+   */
   private val FORCE_EXPIRY_KEY = "panda-forceExpiry"
 
   private def cookie(name: String, value: String): Cookie =
