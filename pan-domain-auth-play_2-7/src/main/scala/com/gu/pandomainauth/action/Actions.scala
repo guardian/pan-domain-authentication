@@ -150,24 +150,24 @@ trait AuthActions {
       token <- decodeCookie(ANTI_FORGERY_KEY)
       originalUrl <- decodeCookie(LOGIN_ORIGIN_KEY)
     } yield {
-    OAuth.validatedUserIdentity(token)(request, ec, wsClient).map { claimedAuth =>
-      val existingAuthenticatedIn = readAuthenticatedUser(request).map(_.authenticatedIn)
-      val authedUserData =
+      OAuth.validatedUserIdentity(token)(request, ec, wsClient).map { claimedAuth =>
+        val existingAuthenticatedIn = readAuthenticatedUser(request).map(_.authenticatedIn)
+        val authedUserData =
           claimedAuth.copy(
             authenticatingSystem = system,
             authenticatedIn = existingAuthenticatedIn.fold(Set(system))(_ + system),
             multiFactor = checkMultifactor(claimedAuth)
           )
 
-      if (validateUser(authedUserData)) {
-        val updatedCookie = generateCookie(authedUserData)
-        Redirect(originalUrl)
-          .withCookies(updatedCookie)
-          .discardingCookies(discardCookies:_*)
-      } else {
-        showUnauthedMessage(invalidUserMessage(claimedAuth))
+        if (validateUser(authedUserData)) {
+          val updatedCookie = generateCookie(authedUserData)
+          Redirect(originalUrl)
+            .withCookies(updatedCookie)
+            .discardingCookies(discardCookies:_*)
+        } else {
+          showUnauthedMessage(invalidUserMessage(claimedAuth))
+        }
       }
-    }
     }) getOrElse {
       Future.successful(BadRequest("Missing cookies"))
     }
