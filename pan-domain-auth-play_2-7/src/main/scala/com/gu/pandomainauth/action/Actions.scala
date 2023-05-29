@@ -151,23 +151,14 @@ trait AuthActions {
     val originalUrl =
       decodeCookie(LOGIN_ORIGIN_KEY).getOrElse(throw new OAuthException("missing original url"))
 
-    val existingCookie = readCookie(request) // will be populated if this was a re-auth for expired login
-
     OAuth.validatedUserIdentity(token)(request, ec, wsClient).map { claimedAuth =>
-      val authedUserData = existingCookie match {
-        case Some(c) =>
-          val existingAuth = CookieUtils.parseCookieData(c.value, settings.publicKey)
-          logger.debug("user re-authed, merging auth data")
-
+      val existingAuthenticatedIn = readAuthenticatedUser(request).map(_.authenticatedIn)
+      val authedUserData =
           claimedAuth.copy(
             authenticatingSystem = system,
-            authenticatedIn = existingAuth.authenticatedIn ++ Set(system),
+            authenticatedIn = existingAuthenticatedIn.fold(Set(system))(_ + system),
             multiFactor = checkMultifactor(claimedAuth)
           )
-        case None =>
-          logger.debug("fresh user login")
-          claimedAuth.copy(multiFactor = checkMultifactor(claimedAuth))
-      }
 
       if (validateUser(authedUserData)) {
         val updatedCookie = generateCookie(authedUserData)
