@@ -146,11 +146,10 @@ trait AuthActions {
     request.cookies.get(name).map(cookie => URLDecoder.decode(cookie.value, "UTF-8"))
 
   def processOAuthCallback()(implicit request: RequestHeader): Future[Result] = {
-    val token =
-      decodeCookie(ANTI_FORGERY_KEY).getOrElse(throw new OAuthException("missing anti forgery token"))
-    val originalUrl =
-      decodeCookie(LOGIN_ORIGIN_KEY).getOrElse(throw new OAuthException("missing original url"))
-
+    (for {
+      token <- decodeCookie(ANTI_FORGERY_KEY)
+      originalUrl <- decodeCookie(LOGIN_ORIGIN_KEY)
+    } yield {
     OAuth.validatedUserIdentity(token)(request, ec, wsClient).map { claimedAuth =>
       val existingAuthenticatedIn = readAuthenticatedUser(request).map(_.authenticatedIn)
       val authedUserData =
@@ -168,6 +167,9 @@ trait AuthActions {
       } else {
         showUnauthedMessage(invalidUserMessage(claimedAuth))
       }
+    }
+    }) getOrElse {
+      Future.successful(BadRequest("Missing cookies"))
     }
   }
 
