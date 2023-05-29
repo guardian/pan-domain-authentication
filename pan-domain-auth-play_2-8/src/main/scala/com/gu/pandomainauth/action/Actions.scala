@@ -142,11 +142,14 @@ trait AuthActions {
     */
   def invalidUserMessage(claimedAuth: AuthenticatedUser) = s"user ${claimedAuth.user.email} not valid for $system"
 
+  private def decodeCookie(name: String)(implicit request: RequestHeader) =
+    request.cookies.get(name).map(cookie => URLDecoder.decode(cookie.value, "UTF-8"))
+
   def processOAuthCallback()(implicit request: RequestHeader): Future[Result] = {
     val token =
-      request.cookies.get(ANTI_FORGERY_KEY).map(cookie => URLDecoder.decode(cookie.value, "UTF-8")).getOrElse(throw new OAuthException("missing anti forgery token"))
+      decodeCookie(ANTI_FORGERY_KEY).getOrElse(throw new OAuthException("missing anti forgery token"))
     val originalUrl =
-      request.cookies.get(LOGIN_ORIGIN_KEY).map(cookie => URLDecoder.decode(cookie.value, "UTF-8")).getOrElse(throw new OAuthException("missing original url"))
+      decodeCookie(LOGIN_ORIGIN_KEY).getOrElse(throw new OAuthException("missing original url"))
 
     val existingCookie = readCookie(request) // will be populated if this was a re-auth for expired login
 
