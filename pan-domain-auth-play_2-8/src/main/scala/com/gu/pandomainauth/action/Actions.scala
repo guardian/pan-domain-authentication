@@ -142,38 +142,34 @@ trait AuthActions {
     */
   def invalidUserMessage(claimedAuth: AuthenticatedUser) = s"user ${claimedAuth.user.email} not valid for $system"
 
+  private def decodeCookie(name: String)(implicit request: RequestHeader) =
+    request.cookies.get(name).map(cookie => URLDecoder.decode(cookie.value, "UTF-8"))
+
   def processOAuthCallback()(implicit request: RequestHeader): Future[Result] = {
-    val token =
-      request.cookies.get(ANTI_FORGERY_KEY).map(cookie => URLDecoder.decode(cookie.value, "UTF-8")).getOrElse(throw new OAuthException("missing anti forgery token"))
-    val originalUrl =
-      request.cookies.get(LOGIN_ORIGIN_KEY).map(cookie => URLDecoder.decode(cookie.value, "UTF-8")).getOrElse(throw new OAuthException("missing original url"))
-
-    val existingCookie = readCookie(request) // will be populated if this was a re-auth for expired login
-
-    OAuth.validatedUserIdentity(token)(request, ec, wsClient).map { claimedAuth =>
-      val authedUserData = existingCookie match {
-        case Some(c) =>
-          val existingAuth = CookieUtils.parseCookieData(c.value, settings.publicKey)
-          logger.debug("user re-authed, merging auth data")
-
+    (for {
+      token <- decodeCookie(ANTI_FORGERY_KEY)
+      originalUrl <- decodeCookie(LOGIN_ORIGIN_KEY)
+    } yield {
+      OAuth.validatedUserIdentity(token)(request, ec, wsClient).map { claimedAuth =>
+        val existingAuthenticatedIn = readAuthenticatedUser(request).map(_.authenticatedIn)
+        val authedUserData =
           claimedAuth.copy(
             authenticatingSystem = system,
-            authenticatedIn = existingAuth.authenticatedIn ++ Set(system),
+            authenticatedIn = existingAuthenticatedIn.fold(Set(system))(_ + system),
             multiFactor = checkMultifactor(claimedAuth)
           )
-        case None =>
-          logger.debug("fresh user login")
-          claimedAuth.copy(multiFactor = checkMultifactor(claimedAuth))
-      }
 
-      if (validateUser(authedUserData)) {
-        val updatedCookie = generateCookie(authedUserData)
-        Redirect(originalUrl)
-          .withCookies(updatedCookie)
-          .discardingCookies(discardCookies:_*)
-      } else {
-        showUnauthedMessage(invalidUserMessage(claimedAuth))
+        if (validateUser(authedUserData)) {
+          val updatedCookie = generateCookie(authedUserData)
+          Redirect(originalUrl)
+            .withCookies(updatedCookie)
+            .discardingCookies(discardCookies:_*)
+        } else {
+          showUnauthedMessage(invalidUserMessage(claimedAuth))
+        }
       }
+    }) getOrElse {
+      Future.successful(BadRequest("Missing cookies"))
     }
   }
 
