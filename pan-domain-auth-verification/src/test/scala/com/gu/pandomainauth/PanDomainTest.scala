@@ -11,9 +11,16 @@ import org.scalatest.matchers.should.Matchers
 class PanDomainTest extends AnyFreeSpec with Matchers with Inside {
   import com.gu.pandomainauth.service.TestKeys._
 
-  def authStatus(cookieData: String, validateUser: AuthenticatedUser => Boolean = _ => true, apiGracePeriod: Long = 0,
-                 system: String = "testsuite", cacheValidation: Boolean = false) = {
-    PanDomain.authStatus(cookieData, testPublicKey, validateUser, apiGracePeriod, system, cacheValidation)
+
+  def authStatus(
+    cookieData: String,
+    validateUser: AuthenticatedUser => Boolean = _ => true,
+    apiGracePeriod: Long = 0,
+    system: String = "testsuite",
+    cacheValidation: Boolean = false,
+    forceExpiry: Boolean = false,
+  ) = {
+    PanDomain.authStatus(cookieData, testPublicKey, validateUser, apiGracePeriod, system, cacheValidation, forceExpiry)
   }
 
   "authStatus" - {
@@ -55,6 +62,11 @@ class PanDomainTest extends AnyFreeSpec with Matchers with Inside {
       val cookieData = CookieUtils.generateCookieData(expiredAuthUser, testPrivateKey)
 
       authStatus(cookieData) shouldBe a [Expired]
+    }
+
+    "returns `Expired` if cookie has not expired, but forceExpiry is set" in {
+      val validCookieData = CookieUtils.generateCookieData(authUser, testPrivateKey)
+      authStatus(validCookieData, forceExpiry = true) shouldBe a [Expired]
     }
 
     "returns `GracePeriod` if the cookie has expired but is within the grace period" in {

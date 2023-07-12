@@ -9,10 +9,10 @@ object PanDomain {
    * Check the authentication status of the provided credentials by examining the signed cookie data.
    */
   def authStatus(cookieData: String, publicKey: PublicKey, validateUser: AuthenticatedUser => Boolean,
-                 apiGracePeriod: Long, system: String, cacheValidation: Boolean): AuthenticationStatus = {
+                 apiGracePeriod: Long, system: String, cacheValidation: Boolean, forceExpiry: Boolean): AuthenticationStatus = {
     try {
       val authedUser = CookieUtils.parseCookieData(cookieData, publicKey)
-      checkStatus(authedUser, validateUser, apiGracePeriod, system, cacheValidation)
+      checkStatus(authedUser, validateUser, apiGracePeriod, system, cacheValidation, forceExpiry)
     } catch {
       case e: Exception =>
         InvalidCookie(e)
@@ -20,7 +20,8 @@ object PanDomain {
   }
 
   private def checkStatus(authedUser: AuthenticatedUser, validateUser: AuthenticatedUser => Boolean,
-                          apiGracePeriod: Long, system: String, cacheValidation: Boolean): AuthenticationStatus = {
+                          apiGracePeriod: Long, system: String, cacheValidation: Boolean,
+                          forceExpiry: Boolean): AuthenticationStatus = {
 
     if (authedUser.isExpired && authedUser.isInGracePeriod(apiGracePeriod)) {
       // expired, but in grace period - check user is valid, GracePeriod if so
@@ -34,7 +35,7 @@ object PanDomain {
         // the user is in the grace period but has failed validation
         NotAuthorized(authedUser)
       }
-    } else if (authedUser.isExpired) {
+    } else if (authedUser.isExpired || forceExpiry) {
       // expired and outside grace period
       Expired(authedUser)
     } else if (cacheValidation && authedUser.authenticatedIn(system)) {

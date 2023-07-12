@@ -14,6 +14,8 @@ import java.net.URLDecoder
 
 class UserRequest[A](val user: User, request: Request[A]) extends WrappedRequest[A](request)
 
+case class PandomainCookie(cookie: Cookie, forceExpiry: Boolean)
+
 trait AuthActions {
   private val logger = LoggerFactory.getLogger(this.getClass)
 
@@ -86,7 +88,15 @@ trait AuthActions {
     * A cookie key that stores the target URL that was being accessed when redirected for authentication
     */
   val LOGIN_ORIGIN_KEY = "panda-loginOriginUrl"
+  /*
+   * Cookie key containing an anti-forgery token; helps to validate that the oauth callback arrived in response to the correct oauth request
+   */
   val ANTI_FORGERY_KEY = "panda-antiForgeryToken"
+  /*
+   * Cookie that will make panda behave as if the cookie has expired.
+   * NOTE: This cookie is for debugging only! It should _not_ be set by any application code to expire the cookie!! Use the `processLogout` action instead!!
+   */
+  private val FORCE_EXPIRY_KEY = "panda-forceExpiry"
 
   private def cookie(name: String, value: String): Cookie =
     Cookie(
@@ -101,7 +111,8 @@ trait AuthActions {
     )
   private lazy val discardCookies = Seq(
     DiscardingCookie(LOGIN_ORIGIN_KEY, secure = true),
-    DiscardingCookie(ANTI_FORGERY_KEY, secure = true)
+    DiscardingCookie(ANTI_FORGERY_KEY, secure = true),
+    DiscardingCookie(FORCE_EXPIRY_KEY, secure = true)
   )
 
   /**
@@ -178,10 +189,15 @@ trait AuthActions {
   }
 
   def readAuthenticatedUser(request: RequestHeader): Option[AuthenticatedUser] = readCookie(request) map { cookie =>
-    CookieUtils.parseCookieData(cookie.value, settings.publicKey)
+    CookieUtils.parseCookieData(cookie.cookie.value, settings.publicKey)
   }
 
-  def readCookie(request: RequestHeader): Option[Cookie] = request.cookies.get(settings.cookieSettings.cookieName)
+  def readCookie(request: RequestHeader): Option[PandomainCookie] = {
+    request.cookies.get(settings.cookieSettings.cookieName).map { cookie =>
+      val forceExpiry = request.cookies.get(FORCE_EXPIRY_KEY).exists(_.value != "0")
+      PandomainCookie(cookie, forceExpiry)
+    }
+  }
 
   def generateCookie(authedUser: AuthenticatedUser): Cookie =
     Cookie(
@@ -212,7 +228,7 @@ trait AuthActions {
     */
   def extractAuth(request: RequestHeader): AuthenticationStatus = {
     readCookie(request).map { cookie =>
-      PanDomain.authStatus(cookie.value, settings.publicKey, validateUser, apiGracePeriod, system, cacheValidation)
+      PanDomain.authStatus(cookie.cookie.value, settings.publicKey, validateUser, apiGracePeriod, system, cacheValidation, cookie.forceExpiry)
     } getOrElse NotAuthenticated
   }
 
