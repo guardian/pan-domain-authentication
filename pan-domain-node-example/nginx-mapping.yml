@@ -1,0 +1,4 @@
+name: example
+mappings:
+  - prefix: example
+    port: 7734

@@ -1,31 +1,8 @@
-export { PanDomainAuthentication } from './panda';
+export { PanDomainAuthentication, verifyUser, guardianValidation } from './panda';
 
-export enum AuthenticationStatus {
-    INVALID_COOKIE = 'Invalid Cookie',
-    EXPIRED = 'Expired',
-    NOT_AUTHORISED = 'Not Authorised',
-    AUTHORISED = 'Authorised'
-}
+export { base64ToPEM, serialiseUser, sign } from './utils';
 
-export interface User {
-    firstName: string,
-    lastName: string,
-    email: string,
-    avatarUrl?: string,
-    authenticatingSystem: string,
-    authenticatedIn: string[],
-    expires: number,
-    multifactor: boolean
-}
+export { AuthenticationStatus } from "./types";
+export type { User, AuthenticationResult, ValidateUserFn } from "./types";
 
-export interface AuthenticationResult {
-    status: AuthenticationStatus,
-    user?: User 
-}
-
-export type ValidateUserFn = (user: User) => boolean;
-
-export function guardianValidation(user: User): boolean {
-    const isGuardianUser = user.email.indexOf('guardian.co.uk') !== -1;
-    return isGuardianUser && user.multifactor;
-}
+export { PanDomainAuthenticationIssuer, PanDomainSettings } from "./panda-issuer";

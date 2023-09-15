@@ -28,6 +28,7 @@ class OAuth(config: OAuthSettings, system: String, redirectUrl: String) {
 
   val random = new SecureRandom()
 
+  // https://developers.google.com/identity/openid-connect/openid-connect#createxsrftoken
   def generateAntiForgeryToken() = new BigInteger(130, random).toString(32)
 
   def oAuthResponse[T](r: WSResponse)(block: JsValue => T): T = {
@@ -75,7 +76,12 @@ class OAuth(config: OAuthSettings, system: String, redirectUrl: String) {
         }.flatMap { response =>
           oAuthResponse(response) { json =>
             val token = Token.fromJson(json)
+
+            // FIXME we should really be validating the token here!!
+            // It's sort of ok for the reasons google says here: https://developers.google.com/identity/openid-connect/openid-connect#obtainuserinfo
+            // ... but still
             val jwt = token.jwt
+
             ws.url(dd.userinfo_endpoint)
               .withHttpHeaders("Authorization" -> s"Bearer ${token.access_token}")
               .get().map { response =>
