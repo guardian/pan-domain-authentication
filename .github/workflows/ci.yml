@@ -1,0 +1,56 @@
+name: CI
+on:
+  pull_request:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+jobs:
+  CI:
+    runs-on: ubuntu-latest
+
+    permissions:
+      # Allow GitHub to request an OIDC JWT ID token, for exchange with `aws-actions/configure-aws-credentials`
+      # See https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services#updating-your-github-actions-workflow
+      id-token: write
+
+      # Required for `actions/checkout`
+      contents: read
+
+    steps:
+      # Seed the build number with last number from TeamCity.
+      # This env var is used by the JS, and SBT builds, and guardian/actions-riff-raff.
+      # Set the value early, rather than `buildNumberOffset` in guardian/actions-riff-raff, to ensure each usage has the same number.
+      # For some reason, it's not possible to mutate GITHUB_RUN_NUMBER, so set BUILD_NUMBER instead.
+      - name: Set BUILD_NUMBER environment variable
+        run: |
+          LAST_TEAMCITY_BUILD=214
+          echo "BUILD_NUMBER=$(( $GITHUB_RUN_NUMBER + $LAST_TEAMCITY_BUILD ))" >> $GITHUB_ENV
+
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version-file: 'pan-domain-node/.nvmrc'
+          cache: npm
+          cache-dependency-path: 'pan-domain-node/package-lock.json'
+
+      - name: JS Build
+        run: |
+          pushd pan-domain-node
+
+          npm install
+          npm run build
+          npm test
+
+          popd
+
+      - uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'corretto'
+          cache: 'sbt'
+
+      - name: Scala Build
+        run: |
+          sbt clean test
