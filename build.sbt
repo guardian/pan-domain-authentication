@@ -106,7 +106,6 @@ lazy val exampleApp = project("pan-domain-auth-example")
   .enablePlugins(PlayScala)
   .settings(libraryDependencies ++= (awsDependencies :+ ws))
   .dependsOn(panDomainAuthPlay_2_8)
-  .settings(sonatypeReleaseSettings: _*)
   .settings(
     publishArtifact := false,
     publish / skip := true,
@@ -119,7 +118,7 @@ lazy val root = Project("pan-domain-auth-root", file(".")).aggregate(
   panDomainAuthPlay_2_7,
   panDomainAuthPlay_2_8,
   exampleApp
-).settings(sonatypeReleaseSettings: _*).settings(
+).settings(
   organization := "com.gu",
   publishArtifact := false,
   publish / skip := true,
