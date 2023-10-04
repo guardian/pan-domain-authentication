@@ -29,16 +29,12 @@ val sonatypeReleaseSettings = {
       url("https://github.com/guardian/pan-domain-authentication"),
       "scm:git:git@github.com:guardian/pan-domain-authentication.git"
     )),
-    pomExtra := {
-      <url>https://github.com/guardian/pan-domain-authentication</url>
-        <developers>
-          <developer>
-            <id>Guardian Developers</id>
-            <name>Guardian Developers</name>
-            <url>https://github.com/guardian</url>
-          </developer>
-        </developers>
-    },
+    developers := List(Developer(
+      id = "GuardianEdTools",
+      name = "Guardian Editorial Tools",
+      email = "digitalcms.dev@theguardian.com",
+      url = url("https://github.com/orgs/guardian/teams/digital-cms")
+    )),
     releaseCrossBuild := true,
     releaseProcess := Seq[ReleaseStep](
       checkSnapshotDependencies,
