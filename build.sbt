@@ -80,15 +80,6 @@ lazy val panDomainAuthCore = project("pan-domain-auth-core")
     publishArtifact := true
   )
 
-lazy val panDomainAuthPlay_2_7 = project("pan-domain-auth-play_2-7")
-  .settings(sonatypeReleaseSettings: _*)
-  .settings(
-    libraryDependencies
-      ++= playLibs_2_7
-      ++ scalaCollectionCompatDependencies,
-    publishArtifact := true
-  ).dependsOn(panDomainAuthCore)
-
 lazy val panDomainAuthPlay_2_8 = project("pan-domain-auth-play_2-8")
   .settings(sonatypeReleaseSettings: _*)
   .settings(
@@ -111,7 +102,6 @@ lazy val exampleApp = project("pan-domain-auth-example")
 lazy val root = Project("pan-domain-auth-root", file(".")).aggregate(
   panDomainAuthVerification,
   panDomainAuthCore,
-  panDomainAuthPlay_2_7,
   panDomainAuthPlay_2_8,
   exampleApp
 ).settings(

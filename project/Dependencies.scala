@@ -4,14 +4,6 @@ object Dependencies {
 
   val awsDependencies = Seq("com.amazonaws" % "aws-java-sdk-s3" % "1.12.470")
 
-  val playLibs_2_7 = {
-    val version = "2.7.5"
-    Seq(
-      "com.typesafe.play" %% "play" % version % "provided",
-      "com.typesafe.play" %% "play-ws" % version % "provided"
-    )
-  }
-
   val playLibs_2_8 = {
     val version = "2.8.19"
     Seq(
