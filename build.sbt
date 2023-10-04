@@ -17,7 +17,6 @@ val commonSettings =
     crossScalaVersions := Seq(scalaVersion.value, scala213),
     organization := "com.gu",
     Test / fork := false,
-    resolvers ++= Seq("Typesafe Repository" at "https://repo.typesafe.com/typesafe/releases/"),
     scalacOptions ++= Seq("-feature", "-deprecation", "-language:higherKinds", "-Xfatal-warnings"),
     publishArtifact := false
   )
