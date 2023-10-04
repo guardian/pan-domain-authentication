@@ -12,6 +12,14 @@ object Dependencies {
     )
   }
 
+  val playLibs_2_9 = {
+    val version = "2.9.0-RC3"
+    Seq(
+      "com.typesafe.play" %% "play" % version % "provided",
+      "com.typesafe.play" %% "play-ws" % version % "provided"
+    )
+  }
+
   val googleDirectoryApiDependencies = Seq(
     "com.google.apis" % "google-api-services-admin-directory" % "directory_v1-rev20230124-2.0.0",
     "com.google.auth" % "google-auth-library-credentials" % "1.16.0",
