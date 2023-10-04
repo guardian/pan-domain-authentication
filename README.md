@@ -171,7 +171,7 @@ Note: you only need to pass the key ie the blob of base64 between the start and 
 
 Add the verification library as an SBT dependency to your project, taking care to use the latest version:
 
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.12/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.12)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.13/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.13)
 
 ```
 libraryDependencies += "com.gu" %% "pan-domain-auth-verification" % "<<LATEST_VERSION>>"
@@ -185,10 +185,11 @@ Configuration settings are read from an S3 bucket. Follow the steps below if you
 
 Add the core library as an SBT dependency to your project, taking care to use the latest version.
 If you are building your application using the Play framework, use the Play integration.
-Play versions 2.7 and 2.8 are supported on Scala 2.12 and 2.13.
-Play version 2.6 is supported up until v0.9.2. 
+Play version 2.8 is supported on Scala 2.12 and 2.13.
+Play version 2.7 is supported up until v1.3.0.
+Play version 2.6 is supported up until v0.9.2.
 
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.12/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.12)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.13/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.13)
 
 ```
 libraryDependencies += "com.gu" %% "pan-domain-auth-core" % "<<LATEST_VERSION>"
@@ -197,7 +198,7 @@ libraryDependencies += "com.gu" %% "pan-domain-auth-core" % "<<LATEST_VERSION>"
 or
 
 ```
-libraryDependencies += "com.gu" %% "pan-domain-auth-play_2-6" % "<<LATEST_VERSION>"
+libraryDependencies += "com.gu" %% "pan-domain-auth-play_2-8" % "<<LATEST_VERSION>"
 ```
 
 Example code for the Play Framework is provided [here](./pan-domain-auth-example). In particular:
