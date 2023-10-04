@@ -9,10 +9,11 @@ import play.sbt.PlayImport.PlayKeys._
 val scala212 = "2.12.15"
 val scala213 = "2.13.8"
 
+ThisBuild / scalaVersion := scala212
+
 val commonSettings =
   Seq(
     scalaVersion := scala212,
-    ThisBuild / scalaVersion := scala212,
     crossScalaVersions := Seq(scalaVersion.value, scala213),
     organization := "com.gu",
     Test / fork := false,
