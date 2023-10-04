@@ -81,6 +81,7 @@ lazy val panDomainAuthCore = project("pan-domain-auth-core")
   )
 
 lazy val panDomainAuthPlay_2_8 = project("pan-domain-auth-play_2-8")
+  .settings(sourceDirectory := (ThisBuild / baseDirectory).value / "pan-domain-auth-play" / "src")
   .settings(sonatypeReleaseSettings: _*)
   .settings(
     libraryDependencies
