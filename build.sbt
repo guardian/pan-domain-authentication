@@ -17,7 +17,7 @@ val commonSettings =
     crossScalaVersions := Seq(scalaVersion.value, scala213),
     organization := "com.gu",
     Test / fork := false,
-    scalacOptions ++= Seq("-feature", "-deprecation", "-language:higherKinds", "-Xfatal-warnings"),
+    scalacOptions ++= Seq("-feature", "-deprecation", "-Xfatal-warnings"),
     publishArtifact := false
   )
 
