@@ -101,6 +101,17 @@ lazy val panDomainAuthPlay_2_9 = project("pan-domain-auth-play_2-9")
     publishArtifact := true
   ).dependsOn(panDomainAuthCore)
 
+lazy val panDomainAuthPlay_3_0 = project("pan-domain-auth-play_3-0")
+  .settings(sourceDirectory := (ThisBuild / baseDirectory).value / "pan-domain-auth-play" / "src")
+  .settings(sonatypeReleaseSettings: _*)
+  .settings(
+    crossScalaVersions := Seq(scala213),
+    libraryDependencies
+      ++= playLibs_3_0
+      ++ scalaCollectionCompatDependencies,
+    publishArtifact := true
+  ).dependsOn(panDomainAuthCore)
+
 lazy val exampleApp = project("pan-domain-auth-example")
   .enablePlugins(PlayScala)
   .settings(libraryDependencies ++= (awsDependencies :+ ws))
