@@ -60,7 +60,7 @@ that need to be able to issue and verify logins which is likely to include user-
 
 The [pan-domain-node](###to-verify-login-in-nodejs) library provides an implementation of *verification only* for node apps.
 
-The `pan-domain-auth-example` provides an example Play 2.8 app with authentication. Additionally the nginx directory provides an example
+The `pan-domain-auth-example` provides an example Play 2.9 app with authentication. Additionally the nginx directory provides an example
 of how to set up an nginx configuration to allow you to run multiple authenticated apps locally as if they were all on the same domain which
 is useful during development.
 
@@ -173,7 +173,7 @@ Add the verification library as an SBT dependency to your project, taking care t
 
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.13/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.13)
 
-```
+```scala
 libraryDependencies += "com.gu" %% "pan-domain-auth-verification" % "<<LATEST_VERSION>>"
 ```
 
@@ -185,20 +185,24 @@ Configuration settings are read from an S3 bucket. Follow the steps below if you
 
 Add the core library as an SBT dependency to your project, taking care to use the latest version.
 If you are building your application using the Play framework, use the Play integration.
+Play versions 2.9 and 3.0 are supported only on Scala 2.13.
 Play version 2.8 is supported on Scala 2.12 and 2.13.
 Play version 2.7 is supported up until v1.3.0.
 Play version 2.6 is supported up until v0.9.2.
 
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.13/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.13)
 
-```
+```scala
 libraryDependencies += "com.gu" %% "pan-domain-auth-core" % "<<LATEST_VERSION>"
 ```
 
 or
 
-```
+```scala
+// pick the version corresponding to your app's version of Play
 libraryDependencies += "com.gu" %% "pan-domain-auth-play_2-8" % "<<LATEST_VERSION>"
+libraryDependencies += "com.gu" %% "pan-domain-auth-play_2-9" % "<<LATEST_VERSION>"
+libraryDependencies += "com.gu" %% "pan-domain-auth-play_3-0" % "<<LATEST_VERSION>"
 ```
 
 Example code for the Play Framework is provided [here](./pan-domain-auth-example). In particular:
