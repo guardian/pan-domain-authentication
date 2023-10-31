@@ -13,8 +13,7 @@ ThisBuild / scalaVersion := scala213
 
 val commonSettings =
   Seq(
-    scalaVersion := scala213,
-    crossScalaVersions := Seq(scalaVersion.value, scala212),
+    crossScalaVersions := List(scala212, scala213),
     organization := "com.gu",
     Test / fork := false,
     scalacOptions ++= Seq("-feature", "-deprecation", "-Xfatal-warnings"),
@@ -35,7 +34,7 @@ val sonatypeReleaseSettings = {
       email = "digitalcms.dev@theguardian.com",
       url = url("https://github.com/orgs/guardian/teams/digital-cms")
     )),
-    releaseCrossBuild := true,
+    releaseCrossBuild := false,
     releaseProcess := Seq[ReleaseStep](
       checkSnapshotDependencies,
       inquireVersions,
