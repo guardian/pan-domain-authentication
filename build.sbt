@@ -129,7 +129,8 @@ lazy val root = Project("pan-domain-auth-root", file(".")).aggregate(
   panDomainAuthPlay_2_9,
   panDomainAuthPlay_3_0,
   exampleApp
-).settings(
+).settings(sonatypeReleaseSettings)
+ .settings(
   organization := "com.gu",
   publishArtifact := false,
   publish / skip := true,
