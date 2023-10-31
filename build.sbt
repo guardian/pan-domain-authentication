@@ -128,6 +128,7 @@ lazy val root = Project("pan-domain-auth-root", file(".")).aggregate(
   panDomainAuthCore,
   panDomainAuthPlay_2_8,
   panDomainAuthPlay_2_9,
+  panDomainAuthPlay_3_0,
   exampleApp
 ).settings(
   organization := "com.gu",
