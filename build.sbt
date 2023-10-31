@@ -11,6 +11,9 @@ val scala213 = "2.13.8"
 
 ThisBuild / scalaVersion := scala213
 
+// See below - the release process itself is correctly configured to publish the cross-built
+// subprojects, invoking sbt with + or sbt-release with "release cross" only serves to confuse things.
+// Always run release as `sbt clean release`!
 val checkRunCorrectly = ReleaseStep(action = st => {
   val allcommands = (st.history.executed ++ st.currentCommand ++ st.remainingCommands).map(_.commandLine)
   val crossCommands = allcommands.exists(_ contains "+")
@@ -51,6 +54,12 @@ val sonatypeReleaseSettings = {
       email = "digitalcms.dev@theguardian.com",
       url = url("https://github.com/orgs/guardian/teams/digital-cms")
     )),
+    // sbt and sbt-release implement cross-building support differently. sbt does it better
+    // (it supports each subproject having different crossScalaVersions), so disable sbt-release's
+    // implementation, and do the publish step with a `+`,
+    // ie. (`releaseStepCommandAndRemaining("+publishSigned")`)
+    // See https://www.scala-sbt.org/1.x/docs/Cross-Build.html#Note+about+sbt-release
+    // Never run with "release cross" or "+release"! Odd things start happening
     releaseCrossBuild := false,
     releaseProcess := Seq[ReleaseStep](
       checkRunCorrectly,
