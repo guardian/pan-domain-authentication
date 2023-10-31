@@ -28,6 +28,7 @@ val sonatypeReleaseSettings = {
       url("https://github.com/guardian/pan-domain-authentication"),
       "scm:git:git@github.com:guardian/pan-domain-authentication.git"
     )),
+    homepage := Some(url("https://github.com/guardian/pan-domain-authentication")),
     developers := List(Developer(
       id = "GuardianEdTools",
       name = "Guardian Editorial Tools",
