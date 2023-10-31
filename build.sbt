@@ -11,10 +11,28 @@ val scala213 = "2.13.8"
 
 ThisBuild / scalaVersion := scala213
 
+// See below - the release process itself is correctly configured to publish the cross-built
+// subprojects, invoking sbt with + or sbt-release with "release cross" only serves to confuse things.
+// Always run release as `sbt clean release`!
+val checkRunCorrectly = ReleaseStep(action = st => {
+  val allcommands = (st.history.executed ++ st.currentCommand ++ st.remainingCommands).map(_.commandLine)
+  val crossCommands = allcommands.exists(_ contains "+")
+  val releaseCommandWithArgs = allcommands.exists(cmd => cmd.contains("release") && cmd != "release")
+  
+  if (crossCommands) {
+    st.log.error("Don't run release commands with cross building! Try again with 'sbt clean release'.")
+    sys.exit(1)
+  } else if (releaseCommandWithArgs) {
+    st.log.error("Don't run the release command with arguments! Try again with 'sbt clean release'.")
+    sys.exit(1)
+  }
+
+  st
+})
+
 val commonSettings =
   Seq(
-    scalaVersion := scala213,
-    crossScalaVersions := Seq(scalaVersion.value, scala212),
+    crossScalaVersions := List(scala212, scala213),
     organization := "com.gu",
     Test / fork := false,
     scalacOptions ++= Seq("-feature", "-deprecation", "-Xfatal-warnings"),
@@ -29,14 +47,22 @@ val sonatypeReleaseSettings = {
       url("https://github.com/guardian/pan-domain-authentication"),
       "scm:git:git@github.com:guardian/pan-domain-authentication.git"
     )),
+    homepage := Some(url("https://github.com/guardian/pan-domain-authentication")),
     developers := List(Developer(
       id = "GuardianEdTools",
       name = "Guardian Editorial Tools",
       email = "digitalcms.dev@theguardian.com",
       url = url("https://github.com/orgs/guardian/teams/digital-cms")
     )),
-    releaseCrossBuild := true,
+    // sbt and sbt-release implement cross-building support differently. sbt does it better
+    // (it supports each subproject having different crossScalaVersions), so disable sbt-release's
+    // implementation, and do the publish step with a `+`,
+    // ie. (`releaseStepCommandAndRemaining("+publishSigned")`)
+    // See https://www.scala-sbt.org/1.x/docs/Cross-Build.html#Note+about+sbt-release
+    // Never run with "release cross" or "+release"! Odd things start happening
+    releaseCrossBuild := false,
     releaseProcess := Seq[ReleaseStep](
+      checkRunCorrectly,
       checkSnapshotDependencies,
       inquireVersions,
       runClean,
@@ -130,7 +156,8 @@ lazy val root = Project("pan-domain-auth-root", file(".")).aggregate(
   panDomainAuthPlay_2_9,
   panDomainAuthPlay_3_0,
   exampleApp
-).settings(
+).settings(sonatypeReleaseSettings)
+ .settings(
   organization := "com.gu",
   publishArtifact := false,
   publish / skip := true,
