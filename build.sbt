@@ -11,6 +11,22 @@ val scala213 = "2.13.8"
 
 ThisBuild / scalaVersion := scala213
 
+val checkRunCorrectly = ReleaseStep(action = st => {
+  val allcommands = (st.history.executed ++ st.currentCommand ++ st.remainingCommands).map(_.commandLine)
+  val crossCommands = allcommands.exists(_ contains "+")
+  val releaseCommandWithArgs = allcommands.exists(cmd => cmd.contains("release") && cmd != "release")
+  
+  if (crossCommands) {
+    st.log.error("Don't run release commands with cross building! Try again with 'sbt clean release'.")
+    sys.exit(1)
+  } else if (releaseCommandWithArgs) {
+    st.log.error("Don't run the release command with arguments! Try again with 'sbt clean release'.")
+    sys.exit(1)
+  }
+
+  st
+})
+
 val commonSettings =
   Seq(
     crossScalaVersions := List(scala212, scala213),
@@ -37,6 +53,7 @@ val sonatypeReleaseSettings = {
     )),
     releaseCrossBuild := false,
     releaseProcess := Seq[ReleaseStep](
+      checkRunCorrectly,
       checkSnapshotDependencies,
       inquireVersions,
       runClean,
