@@ -9,15 +9,15 @@ import play.sbt.PlayImport.PlayKeys._
 val scala212 = "2.12.15"
 val scala213 = "2.13.8"
 
+ThisBuild / scalaVersion := scala213
+
 val commonSettings =
   Seq(
-    scalaVersion := scala212,
-    scalaVersion in ThisBuild := scala212,
-    crossScalaVersions := Seq(scalaVersion.value, scala213),
+    scalaVersion := scala213,
+    crossScalaVersions := Seq(scalaVersion.value, scala212),
     organization := "com.gu",
-    fork in Test := false,
-    resolvers ++= Seq("Typesafe Repository" at "https://repo.typesafe.com/typesafe/releases/"),
-    scalacOptions ++= Seq("-feature", "-deprecation", "-language:higherKinds", "-Xfatal-warnings"),
+    Test / fork := false,
+    scalacOptions ++= Seq("-feature", "-deprecation", "-Xfatal-warnings"),
     publishArtifact := false
   )
 
@@ -29,16 +29,12 @@ val sonatypeReleaseSettings = {
       url("https://github.com/guardian/pan-domain-authentication"),
       "scm:git:git@github.com:guardian/pan-domain-authentication.git"
     )),
-    pomExtra := {
-      <url>https://github.com/guardian/pan-domain-authentication</url>
-        <developers>
-          <developer>
-            <id>Guardian Developers</id>
-            <name>Guardian Developers</name>
-            <url>https://github.com/guardian</url>
-          </developer>
-        </developers>
-    },
+    developers := List(Developer(
+      id = "GuardianEdTools",
+      name = "Guardian Editorial Tools",
+      email = "digitalcms.dev@theguardian.com",
+      url = url("https://github.com/orgs/guardian/teams/digital-cms")
+    )),
     releaseCrossBuild := true,
     releaseProcess := Seq[ReleaseStep](
       checkSnapshotDependencies,
@@ -84,16 +80,8 @@ lazy val panDomainAuthCore = project("pan-domain-auth-core")
     publishArtifact := true
   )
 
-lazy val panDomainAuthPlay_2_7 = project("pan-domain-auth-play_2-7")
-  .settings(sonatypeReleaseSettings: _*)
-  .settings(
-    libraryDependencies
-      ++= playLibs_2_7
-      ++ scalaCollectionCompatDependencies,
-    publishArtifact := true
-  ).dependsOn(panDomainAuthCore)
-
 lazy val panDomainAuthPlay_2_8 = project("pan-domain-auth-play_2-8")
+  .settings(sourceDirectory := (ThisBuild / baseDirectory).value / "pan-domain-auth-play" / "src")
   .settings(sonatypeReleaseSettings: _*)
   .settings(
     libraryDependencies
@@ -102,27 +90,50 @@ lazy val panDomainAuthPlay_2_8 = project("pan-domain-auth-play_2-8")
     publishArtifact := true
   ).dependsOn(panDomainAuthCore)
 
+lazy val panDomainAuthPlay_2_9 = project("pan-domain-auth-play_2-9")
+  .settings(sourceDirectory := (ThisBuild / baseDirectory).value / "pan-domain-auth-play" / "src")
+  .settings(sonatypeReleaseSettings: _*)
+  .settings(
+    crossScalaVersions := Seq(scala213),
+    libraryDependencies
+      ++= playLibs_2_9
+      ++ scalaCollectionCompatDependencies,
+    publishArtifact := true
+  ).dependsOn(panDomainAuthCore)
+
+lazy val panDomainAuthPlay_3_0 = project("pan-domain-auth-play_3-0")
+  .settings(sourceDirectory := (ThisBuild / baseDirectory).value / "pan-domain-auth-play" / "src")
+  .settings(sonatypeReleaseSettings: _*)
+  .settings(
+    crossScalaVersions := Seq(scala213),
+    libraryDependencies
+      ++= playLibs_3_0
+      ++ scalaCollectionCompatDependencies,
+    publishArtifact := true
+  ).dependsOn(panDomainAuthCore)
+
 lazy val exampleApp = project("pan-domain-auth-example")
   .enablePlugins(PlayScala)
   .settings(libraryDependencies ++= (awsDependencies :+ ws))
-  .dependsOn(panDomainAuthPlay_2_8)
-  .settings(sonatypeReleaseSettings: _*)
+  .dependsOn(panDomainAuthPlay_2_9)
   .settings(
+    crossScalaVersions := Seq(scala213),
     publishArtifact := false,
-    skip in publish := true,
+    publish / skip := true,
     playDefaultPort := 9500
   )
 
 lazy val root = Project("pan-domain-auth-root", file(".")).aggregate(
   panDomainAuthVerification,
   panDomainAuthCore,
-  panDomainAuthPlay_2_7,
   panDomainAuthPlay_2_8,
+  panDomainAuthPlay_2_9,
+  panDomainAuthPlay_3_0,
   exampleApp
-).settings(sonatypeReleaseSettings: _*).settings(
+).settings(
   organization := "com.gu",
   publishArtifact := false,
-  skip in publish := true,
+  publish / skip := true,
 )
 
 def project(path: String): Project =
