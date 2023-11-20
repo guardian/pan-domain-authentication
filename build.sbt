@@ -35,7 +35,12 @@ val commonSettings =
     crossScalaVersions := List(scala212, scala213),
     organization := "com.gu",
     Test / fork := false,
-    scalacOptions ++= Seq("-feature", "-deprecation", "-Xfatal-warnings"),
+    scalacOptions ++= Seq(
+      "-feature",
+      "-deprecation",
+      // upgrade warnings to errors except deprecations
+      "-Wconf:cat=deprecation:ws,any:e"
+    ),
     publishArtifact := false
   )
 
@@ -138,6 +143,30 @@ lazy val panDomainAuthPlay_3_0 = project("pan-domain-auth-play_3-0")
     publishArtifact := true
   ).dependsOn(panDomainAuthCore)
 
+lazy val panDomainAuthHmac_2_8 = project("panda-hmac-play_2-8")
+  .settings(sourceDirectory := (ThisBuild / baseDirectory).value / "pan-domain-auth-hmac" / "src")
+  .settings(sonatypeReleaseSettings: _*)
+  .settings(
+    libraryDependencies ++= hmacLibs ++ playLibs_2_8 ++ testDependencies,
+    publishArtifact := true
+  ).dependsOn(panDomainAuthPlay_2_8)
+lazy val panDomainAuthHmac_2_9 = project("panda-hmac-play_2-9")
+  .settings(sourceDirectory := (ThisBuild / baseDirectory).value / "pan-domain-auth-hmac" / "src")
+  .settings(sonatypeReleaseSettings: _*)
+  .settings(
+    crossScalaVersions := Seq(scala213),
+    libraryDependencies ++= hmacLibs ++ playLibs_2_9 ++ testDependencies,
+    publishArtifact := true
+  ).dependsOn(panDomainAuthPlay_2_9)
+lazy val panDomainAuthHmac_3_0 = project("panda-hmac-play_3-0")
+  .settings(sourceDirectory := (ThisBuild / baseDirectory).value / "pan-domain-auth-hmac" / "src")
+  .settings(sonatypeReleaseSettings: _*)
+  .settings(
+    crossScalaVersions := Seq(scala213),
+    libraryDependencies ++= hmacLibs ++ playLibs_3_0 ++ testDependencies,
+    publishArtifact := true
+  ).dependsOn(panDomainAuthPlay_3_0)
+
 lazy val exampleApp = project("pan-domain-auth-example")
   .enablePlugins(PlayScala)
   .settings(libraryDependencies ++= (awsDependencies :+ ws))
@@ -155,6 +184,9 @@ lazy val root = Project("pan-domain-auth-root", file(".")).aggregate(
   panDomainAuthPlay_2_8,
   panDomainAuthPlay_2_9,
   panDomainAuthPlay_3_0,
+  panDomainAuthHmac_2_8,
+  panDomainAuthHmac_2_9,
+  panDomainAuthHmac_3_0,
   exampleApp
 ).settings(sonatypeReleaseSettings)
  .settings(
