@@ -44,7 +44,7 @@ On their return the existing cookie is updated with the new expiry time.
 
 ## What's provided
 
-Pan domain auth is split into 5 modules.
+Pan domain auth is split into 6 modules.
 
 The [pan-domain-auth-verification](###-to-verify-logins) library provides the basic functionality for sigining and verifying login cookies in Scala.
 For JVM applications that only need to *VERIFY* an existing login (rather than issue logins themselves) this is the library to use.
@@ -52,7 +52,7 @@ For JVM applications that only need to *VERIFY* an existing login (rather than i
 The `pan-domain-auth-core` library provides the core utilities to load settings, create and validate the cookie and
 check if the user has mutli-factor auth turned on when usng Google as the provider.
 
-The [pan-domain-auth-play_2-6](###if-your-application-needs-to-issue-logins) library provide an implementation for play apps. There is an auth action
+The [pan-domain-auth-play_2-8, 2-9 and 3-0](###if-your-application-needs-to-issue-logins) libraries provide an implementation for play apps. There is an auth action
 that can be applied to the endpoints in your application that will do checking and setting of the cookie and will give you the OAuth authentication
 mechanism and callback. This is the only framework specific implementation currently (due to play being the framework predominantly used at The
 Guardian), this can be used as reference if you need to implement another framework implementation. This library is for applications
@@ -63,6 +63,9 @@ The [pan-domain-node](###to-verify-login-in-nodejs) library provides an implemen
 The `pan-domain-auth-example` provides an example Play 2.9 app with authentication. Additionally the nginx directory provides an example
 of how to set up an nginx configuration to allow you to run multiple authenticated apps locally as if they were all on the same domain which
 is useful during development.
+
+The [panda-hmac](###to-verify-machines) libraries build on pan-domain-auth-play to also verify machine clients,
+who cannot perform OAuth authentication, by using HMAC-SHA-256.
 
 ## Requirements
 
@@ -319,6 +322,85 @@ function(request) {
 }
 
 ```
+
+
+### To verify machines
+
+Add a dependency on the correct version of `pan-domain-auth-play` and configure to allow authentication of users using OAuth 2. Then, adding support should be as simple as adding a dependency on the relevant panda-hmac-play library, and mixing `HMACAuthActions` into your controllers.
+
+Example:
+
+```scala
+import com.gu.pandahmac.HMACAuthActions
+
+// ...
+
+@Singleton
+class MyController @Inject() (
+    override val config: Configuration,
+    override val controllerComponents: ControllerComponents,
+    override val wsClient: WSClient,
+    override val refresher: InjectableRefresher
+) extends AbstractController(controllerComponents)
+    with PanDomainAuthActions
+    with HMACAuthActions {
+
+  override def secretKeys = List("currentSecret") // You're likely to get your secret from configuration or a cloud service like AWS Secrets Manager
+
+  def myApiActionWithBody = APIHMACAuthAction.async(circe.json(2048)) { request => 
+    // ... do something with the request
+  }
+
+  def myRegularAction = HMACAuthAction {}
+
+  def myRegularAsyncAction = HMACAuthAction.async {}
+}
+```
+
+#### Setting up a machine client
+
+There are example clients for Scala, Javascript and Python in the `hmac-examples/` directory.
+
+Each client needs a copy of the shared secret, defined as "currentSecret" in the controller example above.
+Each request needs a standard (RFC-7231) HTTP Date header, and an authorization digest that is calculated like this:
+
+1. Make a "string to sign" consisting of the HTTP Date and the Path part of the URI you're trying to access, 
+seperated by a literal newline (unix-style, not CRLF)
+2. Calculate the HMAC digest of the "string to sign" using the shared secret as a key and the HMAC-SHA-256 algorithm
+3. Base64 encode the binary output of the HMAC digest to get a random-looking string
+4. Add the HTTP date to the request headers with the header name **'X-Gu-Tools-HMAC-Date'**
+5. Add another header called **'X-Gu-Tools-HMAC-Token'** and set its value to the literal string **HMAC** followed by a
+ space and the digest, like this: `X-Gu-Tools-HMAC-Token: HMAC boXSTNumKWRX3eQk/BBeHYk`
+6. Send the request and the server should respond with a success.
+7. The default allowable clock skew is 5 minutes, if you have problems then this is the first thing to check.
+
+#### Testing HMAC-authenticated endpoints in isolation
+
+[Postman](https://www.postman.com/) is a common environment for testing HTTP requests. We can add a [pre-request script](https://learning.postman.com/docs/writing-scripts/pre-request-scripts/) that automatically adds HMAC headers when we hit send.
+
+<details>
+<summary>Pre-request script</summary>
+  
+```js
+const URL = require("url");
+
+const uri = pm.request.url.toString();
+const secret = "Secret goes here :)";
+
+const httpDate = new Date().toUTCString();
+const path = new URL.parse(uri).path;
+const stringToSign = `${httpDate}\n${path}`;
+const stringToSignBytes = CryptoJS.enc.Utf8.parse(stringToSign);
+const secretBytes = CryptoJS.enc.Utf8.parse(secret);
+
+const signature = CryptoJS.enc.Base64.stringify(CryptoJS.HmacSHA256(stringToSignBytes, secretBytes));
+const authToken = `HMAC ${signature}`;
+
+pm.request.headers.add({ key: 'X-Gu-Tools-HMAC-Date', value: httpDate });
+pm.request.headers.add({ key: 'X-Gu-Tools-HMAC-Token', value: authToken });
+```
+
+</details>
 
 
 ### Dealing with auth expiry in a single page webapp
