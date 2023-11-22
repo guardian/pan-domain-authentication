@@ -46,25 +46,25 @@ On their return the existing cookie is updated with the new expiry time.
 
 Pan domain auth is split into 6 modules.
 
-The [pan-domain-auth-verification](###-to-verify-logins) library provides the basic functionality for sigining and verifying login cookies in Scala.
+The [pan-domain-auth-verification](#to-verify-logins) library provides the basic functionality for sigining and verifying login cookies in Scala.
 For JVM applications that only need to *VERIFY* an existing login (rather than issue logins themselves) this is the library to use.
 
 The `pan-domain-auth-core` library provides the core utilities to load settings, create and validate the cookie and
 check if the user has mutli-factor auth turned on when usng Google as the provider.
 
-The [pan-domain-auth-play_2-8, 2-9 and 3-0](###if-your-application-needs-to-issue-logins) libraries provide an implementation for play apps. There is an auth action
+The [pan-domain-auth-play_2-8, 2-9 and 3-0](#if-your-application-needs-to-issue-logins) libraries provide an implementation for play apps. There is an auth action
 that can be applied to the endpoints in your application that will do checking and setting of the cookie and will give you the OAuth authentication
 mechanism and callback. This is the only framework specific implementation currently (due to play being the framework predominantly used at The
 Guardian), this can be used as reference if you need to implement another framework implementation. This library is for applications
 that need to be able to issue and verify logins which is likely to include user-facing applications.
 
-The [pan-domain-node](###to-verify-login-in-nodejs) library provides an implementation of *verification only* for node apps.
+The [pan-domain-node](#to-verify-login-in-nodejs) library provides an implementation of *verification only* for node apps.
 
 The `pan-domain-auth-example` provides an example Play 2.9 app with authentication. Additionally the nginx directory provides an example
 of how to set up an nginx configuration to allow you to run multiple authenticated apps locally as if they were all on the same domain which
 is useful during development.
 
-The [panda-hmac](###to-verify-machines) libraries build on pan-domain-auth-play to also verify machine clients,
+The [panda-hmac](#to-verify-machines) libraries build on pan-domain-auth-play to also verify machine clients,
 who cannot perform OAuth authentication, by using HMAC-SHA-256.
 
 ## Requirements
