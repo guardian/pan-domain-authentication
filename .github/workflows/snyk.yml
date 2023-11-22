@@ -14,6 +14,7 @@ jobs:
       ORG: guardian
       SKIP_NODE: false
       NODE_VERSION_FILE: ./pan-domain-node/.nvmrc
+      EXCLUDE: hmac-examples
       
       
     secrets:
