@@ -1,30 +1,31 @@
 package com.gu.pandomainauth.service
 
-import java.math.BigInteger
-import java.security.SecureRandom
-
 import com.gu.pandomainauth.model.{AuthenticatedUser, OAuthSettings, User}
 import play.api.libs.json.JsValue
 import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.mvc.Results.Redirect
 import play.api.mvc.{RequestHeader, Result}
 
+import java.math.BigInteger
+import java.security.SecureRandom
+import java.util.concurrent.atomic.AtomicReference
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 
 
 class OAuthException(val message: String, val throwable: Throwable = null) extends Exception(message, throwable)
 
-class OAuth(config: OAuthSettings, system: String, redirectUrl: String) {
-  var discoveryDocumentHolder: Option[Future[DiscoveryDocument]] = None
+class OAuth(config: OAuthSettings, system: String, redirectUrl: String)(implicit context: ExecutionContext, ws: WSClient) {
+  private val discoveryDocumentHolder: AtomicReference[Future[DiscoveryDocument]] =
+    new AtomicReference[Future[DiscoveryDocument]](fetchDiscoveryDocument)
 
-  private def discoveryDocument(implicit context: ExecutionContext, ws: WSClient): Future[DiscoveryDocument] =
-    if (discoveryDocumentHolder.isDefined) discoveryDocumentHolder.get
-    else {
-      val discoveryDocumentFuture = ws.url(config.discoveryDocumentUrl).get().map(r => DiscoveryDocument.fromJson(r.json))
-      discoveryDocumentHolder = Some(discoveryDocumentFuture)
-      discoveryDocumentFuture
-    }
+  private def fetchDiscoveryDocument: Future[DiscoveryDocument] =
+    ws.url(config.discoveryDocumentUrl).get().map(r => DiscoveryDocument.fromJson(r.json))
+
+  private def discoveryDocument: Future[DiscoveryDocument] =
+    discoveryDocumentHolder.updateAndGet(ddf =>
+      if (ddf.value.exists(_.isFailure)) fetchDiscoveryDocument else ddf
+    )
 
   val random = new SecureRandom()
 
@@ -45,7 +46,7 @@ class OAuth(config: OAuthSettings, system: String, redirectUrl: String) {
   }
 
   def redirectToOAuthProvider(antiForgeryToken: String, email: Option[String] = None)
-                      (implicit context: ExecutionContext, request: RequestHeader, ws: WSClient): Future[Result] = {
+                      (implicit context: ExecutionContext): Future[Result] = {
     val queryString: Map[String, Seq[String]] = Map(
       "client_id" -> Seq(config.clientId),
       "response_type" -> Seq("code"),
