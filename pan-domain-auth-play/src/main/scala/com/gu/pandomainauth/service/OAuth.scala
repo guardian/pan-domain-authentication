@@ -16,15 +16,20 @@ import scala.language.postfixOps
 class OAuthException(val message: String, val throwable: Throwable = null) extends Exception(message, throwable)
 
 class OAuth(config: OAuthSettings, system: String, redirectUrl: String)(implicit context: ExecutionContext, ws: WSClient) {
-  private val discoveryDocumentHolder: AtomicReference[Future[DiscoveryDocument]] =
-    new AtomicReference[Future[DiscoveryDocument]](fetchDiscoveryDocument)
 
-  private def fetchDiscoveryDocument: Future[DiscoveryDocument] =
-    ws.url(config.discoveryDocumentUrl).get().map(r => DiscoveryDocument.fromJson(r.json))
+  private val discoveryDocumentHolder: AtomicReference[Future[DiscoveryDocument]] =
+    new AtomicReference[Future[DiscoveryDocument]](fetchDiscoveryDocument())
+
+  private def fetchDiscoveryDocument(): Future[DiscoveryDocument] =
+    ws.url(config.discoveryDocumentUrl).get().map(response => DiscoveryDocument.fromJson(response.json))
 
   private def discoveryDocument: Future[DiscoveryDocument] =
-    discoveryDocumentHolder.updateAndGet(ddf =>
-      if (ddf.value.exists(_.isFailure)) fetchDiscoveryDocument else ddf
+    discoveryDocumentHolder.updateAndGet(futureDiscoveryDocument =>
+      if (futureDiscoveryDocument.value.exists(_.isFailure)) {
+        fetchDiscoveryDocument()
+      } else {
+        futureDiscoveryDocument
+      }
     )
 
   val random = new SecureRandom()
