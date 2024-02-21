@@ -73,7 +73,7 @@ trait AuthActions {
     */
   def authCallbackUrl: String
 
-  val OAuth = new OAuth(settings.oAuthSettings, system, authCallbackUrl)
+  val OAuth = new OAuth(settings.oAuthSettings, system, authCallbackUrl)(ec, wsClient)
 
   /**
     * Application name used for initialising Google API clients for directory group checking
@@ -119,9 +119,9 @@ trait AuthActions {
     * starts the authentication process for a user. By default this just sends the user off to the OAuth provider for auth
     * but if you want to show welcome page with a button on it then override.
     */
-  def sendForAuth[A](implicit request: RequestHeader, email: Option[String] = None) = {
+  def sendForAuth(implicit request: RequestHeader, email: Option[String] = None) = {
     val antiForgeryToken = OAuth.generateAntiForgeryToken()
-    OAuth.redirectToOAuthProvider(antiForgeryToken, email)(ec, request, wsClient) map { res =>
+    OAuth.redirectToOAuthProvider(antiForgeryToken, email)(ec) map { res =>
       val originUrl = request.uri
       res.withCookies(cookie(ANTI_FORGERY_KEY, antiForgeryToken), cookie(LOGIN_ORIGIN_KEY, originUrl))
     }
