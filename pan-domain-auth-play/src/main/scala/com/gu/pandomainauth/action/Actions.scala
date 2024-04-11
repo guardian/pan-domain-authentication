@@ -19,6 +19,15 @@ case class PandomainCookie(cookie: Cookie, forceExpiry: Boolean)
 trait AuthActions {
   private val logger = LoggerFactory.getLogger(this.getClass)
 
+  trait AuthenticationAction extends ActionBuilder[UserRequest, AnyContent] {
+
+    def authenticateRequest(request: RequestHeader)(produceResultGivenAuthedUser: User => Future[Result]): Future[Result]
+
+    override def invokeBlock[A](request: Request[A], block: (UserRequest[A]) => Future[Result]): Future[Result] =
+      authenticateRequest(request)(user => block(new UserRequest(user, request)))
+
+  }
+
   /**
     * Play application components that you must provide in order to use AuthActions
     */
@@ -240,12 +249,12 @@ trait AuthActions {
     *
     * if the user is not authed or the auth has expired they are sent for authentication
     */
-  object AuthAction extends ActionBuilder[UserRequest, AnyContent] {
+  object AuthAction extends AuthenticationAction {
 
     override def parser: BodyParser[AnyContent]               = AuthActions.this.controllerComponents.parsers.default
     override protected def executionContext: ExecutionContext = AuthActions.this.controllerComponents.executionContext
 
-    override def invokeBlock[A](request: Request[A], block: (UserRequest[A]) => Future[Result]): Future[Result] = {
+    def authenticateRequest(request: RequestHeader)(produceResultGivenAuthedUser: User => Future[Result]): Future[Result] = {
       extractAuth(request) match {
         case NotAuthenticated =>
           logger.debug(s"user not authed against $domain, authing")
@@ -269,7 +278,7 @@ trait AuthActions {
           Future(showUnauthedMessage(invalidUserMessage(authedUser))(request))
 
         case Authenticated(authedUser) =>
-          val response = block(new UserRequest(authedUser.user, request))
+          val response = produceResultGivenAuthedUser(authedUser.user)
           if (authedUser.authenticatedIn(system)) {
             response
           } else {
@@ -305,7 +314,7 @@ trait AuthActions {
   /**
     * Abstraction for API auth actions allowing to mix in custom results for each of the different error scenarios.
     */
-  trait AbstractApiAuthAction extends ActionBuilder[UserRequest, AnyContent] {
+  trait AbstractApiAuthAction extends AuthenticationAction {
 
     override def parser: BodyParser[AnyContent]               = AuthActions.this.controllerComponents.parsers.default
     override protected def executionContext: ExecutionContext = AuthActions.this.controllerComponents.executionContext
@@ -315,7 +324,7 @@ trait AuthActions {
     val expiredResult: Result
     val notAuthorizedResult: Result
 
-    override def invokeBlock[A](request: Request[A], block: (UserRequest[A]) => Future[Result]): Future[Result] = {
+    def authenticateRequest(request: RequestHeader)(produceResultGivenAuthedUser: User => Future[Result]): Future[Result] = {
       extractAuth(request) match {
         case NotAuthenticated =>
           logger.debug(s"user not authed against $domain, return 401")
@@ -332,7 +341,7 @@ trait AuthActions {
 
         case GracePeriod(authedUser) =>
           logger.debug(s"user ${authedUser.user.email} login expired but is in grace period.")
-          val response = block(new UserRequest(authedUser.user, request))
+          val response = produceResultGivenAuthedUser(authedUser.user)
           responseWithSystemCookie(response, authedUser)
 
         case NotAuthorized(authedUser) =>
@@ -341,7 +350,7 @@ trait AuthActions {
           Future(notAuthorizedResult)
 
         case Authenticated(authedUser) =>
-          val response = block(new UserRequest(authedUser.user, request))
+          val response = produceResultGivenAuthedUser(authedUser.user)
           responseWithSystemCookie(response, authedUser)
       }
     }
