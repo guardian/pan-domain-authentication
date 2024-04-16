@@ -24,7 +24,6 @@ val commonSettings =
       "-Wconf:cat=deprecation:ws,any:e",
       "-release:8"
     ),
-    publishArtifact := false
   )
 
 val sonatypeReleaseSettings = {
