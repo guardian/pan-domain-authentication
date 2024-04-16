@@ -27,7 +27,7 @@ val commonSettings =
     licenses := Seq(License.Apache2),
   )
 
-lazy val panDomainAuthVerification = project("pan-domain-auth-verification")
+lazy val panDomainAuthVerification = subproject("pan-domain-auth-verification")
   .settings(
     libraryDependencies
       ++= cryptoDependencies
@@ -38,7 +38,7 @@ lazy val panDomainAuthVerification = project("pan-domain-auth-verification")
   )
 
 
-lazy val panDomainAuthCore = project("pan-domain-auth-core")
+lazy val panDomainAuthCore = subproject("pan-domain-auth-core")
   .dependsOn(panDomainAuthVerification)
   .settings(
     libraryDependencies
@@ -49,7 +49,7 @@ lazy val panDomainAuthCore = project("pan-domain-auth-core")
       ++ scalaCollectionCompatDependencies,
   )
 
-lazy val panDomainAuthPlay_2_8 = project("pan-domain-auth-play_2-8")
+lazy val panDomainAuthPlay_2_8 = subproject("pan-domain-auth-play_2-8")
   .settings(sourceDirectory := (ThisBuild / baseDirectory).value / "pan-domain-auth-play" / "src")
   .settings(
     libraryDependencies
@@ -57,7 +57,7 @@ lazy val panDomainAuthPlay_2_8 = project("pan-domain-auth-play_2-8")
       ++ scalaCollectionCompatDependencies,
   ).dependsOn(panDomainAuthCore)
 
-lazy val panDomainAuthPlay_2_9 = project("pan-domain-auth-play_2-9")
+lazy val panDomainAuthPlay_2_9 = subproject("pan-domain-auth-play_2-9")
   .settings(sourceDirectory := (ThisBuild / baseDirectory).value / "pan-domain-auth-play" / "src")
   .settings(
     crossScalaVersions := Seq(scala213),
@@ -66,7 +66,7 @@ lazy val panDomainAuthPlay_2_9 = project("pan-domain-auth-play_2-9")
       ++ scalaCollectionCompatDependencies,
   ).dependsOn(panDomainAuthCore)
 
-lazy val panDomainAuthPlay_3_0 = project("pan-domain-auth-play_3-0")
+lazy val panDomainAuthPlay_3_0 = subproject("pan-domain-auth-play_3-0")
   .settings(sourceDirectory := (ThisBuild / baseDirectory).value / "pan-domain-auth-play" / "src")
   .settings(
     crossScalaVersions := Seq(scala213),
@@ -75,27 +75,27 @@ lazy val panDomainAuthPlay_3_0 = project("pan-domain-auth-play_3-0")
       ++ scalaCollectionCompatDependencies,
   ).dependsOn(panDomainAuthCore)
 
-lazy val panDomainAuthHmac_2_8 = project("panda-hmac-play_2-8")
+lazy val panDomainAuthHmac_2_8 = subproject("panda-hmac-play_2-8")
   .settings(sourceDirectory := (ThisBuild / baseDirectory).value / "pan-domain-auth-hmac" / "src")
   .settings(
     libraryDependencies ++= hmacLibs ++ playLibs_2_8 ++ testDependencies,
   ).dependsOn(panDomainAuthPlay_2_8)
 
-lazy val panDomainAuthHmac_2_9 = project("panda-hmac-play_2-9")
+lazy val panDomainAuthHmac_2_9 = subproject("panda-hmac-play_2-9")
   .settings(sourceDirectory := (ThisBuild / baseDirectory).value / "pan-domain-auth-hmac" / "src")
   .settings(
     crossScalaVersions := Seq(scala213),
     libraryDependencies ++= hmacLibs ++ playLibs_2_9 ++ testDependencies,
   ).dependsOn(panDomainAuthPlay_2_9)
 
-lazy val panDomainAuthHmac_3_0 = project("panda-hmac-play_3-0")
+lazy val panDomainAuthHmac_3_0 = subproject("panda-hmac-play_3-0")
   .settings(sourceDirectory := (ThisBuild / baseDirectory).value / "pan-domain-auth-hmac" / "src")
   .settings(
     crossScalaVersions := Seq(scala213),
     libraryDependencies ++= hmacLibs ++ playLibs_3_0 ++ testDependencies,
   ).dependsOn(panDomainAuthPlay_3_0)
 
-lazy val exampleApp = project("pan-domain-auth-example")
+lazy val exampleApp = subproject("pan-domain-auth-example")
   .enablePlugins(PlayScala)
   .settings(libraryDependencies ++= (awsDependencies :+ ws))
   .dependsOn(panDomainAuthPlay_2_9)
@@ -145,5 +145,5 @@ lazy val root = Project("pan-domain-auth-root", file(".")).aggregate(
   publish / skip := true,
 )
 
-def project(path: String): Project =
+def subproject(path: String): Project =
   Project(path, file(path)).settings(commonSettings: _*)
