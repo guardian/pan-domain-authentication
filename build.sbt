@@ -21,7 +21,8 @@ val commonSettings =
       "-feature",
       "-deprecation",
       // upgrade warnings to errors except deprecations
-      "-Wconf:cat=deprecation:ws,any:e"
+      "-Wconf:cat=deprecation:ws,any:e",
+      "-release:8"
     ),
     publishArtifact := false
   )
