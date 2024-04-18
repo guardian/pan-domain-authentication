@@ -7,8 +7,8 @@ import xerial.sbt.Sonatype._
 import play.sbt.PlayImport.PlayKeys._
 import sbtversionpolicy.withsbtrelease.ReleaseVersion
 
-val scala212 = "2.12.17"
-val scala213 = "2.13.9"
+val scala212 = "2.12.19"
+val scala213 = "2.13.13"
 
 ThisBuild / scalaVersion := scala213
 
