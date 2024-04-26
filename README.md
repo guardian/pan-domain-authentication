@@ -174,7 +174,7 @@ Note: you only need to pass the key ie the blob of base64 between the start and 
 
 Add the verification library as an SBT dependency to your project, taking care to use the latest version:
 
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.13/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.13)
+[![pan-domain-auth-verification Scala version support](https://index.scala-lang.org/guardian/pan-domain-authentication/pan-domain-auth-verification/latest-by-scala-version.svg?platform=jvm)](https://index.scala-lang.org/guardian/pan-domain-authentication/pan-domain-auth-verification)
 
 ```scala
 libraryDependencies += "com.gu" %% "pan-domain-auth-verification" % "<<LATEST_VERSION>>"
@@ -193,7 +193,7 @@ Play version 2.8 is supported on Scala 2.12 and 2.13.
 Play version 2.7 is supported up until v1.3.0.
 Play version 2.6 is supported up until v0.9.2.
 
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.13/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.gu/pan-domain-auth-core_2.13)
+[![pan-domain-auth-core Scala version support](https://index.scala-lang.org/guardian/pan-domain-authentication/pan-domain-auth-core/latest-by-scala-version.svg?platform=jvm)](https://index.scala-lang.org/guardian/pan-domain-authentication/pan-domain-auth-core)
 
 ```scala
 libraryDependencies += "com.gu" %% "pan-domain-auth-core" % "<<LATEST_VERSION>"
