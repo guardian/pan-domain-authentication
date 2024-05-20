@@ -14,7 +14,7 @@ jobs:
 
       - uses: actions/setup-node@v3
         with:
-          node-version-file: 'pan-domain-node/.nvmrc'
+          node-version-file: '.nvmrc'
           cache: npm
           cache-dependency-path: 'pan-domain-node/package-lock.json'
 
