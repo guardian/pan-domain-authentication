@@ -8,7 +8,10 @@ on:
 jobs:
   CI:
     runs-on: ubuntu-latest
-
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v3
 
@@ -18,7 +21,32 @@ jobs:
           cache: npm
           cache-dependency-path: 'pan-domain-node/package-lock.json'
 
-      - name: JS Build
+      - uses: actions/setup-node@v3
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+          cache-dependency-path: 'cdk/package-lock.json'
+
+      - name: synth infra
+        working-directory: cdk
+        run: |
+          npm ci
+          npm test
+          npm run synth
+
+      - name: Upload infra definitions to Riff-Raff
+        uses: guardian/actions-riff-raff@v4
+        with:
+          roleArn: ${{ secrets.GU_RIFF_RAFF_ROLE_ARN }}
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          app: pan-domain-authentication
+          projectName: 'pan-domain-authentication'
+          configPath: cdk/cdk.out/riff-raff.yaml
+          contentDirectories: |
+            cdk.out:
+              - cdk/cdk.out
+
+      - name: pan-domain-node JS Build
         run: |
           pushd pan-domain-node
 
