@@ -1,6 +1,6 @@
 package com.gu.pandomainauth.model
 
-import com.gu.pandomainauth.{PrivateKey, PublicKey, Secret}
+import com.gu.pandomainauth.{PrivateKey, PublicKey}
 
 case class PanDomainAuthSettings(
   publicKey: PublicKey,
