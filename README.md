@@ -157,6 +157,8 @@ publicKey=example_key
 
 ### Generating Keys
 
+**Guardian Devs**: See the [Emergency Panda key-rotation Guide](https://docs.google.com/document/d/1haVnQ9D8zNYUU-fOfkudPC1WpPGrlelLygd8V7xb3eQ/edit?usp=sharing).
+
 You can generate an rsa key pair as follows:
 
     openssl genrsa -out private_key.pem 4096
