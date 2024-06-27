@@ -1,11 +1,10 @@
 package com.gu.pandomainauth.service
 
-import java.security.spec.{PKCS8EncodedKeySpec, X509EncodedKeySpec}
-import java.security.{KeyFactory, Security, Signature}
-
-import com.gu.pandomainauth.{PrivateKey, PublicKey}
 import org.apache.commons.codec.binary.Base64._
 import org.bouncycastle.jce.provider.BouncyCastleProvider
+
+import java.security.spec.{PKCS8EncodedKeySpec, X509EncodedKeySpec}
+import java.security._
 
 
 object Crypto {
@@ -25,8 +24,7 @@ object Crypto {
 
   def signData(data: Array[Byte], prvKey: PrivateKey): Array[Byte] = {
     val rsa = Signature.getInstance(signatureAlgorithm, "BC")
-    val privateKey = keyFactory.generatePrivate(new PKCS8EncodedKeySpec(decodeBase64(prvKey.key)))
-    rsa.initSign(privateKey)
+    rsa.initSign(prvKey)
 
     rsa.update(data)
     rsa.sign()
@@ -34,10 +32,17 @@ object Crypto {
 
   def verifySignature(data: Array[Byte], signature: Array[Byte], pubKey: PublicKey) : Boolean = {
     val rsa = Signature.getInstance(signatureAlgorithm, "BC")
-    val publicKey = keyFactory.generatePublic(new X509EncodedKeySpec(decodeBase64(pubKey.key)))
-    rsa.initVerify(publicKey)
+    rsa.initVerify(pubKey)
 
     rsa.update(data)
     rsa.verify(signature)
   }
+
+  def publicKeyFor(base64EncodedKey: String): PublicKey =
+    keyFactory.generatePublic(new X509EncodedKeySpec(decodeBase64(base64EncodedKey)))
+  def privateKeyFor(base64EncodedKey: String): PrivateKey =
+    keyFactory.generatePrivate(new PKCS8EncodedKeySpec(decodeBase64(base64EncodedKey)))
+
+  def keyPairFrom(settingMap: Map[String,String]): KeyPair =
+    new KeyPair(publicKeyFor(settingMap("publicKey")), privateKeyFor(settingMap("privateKey")))
 }

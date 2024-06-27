@@ -2,10 +2,13 @@ package com.gu.pandomainauth
 
 import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.{Executors, ScheduledExecutorService, TimeUnit}
-
 import com.amazonaws.services.s3.AmazonS3
+import com.gu.pandomainauth.PublicSettings.validateAndParseKeyText
+import com.gu.pandomainauth.service.Crypto
 import org.slf4j.LoggerFactory
 
+import java.security.PublicKey
+import java.util.regex.Pattern
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
@@ -63,13 +66,11 @@ object PublicSettings {
     fetchSettings(settingsFileKey, bucketName, s3Client) flatMap extractSettings flatMap extractPublicKey
   }
 
-  private[pandomainauth] def extractPublicKey(settings: Map[String, String]): Either[SettingsFailure, PublicKey] = for {
-    rawKey <- settings.get("publicKey").toRight(PublicKeyNotFoundFailure)
-    publicKey <- validateKey(PublicKey(rawKey))
-  } yield publicKey
+  private[pandomainauth] def extractPublicKey(settings: Map[String, String]): Either[SettingsFailure, PublicKey] =
+    settings.get("publicKey").toRight(PublicKeyNotFoundFailure).flatMap(validateAndParseKeyText)
 
-  private[pandomainauth] def validateKey(pubKey: PublicKey): Either[SettingsFailure, PublicKey] = {
-    if ("[a-zA-Z0-9+/\n]+={0,3}".r.pattern.matcher(pubKey.key).matches) Right(pubKey)
-    else Left(PublicKeyFormatFailure)
-  }
+  private val KeyPattern: Pattern = "[a-zA-Z0-9+/\n]+={0,3}".r.pattern
+
+  private[pandomainauth] def validateAndParseKeyText(pubKeyText: String): Either[SettingsFailure, PublicKey] =
+    Either.cond(KeyPattern.matcher(pubKeyText).matches, Crypto.publicKeyFor(pubKeyText), PublicKeyFormatFailure)
 }
