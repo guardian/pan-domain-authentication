@@ -14,33 +14,33 @@ class CookieUtilsTest extends AnyFreeSpec with Matchers {
 
   "generateCookieData" - {
     "generates a a base64-encoded 'data.signature' cookie value" in {
-      CookieUtils.generateCookieData(authUser, testPrivateKey) should fullyMatch regex "[\\w+/]+=*\\.[\\w+/]+=*".r
+      CookieUtils.generateCookieData(authUser, testPrivateKey.key) should fullyMatch regex "[\\w+/]+=*\\.[\\w+/]+=*".r
     }
   }
 
   "parseCookieData" - {
     "can extract an authenticatedUser from real cookie data" in {
-      val cookieData = CookieUtils.generateCookieData(authUser, testPrivateKey)
-      CookieUtils.parseCookieData(cookieData, testPublicKey) should equal(authUser)
+      val cookieData = CookieUtils.generateCookieData(authUser, testPrivateKey.key)
+      CookieUtils.parseCookieData(cookieData, testPublicKey.key) should equal(authUser)
     }
 
     "fails to extract invalid data with a CookieSignatureInvalidException" in {
-      val cookieData = CookieUtils.generateCookieData(authUser, testINCORRECTPrivateKey)
+      val cookieData = CookieUtils.generateCookieData(authUser, testINCORRECTPrivateKey.key)
       intercept[CookieSignatureInvalidException] {
-        CookieUtils.parseCookieData("data.invalidSignature", testPublicKey)
+        CookieUtils.parseCookieData("data.invalidSignature", testPublicKey.key)
       }
     }
 
     "fails to extract incorrectly signed data with a CookieSignatureInvalidException" - {
-      val cookieData = CookieUtils.generateCookieData(authUser, testINCORRECTPrivateKey)
+      val cookieData = CookieUtils.generateCookieData(authUser, testINCORRECTPrivateKey.key)
       intercept[CookieSignatureInvalidException] {
-        CookieUtils.parseCookieData(cookieData, testPublicKey)
+        CookieUtils.parseCookieData(cookieData, testPublicKey.key)
       }
     }
 
     "fails to extract completely incorrect cookie data with a CookieParseException" - {
       intercept[CookieParseException] {
-        CookieUtils.parseCookieData("Completely incorrect cookie data", testPublicKey)
+        CookieUtils.parseCookieData("Completely incorrect cookie data", testPublicKey.key)
       }
     }
   }

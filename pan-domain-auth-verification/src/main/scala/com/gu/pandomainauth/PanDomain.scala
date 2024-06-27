@@ -3,6 +3,8 @@ package com.gu.pandomainauth
 import com.gu.pandomainauth.model._
 import com.gu.pandomainauth.service.CookieUtils
 
+import java.security.PublicKey
+
 
 object PanDomain {
   /**
