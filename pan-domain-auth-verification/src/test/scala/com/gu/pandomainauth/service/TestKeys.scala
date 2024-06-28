@@ -1,13 +1,19 @@
 package com.gu.pandomainauth.service
 
-import com.gu.pandomainauth.{PrivateKey, PublicKey}
+import com.gu.pandomainauth.service.Crypto.{privateKeyFor, publicKeyFor}
+
+import java.security.Key
 
 object TestKeys {
+
+  case class Example[K <: Key](key: K, base64Encoded: String)
+  def example[K <: Key](f: String => K)(base64Encoded: String): Example[K] =
+    Example(f(base64Encoded), base64Encoded)
 
   /**
    * A test public/private key-pair
    */
-  val testPublicKey = PublicKey(
+  val testPublicKey = example(publicKeyFor)(
                       """MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEA5AGsiD19GMj8p8jFLRAg
                         |k0z8SFrOU7J3VBCsSn6ByS9tMpkvI9PFWwcmwxgGXAbWkPWOfyC0nNyQPx8MhgRt
                         |zqS+X6j07juaaLnkHh8KmdLYyE7JGH9AfTI2gNI2qvSFhlvYqX8EVVSmooMz6zBu
@@ -20,7 +26,7 @@ object TestKeys {
                         |q19rXt5nBnpqVND80oPPn1wc1WrSy1sm8aQwtKSBoNJgvO6diuKPtX2BnQxzKjEw
                         |p2RyzmRIBIw16kjPNLKGgakrJOZP51gFdOA1qjUA44w0V2mxbszq40aMYFsI5Kyd
                         |qqXkOlqIoeN8DHVaNBPiSakCAwEAAQ==""".stripMargin)
-  val testPrivateKey = PrivateKey(
+  val testPrivateKey = example(privateKeyFor)(
                        """MIIJKQIBAAKCAgEA5AGsiD19GMj8p8jFLRAgk0z8SFrOU7J3VBCsSn6ByS9tMpkv
                          |I9PFWwcmwxgGXAbWkPWOfyC0nNyQPx8MhgRtzqS+X6j07juaaLnkHh8KmdLYyE7J
                          |GH9AfTI2gNI2qvSFhlvYqX8EVVSmooMz6zBuTIrn9aT9eJRsqBtNw5NKp2lB7FIB
@@ -74,7 +80,7 @@ object TestKeys {
   /**
    * A valid private key that does not match the public key (useful to test things fail with the wrong key)
    */
-  val testINCORRECTPrivateKey = PrivateKey(
+  val testINCORRECTPrivateKey = example(privateKeyFor)(
                                 """MIIEpQIBAAKCAQEA2rEzkKiGmC1Dy+MlBESQDhaokUKGKnbyB+8AoZ3dWvMKkUiC
                                   |u6LoXRPePT9ncKVtJk0fnv08Ca+eP4JOaVJMxZoHnDzhwMeRzmofHlqE6IMsU0vq
                                   |ZHZLV0+WDRCjlScZ5xq/Pvi2HUXTDrGp+DmLzibkerPBNd6f2sMeGpuGXD6ha0no

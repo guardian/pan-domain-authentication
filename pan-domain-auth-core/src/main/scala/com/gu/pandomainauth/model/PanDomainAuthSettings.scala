@@ -1,10 +1,11 @@
 package com.gu.pandomainauth.model
 
-import com.gu.pandomainauth.{PrivateKey, PublicKey}
+import com.gu.pandomainauth.service.Crypto
+
+import java.security.KeyPair
 
 case class PanDomainAuthSettings(
-  publicKey: PublicKey,
-  privateKey: PrivateKey,
+  signingKeyPair: KeyPair,
   cookieSettings: CookieSettings,
   oAuthSettings: OAuthSettings,
   google2FAGroupSettings: Option[Google2FAGroupSettings]
@@ -53,8 +54,7 @@ object PanDomainAuthSettings{
     }
 
     PanDomainAuthSettings(
-      PublicKey(settingMap("publicKey")),
-      PrivateKey(settingMap("privateKey")),
+      Crypto.keyPairFrom(settingMap),
       cookieSettings,
       oAuthSettings,
       google2faSettings
