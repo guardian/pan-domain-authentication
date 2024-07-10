@@ -140,10 +140,10 @@ trait AuthActions {
 
   /**
     * invoked when the user is not logged in a can't be authed - this may be when the user is not valid in yur system
-    * or when they have exoplicitly logged out.
+    * or when they have explicitly logged out.
     *
-    * Override this to add a logged out screen and display maeesages for your app. The default implementation is
-    * to ust return a 403 response
+    * Override this to add a logged out screen and display messages for your app. The default implementation is
+    * to just return a 403 response
     *
     * @param message
     * @param request
