@@ -198,7 +198,7 @@ trait AuthActions {
   }
 
   def readAuthenticatedUser(request: RequestHeader): Option[AuthenticatedUser] = readCookie(request) map { cookie =>
-    CookieUtils.parseCookieData(cookie.cookie.value, settings.publicKey)
+    CookieUtils.parseCookieData(cookie.cookie.value, settings.signingKeyPair.getPublic)
   }
 
   def readCookie(request: RequestHeader): Option[PandomainCookie] = {
@@ -211,7 +211,7 @@ trait AuthActions {
   def generateCookie(authedUser: AuthenticatedUser): Cookie =
     Cookie(
       name = settings.cookieSettings.cookieName,
-      value = CookieUtils.generateCookieData(authedUser, settings.privateKey),
+      value = CookieUtils.generateCookieData(authedUser, settings.signingKeyPair.getPrivate),
       domain = Some(domain),
       secure = true,
       httpOnly = true
@@ -237,7 +237,7 @@ trait AuthActions {
     */
   def extractAuth(request: RequestHeader): AuthenticationStatus = {
     readCookie(request).map { cookie =>
-      PanDomain.authStatus(cookie.cookie.value, settings.publicKey, validateUser, apiGracePeriod, system, cacheValidation, cookie.forceExpiry)
+      PanDomain.authStatus(cookie.cookie.value, settings.signingKeyPair.getPublic, validateUser, apiGracePeriod, system, cacheValidation, cookie.forceExpiry)
     } getOrElse NotAuthenticated
   }
 

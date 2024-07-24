@@ -1,8 +1,6 @@
 package com.gu.pandomainauth.service
 
-import java.security.SignatureException
-
-import com.gu.pandomainauth.{PrivateKey, PublicKey}
+import java.security.{PrivateKey, PublicKey, SignatureException}
 import com.gu.pandomainauth.model.{AuthenticatedUser, CookieParseException, CookieSignatureInvalidException, User}
 import org.apache.commons.codec.binary.Base64
 
