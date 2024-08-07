@@ -1,8 +1,9 @@
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
+import com.gu.pandomainauth.S3BucketLoader.forAwsSdkV1
 import com.gu.pandomainauth.model.{Authenticated, AuthenticatedUser, GracePeriod}
-import com.gu.pandomainauth.{PanDomain, PublicSettings}
+import com.gu.pandomainauth.{PanDomain, PublicSettings, Settings}
 
 object VerifyExample {
   // Change this to point to the S3 bucket and key for the settings file
@@ -14,16 +15,13 @@ object VerifyExample {
   val credentials = DefaultAWSCredentialsProviderChain.getInstance()
   val s3Client = AmazonS3ClientBuilder.standard().withRegion(region).withCredentials(credentials).build()
 
-  val publicSettings = new PublicSettings(settingsFileKey, bucketName, s3Client)
+  val loader = new Settings.Loader(forAwsSdkV1(s3Client, bucketName), settingsFileKey)
+  val publicSettings = PublicSettings(loader)
 
   // Call the start method when your application starts up to ensure the settings are kept up to date
   publicSettings.start()
 
-  // You can integrate with your own scheduler by calling refresh() which will synchronously update the settings
-  publicSettings.refresh()
-
-  // `publicKey` will return None if a value has not been successfully obtained
-  val publicKey = publicSettings.publicKey.get
+  val publicKey = publicSettings.publicKey
 
   // The name of this particular application
   val system = "test"

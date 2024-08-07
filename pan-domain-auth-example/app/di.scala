@@ -3,6 +3,7 @@ import com.amazonaws.auth.{AWSCredentialsProviderChain, DefaultAWSCredentialsPro
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
 import com.gu.pandomainauth.PanDomainAuthSettingsRefresher
+import com.gu.pandomainauth.S3BucketLoader.forAwsSdkV1
 import controllers.AdminController
 import play.api.ApplicationLoader.Context
 import play.api.libs.ws.ahc.AhcWSComponents
@@ -34,12 +35,10 @@ class AppComponents(context: Context) extends BuiltInComponentsFromContext(conte
 
   val s3Client = AmazonS3ClientBuilder.standard().withRegion(region).withCredentials(credentials).build()
 
-  val panDomainSettings = new PanDomainAuthSettingsRefresher(
+  val panDomainSettings = PanDomainAuthSettingsRefresher(
     domain = "local.dev-gutools.co.uk",
     system = "example",
-    bucketName = bucketName,
-    settingsFileKey = "local.dev-gutools.co.uk.settings",
-    s3Client = s3Client
+    s3BucketLoader = forAwsSdkV1(s3Client, bucketName)
   )
 
   val controller = new AdminController(controllerComponents, configuration, wsClient, panDomainSettings)

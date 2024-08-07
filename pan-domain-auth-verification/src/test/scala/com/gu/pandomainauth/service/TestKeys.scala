@@ -1,14 +1,15 @@
 package com.gu.pandomainauth.service
 
-import com.gu.pandomainauth.service.Crypto.{privateKeyFor, publicKeyFor}
+import com.gu.pandomainauth.SettingsFailure.SettingsResult
+import com.gu.pandomainauth.service.CryptoConf.SettingsReader.{privateKeyFor, publicKeyFor}
 
 import java.security.Key
 
 object TestKeys {
 
   case class Example[K <: Key](key: K, base64Encoded: String)
-  def example[K <: Key](f: String => K)(base64Encoded: String): Example[K] =
-    Example(f(base64Encoded), base64Encoded)
+  def example[K <: Key](f: String => SettingsResult[K])(base64Encoded: String): Example[K] =
+    Example(f(base64Encoded).toOption.get, base64Encoded)
 
   /**
    * A test public/private key-pair
