@@ -90,7 +90,7 @@ trait AuthActions {
   val applicationName: String = s"pan-domain-authentication-$system"
 
   val multifactorChecker: Option[Google2FAGroupChecker] = settings.google2FAGroupSettings.map {
-    new Google2FAGroupChecker(_, panDomainSettings.bucketName, panDomainSettings.s3Client, applicationName)
+    new Google2FAGroupChecker(_, panDomainSettings.s3BucketLoader, applicationName)
   }
 
   /**
@@ -198,7 +198,7 @@ trait AuthActions {
   }
 
   def readAuthenticatedUser(request: RequestHeader): Option[AuthenticatedUser] = readCookie(request) map { cookie =>
-    CookieUtils.parseCookieData(cookie.cookie.value, settings.signingKeyPair.getPublic)
+    CookieUtils.parseCookieData(cookie.cookie.value, settings.signingKeyPair.publicKey)
   }
 
   def readCookie(request: RequestHeader): Option[PandomainCookie] = {
@@ -211,7 +211,7 @@ trait AuthActions {
   def generateCookie(authedUser: AuthenticatedUser): Cookie =
     Cookie(
       name = settings.cookieSettings.cookieName,
-      value = CookieUtils.generateCookieData(authedUser, settings.signingKeyPair.getPrivate),
+      value = CookieUtils.generateCookieData(authedUser, settings.signingKeyPair.privateKey),
       domain = Some(domain),
       secure = true,
       httpOnly = true
@@ -237,7 +237,7 @@ trait AuthActions {
     */
   def extractAuth(request: RequestHeader): AuthenticationStatus = {
     readCookie(request).map { cookie =>
-      PanDomain.authStatus(cookie.cookie.value, settings.signingKeyPair.getPublic, validateUser, apiGracePeriod, system, cacheValidation, cookie.forceExpiry)
+      PanDomain.authStatus(cookie.cookie.value, settings.signingKeyPair.publicKey, validateUser, apiGracePeriod, system, cacheValidation, cookie.forceExpiry)
     } getOrElse NotAuthenticated
   }
 

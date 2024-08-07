@@ -1,51 +1,30 @@
 package com.gu.pandomainauth
 
-import java.util.concurrent.atomic.AtomicReference
-import java.util.concurrent.{Executors, ScheduledExecutorService, TimeUnit}
-import com.amazonaws.services.s3.AmazonS3
-import com.gu.pandomainauth.PublicSettings.validateAndParseKeyText
-import com.gu.pandomainauth.service.Crypto
-import org.slf4j.LoggerFactory
+import com.gu.pandomainauth.SettingsFailure.SettingsResult
+import com.gu.pandomainauth.service.CryptoConf
 
 import java.security.PublicKey
-import java.util.regex.Pattern
-import scala.concurrent.ExecutionContext
+import java.util.concurrent.{Executors, ScheduledExecutorService}
 import scala.concurrent.duration._
 
 /**
  * Class that contains the static public settings and includes mechanism for fetching the public key. Once you have an
  * instance, call the `start()` method to load the public data.
-  *
-  * @param settingsFileKey the settings file for the domain in the S3 bucket (eg local.dev.gutools.co.uk.public.settings)
-  * @param bucketName      the name of the S3 bucket (eg pan-domain-auth-settings)
-  * @param s3Client        the AWS S3 client that will be used to download the settings from the bucket
-  * @param scheduler       optional scheduler that will be used to run the code that updates the bucket
+ *
+ * @param scheduler       optional scheduler that will be used to run the code that updates the bucket
  */
-class PublicSettings(settingsFileKey: String, bucketName: String, s3Client: AmazonS3,
+class PublicSettings(loader: Settings.Loader,
                      scheduler: ScheduledExecutorService = Executors.newScheduledThreadPool(1)) {
 
-  private val agent = new AtomicReference[Option[PublicKey]](None)
+  private val settingsRefresher = new Settings.Refresher[PublicKey](
+    loader,
+    CryptoConf.SettingsReader(_).activePublicKey,
+    scheduler
+  )
 
-  private val logger = LoggerFactory.getLogger(this.getClass)
-  implicit private val executionContext: ExecutionContext = ExecutionContext.fromExecutor(scheduler)
+  def start(interval: FiniteDuration = 60.seconds): Unit = settingsRefresher.start(interval.toMinutes.toInt)
 
-  def start(interval: FiniteDuration = 60.seconds): Unit = {
-    scheduler.scheduleAtFixedRate(() => refresh(), 0, interval.toMillis, TimeUnit.MILLISECONDS)
-  }
-
-  def refresh(): Unit = {
-    PublicSettings.getPublicKey(settingsFileKey, bucketName, s3Client) match {
-      case Right(publicKey) =>
-        agent.set(Some(publicKey))
-        logger.debug("Successfully updated pan-domain public settings")
-
-      case Left(err) =>
-        logger.error("Failed to update pan-domain public settings")
-        Settings.logError(err, logger)
-    }
-  }
-
-  def publicKey: Option[PublicKey] = agent.get()
+  def publicKey: PublicKey = settingsRefresher.get()
 }
 
 /**
@@ -59,18 +38,7 @@ object PublicSettings {
    * Fetches the public key from the public S3 bucket
    *
    * @param domain the domain to fetch the public key for
-   * @param client implicit dispatch.Http to use for fetching the key
-   * @param ec     implicit execution context to use for fetching the key
    */
-  def getPublicKey(settingsFileKey: String, bucketName: String, s3Client: AmazonS3): Either[SettingsFailure, PublicKey] = {
-    fetchSettings(settingsFileKey, bucketName, s3Client) flatMap extractSettings flatMap extractPublicKey
-  }
-
-  private[pandomainauth] def extractPublicKey(settings: Map[String, String]): Either[SettingsFailure, PublicKey] =
-    settings.get("publicKey").toRight(PublicKeyNotFoundFailure).flatMap(validateAndParseKeyText)
-
-  private val KeyPattern: Pattern = "[a-zA-Z0-9+/\n]+={0,3}".r.pattern
-
-  private[pandomainauth] def validateAndParseKeyText(pubKeyText: String): Either[SettingsFailure, PublicKey] =
-    Either.cond(KeyPattern.matcher(pubKeyText).matches, Crypto.publicKeyFor(pubKeyText), PublicKeyFormatFailure)
+  def getPublicKey(loader: Loader): SettingsResult[PublicKey] =
+    loader.loadAndParseSettingsMap().flatMap(CryptoConf.SettingsReader(_).activePublicKey)
 }

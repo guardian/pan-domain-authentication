@@ -1,8 +1,7 @@
 package com.gu.pandomainauth.model
 
-import com.gu.pandomainauth.service.Crypto
-
-import java.security.KeyPair
+import com.gu.pandomainauth.SettingsFailure.SettingsResult
+import com.gu.pandomainauth.service.{CryptoConf, KeyPair}
 
 case class PanDomainAuthSettings(
   signingKeyPair: KeyPair,
@@ -32,7 +31,7 @@ case class Google2FAGroupSettings(
 object PanDomainAuthSettings{
   private val legacyCookieNameSetting = "assymCookieName"
 
-  def apply(settingMap: Map[String, String]): PanDomainAuthSettings = {
+  def apply(settingMap: Map[String, String]): SettingsResult[PanDomainAuthSettings] = {
     val cookieSettings = CookieSettings(
       cookieName = settingMap.getOrElse(legacyCookieNameSetting, settingMap("cookieName"))
     )
@@ -49,12 +48,12 @@ object PanDomainAuthSettings{
       serviceAccountCert <- settingMap.get("googleServiceAccountCert");
       adminUser          <- settingMap.get("google2faUser");
       group              <- settingMap.get("multifactorGroupId")
-    ) yield {
-      Google2FAGroupSettings(serviceAccountId, serviceAccountCert, adminUser, group)
-    }
+    ) yield Google2FAGroupSettings(serviceAccountId, serviceAccountCert, adminUser, group)
 
-    PanDomainAuthSettings(
-      Crypto.keyPairFrom(settingMap),
+    for {
+      activeKeyPair <- CryptoConf.SettingsReader(settingMap).activeKeyPair
+    } yield PanDomainAuthSettings(
+      activeKeyPair,
       cookieSettings,
       oAuthSettings,
       google2faSettings
