@@ -22,7 +22,7 @@ val commonSettings =
       "-deprecation",
       // upgrade warnings to errors except deprecations
       "-Wconf:cat=deprecation:ws,any:e",
-      "-release:8"
+      "-release:11"
     ),
     licenses := Seq(License.Apache2),
   )

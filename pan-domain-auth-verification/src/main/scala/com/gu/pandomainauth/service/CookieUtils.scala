@@ -2,8 +2,9 @@ package com.gu.pandomainauth.service
 
 import com.gu.pandomainauth.model.{AuthenticatedUser, User}
 import com.gu.pandomainauth.service.CookieUtils.CookieIntegrityFailure.{MalformedCookieText, MissingUserData, SignatureNotValid}
+import com.gu.pandomainauth.service.CryptoConf.Verification
 
-import java.security.{PrivateKey, PublicKey}
+import java.security.PrivateKey
 
 object CookieUtils {
   sealed trait CookieIntegrityFailure
@@ -54,9 +55,9 @@ object CookieUtils {
 
   // We would quite like to know, if a user is using an old (but accepted) key, *who* that user is- or to put it another
   // way, give me the authenticated user, and tell me which key they're using
-  def parseCookieData(cookieString: String, publicKey: PublicKey): CookieResult[AuthenticatedUser] = for {
+  def parseCookieData(cookieString: String, verification: Verification): CookieResult[AuthenticatedUser] = for {
     cookiePayload <- CookiePayload.parse(cookieString).toRight(MalformedCookieText)
-    cookiePayloadText <- cookiePayload.payloadTextVerifiedSignedWith(publicKey).toRight(SignatureNotValid)
+    cookiePayloadText <- verification.decode(cookiePayload.payloadTextVerifiedSignedWith).toRight(SignatureNotValid)
     authUser <- deserializeAuthenticatedUser(cookiePayloadText).toRight(MissingUserData)
   } yield authUser
 }
