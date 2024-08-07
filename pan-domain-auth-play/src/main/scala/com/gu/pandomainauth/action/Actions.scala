@@ -197,8 +197,8 @@ trait AuthActions {
     flushCookie(showUnauthedMessage("logged out"))
   }
 
-  def readAuthenticatedUser(request: RequestHeader): Option[AuthenticatedUser] = readCookie(request) map { cookie =>
-    CookieUtils.parseCookieData(cookie.cookie.value, settings.signingKeyPair.publicKey)
+  def readAuthenticatedUser(request: RequestHeader): Option[AuthenticatedUser] = readCookie(request) flatMap { cookie =>
+    CookieUtils.parseCookieData(cookie.cookie.value, settings.signingKeyPair.publicKey).toOption
   }
 
   def readCookie(request: RequestHeader): Option[PandomainCookie] = {

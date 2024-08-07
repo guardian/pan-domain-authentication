@@ -1,10 +1,19 @@
 package com.gu.pandomainauth.service
 
-import java.security.{PrivateKey, PublicKey, SignatureException}
-import com.gu.pandomainauth.model.{AuthenticatedUser, CookieParseException, CookieSignatureInvalidException, User}
-import org.apache.commons.codec.binary.Base64
+import com.gu.pandomainauth.model.{AuthenticatedUser, User}
+import com.gu.pandomainauth.service.CookieUtils.CookieIntegrityFailure.{MalformedCookieText, MissingUserData, SignatureNotValid}
+
+import java.security.{PrivateKey, PublicKey}
 
 object CookieUtils {
+  sealed trait CookieIntegrityFailure
+  object CookieIntegrityFailure {
+    case object MalformedCookieText extends CookieIntegrityFailure
+    case object SignatureNotValid extends CookieIntegrityFailure
+    case object MissingUserData extends CookieIntegrityFailure
+  }
+
+  type CookieResult[A] = Either[CookieIntegrityFailure, A]
 
   private[service] def serializeAuthenticatedUser(authUser: AuthenticatedUser): String =
       s"firstName=${authUser.user.firstName}" +
@@ -16,48 +25,39 @@ object CookieUtils {
       s"&expires=${authUser.expires}" +
       s"&multifactor=${authUser.multiFactor}"
 
-  private[service] def deserializeAuthenticatedUser(serializedForm: String): AuthenticatedUser = {
+  private[service] def deserializeAuthenticatedUser(serializedForm: String): Option[AuthenticatedUser] = {
     val data = serializedForm
       .split("&")
       .map(_.split("=", 2))
       .map{p => p(0) -> p(1)}
       .toMap
 
-    AuthenticatedUser(
-      user = User(data("firstName"), data("lastName"), data("email"), data.get("avatarUrl")),
-      authenticatingSystem = data("system"),
-      authenticatedIn = Set(data("authedIn").split(",").toSeq :_*),
-      expires = data("expires").toLong,
-      multiFactor = data("multifactor").toBoolean
+    for {
+      firstName <- data.get("firstName")
+      lastName <- data.get("lastName")
+      email <- data.get("email")
+      system <- data.get("system")
+      authedIn <- data.get("authedIn")
+      expires <- data.get("expires")
+      multifactor <- data.get("multifactor")
+    } yield AuthenticatedUser(
+      user = User(firstName, lastName, email, data.get("avatarUrl")),
+      authenticatingSystem = system,
+      authenticatedIn = Set(authedIn.split(",").toSeq :_*),
+      expires = expires.toLong,
+      multiFactor = multifactor.toBoolean
     )
   }
 
-  def generateCookieData(authUser: AuthenticatedUser, prvKey: PrivateKey): String = {
-    val data = serializeAuthenticatedUser(authUser)
-    val encodedData = new String(Base64.encodeBase64(data.getBytes("UTF-8")))
-    val signature = Crypto.signData(data.getBytes("UTF-8"), prvKey)
-    val encodedSignature = new String(Base64.encodeBase64(signature))
+  def generateCookieData(authUser: AuthenticatedUser, prvKey: PrivateKey): String =
+    CookiePayload.generateForPayloadText(serializeAuthenticatedUser(authUser), prvKey).asCookieText
 
-    s"$encodedData.$encodedSignature"
-  }
-
-  lazy val CookieRegEx = "^^([\\w\\W]*)\\.([\\w\\W]*)$".r
-
-  def parseCookieData(cookieString: String, pubKey: PublicKey): AuthenticatedUser = {
-
-    cookieString match {
-      case CookieRegEx(data, sig) =>
-        try {
-          if (Crypto.verifySignature(Base64.decodeBase64(data.getBytes("UTF-8")), Base64.decodeBase64(sig.getBytes("UTF-8")), pubKey)) {
-            deserializeAuthenticatedUser(new String(Base64.decodeBase64(data.getBytes("UTF-8"))))
-          } else {
-            throw new CookieSignatureInvalidException
-          }
-        } catch {
-          case e: SignatureException =>
-            throw new CookieSignatureInvalidException
-        }
-      case _ => throw new CookieParseException
-    }
-  }
+  // We would quite like to know, if a user is using an old (but accepted) key, *who* that user is- or to put it another
+  // way, give me the authenticated user, and tell me which key they're using
+  def parseCookieData(cookieString: String, publicKey: PublicKey): CookieResult[AuthenticatedUser] = for {
+    cookiePayload <- CookiePayload.parse(cookieString).toRight(MalformedCookieText)
+    cookiePayloadText <- cookiePayload.payloadTextVerifiedSignedWith(publicKey).toRight(SignatureNotValid)
+    authUser <- deserializeAuthenticatedUser(cookiePayloadText).toRight(MissingUserData)
+  } yield authUser
 }
+
