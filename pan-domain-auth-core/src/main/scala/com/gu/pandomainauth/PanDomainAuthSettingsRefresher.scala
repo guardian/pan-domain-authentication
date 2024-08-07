@@ -2,6 +2,8 @@ package com.gu.pandomainauth
 
 import com.amazonaws.services.s3.AmazonS3
 import com.gu.pandomainauth.model.PanDomainAuthSettings
+import com.gu.pandomainauth.service.CryptoConf
+import org.slf4j.LoggerFactory
 
 import java.util.concurrent.Executors.newScheduledThreadPool
 import java.util.concurrent.ScheduledExecutorService
@@ -32,9 +34,12 @@ class PanDomainAuthSettingsRefresher(
     scheduler: ScheduledExecutorService = newScheduledThreadPool(1)
   ) = this(domain, system, S3BucketLoader.forAwsSdkV1(s3Client, bucketName), settingsFileKey, scheduler)
 
+  private val logger = LoggerFactory.getLogger(this.getClass)
+
   private val settingsRefresher = new Settings.Refresher[PanDomainAuthSettings](
     new Settings.Loader(s3BucketLoader, settingsFileKey),
     PanDomainAuthSettings.apply,
+    _.signingAndVerification,
     scheduler
   )
   settingsRefresher.start(1)

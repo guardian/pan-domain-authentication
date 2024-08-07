@@ -1,10 +1,11 @@
 package com.gu.pandomainauth.model
 
 import com.gu.pandomainauth.SettingsFailure.SettingsResult
-import com.gu.pandomainauth.service.{CryptoConf, KeyPair}
+import com.gu.pandomainauth.service.CryptoConf
+import com.gu.pandomainauth.service.CryptoConf.SigningAndVerification
 
 case class PanDomainAuthSettings(
-  signingKeyPair: KeyPair,
+  signingAndVerification: SigningAndVerification,
   cookieSettings: CookieSettings,
   oAuthSettings: OAuthSettings,
   google2FAGroupSettings: Option[Google2FAGroupSettings]
@@ -51,9 +52,9 @@ object PanDomainAuthSettings{
     ) yield Google2FAGroupSettings(serviceAccountId, serviceAccountCert, adminUser, group)
 
     for {
-      activeKeyPair <- CryptoConf.SettingsReader(settingMap).activeKeyPair
+      cryptoConf <- CryptoConf.SettingsReader(settingMap).signingAndVerificationConf
     } yield PanDomainAuthSettings(
-      activeKeyPair,
+      cryptoConf,
       cookieSettings,
       oAuthSettings,
       google2faSettings

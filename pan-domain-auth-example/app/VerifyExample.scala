@@ -3,6 +3,7 @@ import com.amazonaws.regions.Regions
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
 import com.gu.pandomainauth.S3BucketLoader.forAwsSdkV1
 import com.gu.pandomainauth.model.{Authenticated, AuthenticatedUser, GracePeriod}
+import com.gu.pandomainauth.service.CryptoConf
 import com.gu.pandomainauth.{PanDomain, PublicSettings, Settings}
 
 object VerifyExample {
@@ -21,7 +22,7 @@ object VerifyExample {
   // Call the start method when your application starts up to ensure the settings are kept up to date
   publicSettings.start()
 
-  val publicKey = publicSettings.publicKey
+  val verification: CryptoConf.Verification = publicSettings.verification
 
   // The name of this particular application
   val system = "test"
@@ -42,7 +43,7 @@ object VerifyExample {
   val cacheValidation = false
 
   // To verify, call the authStatus method with the encoded cookie data
-  val status = PanDomain.authStatus("<<cookie data>>>", publicKey, validateUser, apiGracePeriod, system, cacheValidation, forceExpiry = false)
+  val status = PanDomain.authStatus("<<cookie data>>>", verification, validateUser, apiGracePeriod, system, cacheValidation, forceExpiry = false)
 
   status match {
     case Authenticated(_) | GracePeriod(_) =>

@@ -8,9 +8,8 @@ import play.api.libs.ws.WSClient
 import play.api.mvc.Results._
 import play.api.mvc._
 
+import java.net.{URLDecoder, URLEncoder}
 import scala.concurrent.{ExecutionContext, Future}
-import java.net.URLEncoder
-import java.net.URLDecoder
 
 class UserRequest[A](val user: User, request: Request[A]) extends WrappedRequest[A](request)
 
@@ -198,7 +197,7 @@ trait AuthActions {
   }
 
   def readAuthenticatedUser(request: RequestHeader): Option[AuthenticatedUser] = readCookie(request) flatMap { cookie =>
-    CookieUtils.parseCookieData(cookie.cookie.value, settings.signingKeyPair.publicKey).toOption
+    CookieUtils.parseCookieData(cookie.cookie.value, settings.signingAndVerification).toOption
   }
 
   def readCookie(request: RequestHeader): Option[PandomainCookie] = {
@@ -208,14 +207,13 @@ trait AuthActions {
     }
   }
 
-  def generateCookie(authedUser: AuthenticatedUser): Cookie =
-    Cookie(
-      name = settings.cookieSettings.cookieName,
-      value = CookieUtils.generateCookieData(authedUser, settings.signingKeyPair.privateKey),
-      domain = Some(domain),
-      secure = true,
-      httpOnly = true
-    )
+  def generateCookie(authedUser: AuthenticatedUser): Cookie = Cookie(
+    name = settings.cookieSettings.cookieName,
+    value = CookieUtils.generateCookieData(authedUser, settings.signingAndVerification),
+    domain = Some(domain),
+    secure = true,
+    httpOnly = true
+  )
 
   def includeSystemInCookie(authedUser: AuthenticatedUser)(result: Result): Result = {
     val updatedAuth    = authedUser.copy(authenticatedIn = authedUser.authenticatedIn + system)
@@ -237,7 +235,7 @@ trait AuthActions {
     */
   def extractAuth(request: RequestHeader): AuthenticationStatus = {
     readCookie(request).map { cookie =>
-      PanDomain.authStatus(cookie.cookie.value, settings.signingKeyPair.publicKey, validateUser, apiGracePeriod, system, cacheValidation, cookie.forceExpiry)
+      PanDomain.authStatus(cookie.cookie.value, settings.signingAndVerification, validateUser, apiGracePeriod, system, cacheValidation, cookie.forceExpiry)
     } getOrElse NotAuthenticated
   }
 
