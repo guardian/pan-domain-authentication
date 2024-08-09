@@ -93,8 +93,8 @@ object Settings {
 
     private def refresh(): Unit = loadAndParseSettings() match {
       case Right(newSettings) =>
-        // logger.debug(s"Updated pan-domain settings for $domain")
         val oldSettings = store.getAndSet(newSettings)
+        if (oldSettings != newSettings) logger.info("Updated pan-domain settings")
       case Left(err) =>
         logger.error("Failed to update pan-domain settings for $domain")
         err.logError(logger)
