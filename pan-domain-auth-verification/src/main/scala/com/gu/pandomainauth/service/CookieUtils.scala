@@ -51,9 +51,7 @@ object CookieUtils {
 
   def generateCookieData(authUser: AuthenticatedUser, prvKey: PrivateKey): String =
     CookiePayload.generateForPayloadText(serializeAuthenticatedUser(authUser), prvKey).asCookieText
-
-  // We would quite like to know, if a user is using an old (but accepted) key, *who* that user is- or to put it another
-  // way, give me the authenticated user, and tell me which key they're using
+  
   def parseCookieData(cookieString: String, publicKey: PublicKey): CookieResult[AuthenticatedUser] = for {
     cookiePayload <- CookiePayload.parse(cookieString).toRight(MalformedCookieText)
     cookiePayloadText <- cookiePayload.payloadTextVerifiedSignedWith(publicKey).toRight(SignatureNotValid)
