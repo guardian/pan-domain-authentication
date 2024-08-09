@@ -1,7 +1,7 @@
 package com.gu.pandomainauth.service
 
 import com.gu.pandomainauth.model.{AuthenticatedUser, User}
-import com.gu.pandomainauth.service.CookieUtils.CookieIntegrityFailure.{MalformedCookieText, MissingUserData, SignatureNotValid}
+import com.gu.pandomainauth.service.CookieUtils.CookieIntegrityFailure.{MalformedCookieText, MissingOrMalformedUserData, SignatureNotValid}
 
 import java.security.{PrivateKey, PublicKey}
 
@@ -10,7 +10,7 @@ object CookieUtils {
   object CookieIntegrityFailure {
     case object MalformedCookieText extends CookieIntegrityFailure
     case object SignatureNotValid extends CookieIntegrityFailure
-    case object MissingUserData extends CookieIntegrityFailure
+    case object MissingOrMalformedUserData extends CookieIntegrityFailure
   }
 
   type CookieResult[A] = Either[CookieIntegrityFailure, A]
@@ -38,24 +38,24 @@ object CookieUtils {
       email <- data.get("email")
       system <- data.get("system")
       authedIn <- data.get("authedIn")
-      expires <- data.get("expires")
-      multifactor <- data.get("multifactor")
+      expires <- data.get("expires").flatMap(_.toLongOption)
+      multiFactor <- data.get("multifactor").flatMap(_.toBooleanOption)
     } yield AuthenticatedUser(
       user = User(firstName, lastName, email, data.get("avatarUrl")),
       authenticatingSystem = system,
       authenticatedIn = Set(authedIn.split(",").toSeq :_*),
-      expires = expires.toLong,
-      multiFactor = multifactor.toBoolean
+      expires = expires,
+      multiFactor = multiFactor
     )
   }
 
   def generateCookieData(authUser: AuthenticatedUser, prvKey: PrivateKey): String =
     CookiePayload.generateForPayloadText(serializeAuthenticatedUser(authUser), prvKey).asCookieText
-  
+
   def parseCookieData(cookieString: String, publicKey: PublicKey): CookieResult[AuthenticatedUser] = for {
     cookiePayload <- CookiePayload.parse(cookieString).toRight(MalformedCookieText)
     cookiePayloadText <- cookiePayload.payloadTextVerifiedSignedWith(publicKey).toRight(SignatureNotValid)
-    authUser <- deserializeAuthenticatedUser(cookiePayloadText).toRight(MissingUserData)
+    authUser <- deserializeAuthenticatedUser(cookiePayloadText).toRight(MissingOrMalformedUserData)
   } yield authUser
 }
 
