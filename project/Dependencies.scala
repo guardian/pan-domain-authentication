@@ -43,7 +43,7 @@ object Dependencies {
     "commons-codec" % "commons-codec" % "1.14"
   )
 
-  val testDependencies = Seq("org.scalatest" %% "scalatest" % "3.2.0" % "test")
+  val testDependencies = Seq("org.scalatest" %% "scalatest" % "3.2.19" % Test)
 
   val loggingDependencies = Seq("org.slf4j" % "slf4j-api" % "1.7.30")
 

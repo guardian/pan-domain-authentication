@@ -12,13 +12,9 @@ object PanDomain {
    */
   def authStatus(cookieData: String, publicKey: PublicKey, validateUser: AuthenticatedUser => Boolean,
                  apiGracePeriod: Long, system: String, cacheValidation: Boolean, forceExpiry: Boolean): AuthenticationStatus = {
-    try {
-      val authedUser = CookieUtils.parseCookieData(cookieData, publicKey)
+    CookieUtils.parseCookieData(cookieData, publicKey).fold(InvalidCookie, { authedUser =>
       checkStatus(authedUser, validateUser, apiGracePeriod, system, cacheValidation, forceExpiry)
-    } catch {
-      case e: Exception =>
-        InvalidCookie(e)
-    }
+    })
   }
 
   private def checkStatus(authedUser: AuthenticatedUser, validateUser: AuthenticatedUser => Boolean,
