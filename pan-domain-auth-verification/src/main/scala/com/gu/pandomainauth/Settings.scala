@@ -1,66 +1,105 @@
 package com.gu.pandomainauth
 
+import com.amazonaws.util.IOUtils
+import com.gu.pandomainauth.SettingsFailure.SettingsResult
+import org.slf4j.{Logger, LoggerFactory}
+
 import java.io.ByteArrayInputStream
 import java.util.Properties
-
-import com.amazonaws.services.s3.AmazonS3
-import com.amazonaws.util.IOUtils
-import org.slf4j.Logger
-
-import scala.util.control.NonFatal
+import java.util.concurrent.TimeUnit.MINUTES
+import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.{Executors, ScheduledExecutorService}
 import scala.jdk.CollectionConverters._
+import scala.util.control.NonFatal
 
-sealed trait SettingsFailure
-case class SettingsDownloadFailure(cause: Throwable) extends SettingsFailure
-case class SettingsParseFailure(cause: Throwable) extends SettingsFailure
-case object PublicKeyFormatFailure extends SettingsFailure
-case object PublicKeyNotFoundFailure extends SettingsFailure
+sealed trait SettingsFailure {
+  val description: String
+
+  def logError(logger: Logger): Unit = logger.error(description)
+
+  def asThrowable(): Throwable = new IllegalStateException(description)
+}
+
+trait FailureWithCause extends SettingsFailure {
+  val cause: Throwable
+
+  override def logError(logger: Logger): Unit = logger.error(description, cause)
+
+  override def asThrowable(): Throwable = new IllegalStateException(description, cause)
+}
+
+case class SettingsDownloadFailure(cause: Throwable) extends FailureWithCause {
+  override val description: String = "Unable to download public key"
+}
+
+case class MissingSetting(name: String) extends SettingsFailure {
+  override val description: String = s"Key '$name' not found in settings file"
+}
+
+case class SettingsParseFailure(cause: Throwable) extends FailureWithCause {
+  override val description: String = "Unable to parse public key"
+}
+
+case object PublicKeyFormatFailure extends SettingsFailure {
+  override val description: String = "Public key does not match expected format"
+}
+
+case object InvalidBase64 extends SettingsFailure {
+  override val description: String = "Settings file value for cryptographic key is not valid base64"
+}
+
+object SettingsFailure {
+  type SettingsResult[A] = Either[SettingsFailure, A]
+}
 
 object Settings {
-  // internal functions for fetching and parsing the responses
-  def fetchSettings(settingsFileKey: String, bucketName: String, s3Client: AmazonS3): Either[SettingsFailure, String] = try {
-    val response = s3Client.getObject(bucketName, settingsFileKey)
-    Right(IOUtils.toString(response.getObjectContent))
-  } catch {
-    case NonFatal(e) =>
-      Left(SettingsDownloadFailure(e))
+  /**
+   * @param settingsFileKey the name of the file that contains the private settings for the given domain
+   */
+  class Loader(s3BucketLoader: S3BucketLoader, settingsFileKey: String) {
+
+    def loadAndParseSettingsMap(): SettingsResult[Map[String, String]] = fetchSettings().flatMap(extractSettings)
+
+    private def fetchSettings(): SettingsResult[String] = try {
+      Right(IOUtils.toString(s3BucketLoader.inputStreamFetching(settingsFileKey)))
+    } catch { case NonFatal(e) => Left(SettingsDownloadFailure(e)) }
   }
 
-  private[pandomainauth] def extractSettings(settingsBody: String): Either[SettingsFailure, Map[String, String]] = try {
+  private[pandomainauth] def extractSettings(settingsBody: String): SettingsResult[Map[String, String]] = try {
     val props = new Properties()
     props.load(new ByteArrayInputStream(settingsBody.getBytes("UTF-8")))
-
     Right(props.asScala.toMap)
   } catch {
     case NonFatal(e) =>
       Left(SettingsParseFailure(e))
   }
 
-  def logError(failure: SettingsFailure, logger: Logger) = failure match {
-    case SettingsDownloadFailure(cause) =>
-      logger.error("Unable to download public key", cause)
+  class Refresher[A](
+    loader: Settings.Loader,
+    settingsParser: Map[String, String] => SettingsResult[A],
+    scheduler: ScheduledExecutorService = Executors.newScheduledThreadPool(1)
+  ) {
+    // This is deliberately designed to throw an exception during construction if we cannot immediately read the settings
+    private val store: AtomicReference[A] = new AtomicReference(
+      loadAndParseSettings().fold(fail => throw fail.asThrowable(), identity)
+    )
 
-    case SettingsParseFailure(cause) =>
-      logger.error("Unable to parse public key", cause)
+    private val logger = LoggerFactory.getLogger(getClass)
 
-    case PublicKeyFormatFailure =>
-      logger.error("Public key does not match expected format")
+    def start(interval: Int): Unit = scheduler.scheduleAtFixedRate(() => refresh(), 0, interval, MINUTES)
 
-    case PublicKeyNotFoundFailure =>
-      logger.error("Public key not found in settings file")
-  }
+    def loadAndParseSettings(): SettingsResult[A] =
+      loader.loadAndParseSettingsMap().flatMap(settingsParser)
 
-  def errorToThrowable(failure: SettingsFailure): Throwable = failure match {
-    case SettingsDownloadFailure(cause) =>
-      new IllegalStateException("Unable to download public key", cause)
+    private def refresh(): Unit = loadAndParseSettings() match {
+      case Right(newSettings) =>
+        val oldSettings = store.getAndSet(newSettings)
+        if (oldSettings != newSettings) logger.info("Updated pan-domain settings")
+      case Left(err) =>
+        logger.error("Failed to update pan-domain settings for $domain")
+        err.logError(logger)
+    }
 
-    case SettingsParseFailure(cause) =>
-      new IllegalStateException("Unable to parse public key", cause)
-
-    case PublicKeyFormatFailure =>
-      new IllegalStateException("Public key does not match expected format")
-
-    case PublicKeyNotFoundFailure =>
-      new IllegalStateException("Public key not found in settings file")
+    def get(): A = store.get()
   }
 }

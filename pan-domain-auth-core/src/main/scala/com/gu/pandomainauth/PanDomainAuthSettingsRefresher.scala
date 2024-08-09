@@ -1,61 +1,58 @@
 package com.gu.pandomainauth
 
-import java.util.concurrent.atomic.AtomicReference
-import java.util.concurrent.{Executors, ScheduledExecutorService, TimeUnit}
-
 import com.amazonaws.services.s3.AmazonS3
 import com.gu.pandomainauth.model.PanDomainAuthSettings
-import org.slf4j.LoggerFactory
 
-import scala.language.postfixOps
+import java.util.concurrent.Executors.newScheduledThreadPool
+import java.util.concurrent.ScheduledExecutorService
 
 /**
   * PanDomainAuthSettingsRefresher will periodically refresh the pan domain settings and expose them via the "settings" method
   *
-  * @param domain the domain you are authenticating against
-  * @param system the identifier for your app, typically the same as the subdomain your app runs on
-  * @param bucketName the bucket where the settings are stored
-  * @param settingsFileKey the name of the file that contains the private settings for the given domain
-  * @param s3Client the AWS S3 client that will be used to download the settings from the bucket
-  * @param scheduler optional scheduler that will be used to run the code that updates the bucket
+  * To construct a PanDomainAuthSettingsRefresher, prefer the companion object's apply method, which uses
+  * reasonable defaults.
   */
 class PanDomainAuthSettingsRefresher(
   val domain: String,
   val system: String,
-  val bucketName: String,
+  val s3BucketLoader: S3BucketLoader,
   settingsFileKey: String,
-  val s3Client: AmazonS3,
-  scheduler: ScheduledExecutorService = Executors.newScheduledThreadPool(1)
+  scheduler: ScheduledExecutorService
 ) {
-  private val logger = LoggerFactory.getLogger(this.getClass)
+  /**
+   * This auxiliary constructor is a convenience for legacy code - it matches the constructor signature
+   * used by earlier versions of this class. Prefer the companion object's apply method if you're writing new code.
+   */
+  def this(
+    domain: String,
+    system: String,
+    bucketName: String,
+    settingsFileKey: String,
+    s3Client: AmazonS3,
+    scheduler: ScheduledExecutorService = newScheduledThreadPool(1)
+  ) = this(domain, system, S3BucketLoader.forAwsSdkV1(s3Client, bucketName), settingsFileKey, scheduler)
 
-  // This is deliberately designed to throw an exception during construction if we cannot immediately read the settings
-  private val authSettings: AtomicReference[PanDomainAuthSettings] = new AtomicReference[PanDomainAuthSettings](loadSettings() match {
-    case Right(settings) => PanDomainAuthSettings(settings)
-    case Left(err) => throw Settings.errorToThrowable(err)
-  })
+  private val settingsRefresher = new Settings.Refresher[PanDomainAuthSettings](
+    new Settings.Loader(s3BucketLoader, settingsFileKey),
+    PanDomainAuthSettings.apply,
+    scheduler
+  )
+  settingsRefresher.start(1)
 
-  scheduler.scheduleAtFixedRate(() => refresh(), 1, 1, TimeUnit.MINUTES)
-
-  def settings: PanDomainAuthSettings = authSettings.get()
-
-  private def loadSettings(): Either[SettingsFailure, Map[String, String]] = {
-    Settings.fetchSettings(settingsFileKey, bucketName, s3Client).flatMap(Settings.extractSettings)
-  }
-
-  private def refresh(): Unit = {
-    loadSettings() match {
-      case Right(settings) =>
-        logger.debug(s"Updated pan-domain settings for $domain")
-        authSettings.set(PanDomainAuthSettings(settings))
-
-      case Left(err) =>
-        logger.error(s"Failed to update pan-domain settings for $domain")
-        Settings.logError(err, logger)
-    }
-  }
+  def settings: PanDomainAuthSettings = settingsRefresher.get()
 }
 
-
-
-
+object PanDomainAuthSettingsRefresher {
+  /**
+   * Preferred constructor for PanDomainAuthSettingsRefresher, uses reasonable defaults.
+   * 
+   * @param domain the domain you are authenticating against (e.g. 'gutools.co.uk', 'local.dev-gutools.co.uk', etc)
+   * @param system the identifier for your app, typically the same as the subdomain your app runs on
+   */
+  def apply(
+    domain: String,
+    system: String,
+    s3BucketLoader: S3BucketLoader
+  ): PanDomainAuthSettingsRefresher =
+    new PanDomainAuthSettingsRefresher(domain, system, s3BucketLoader, s"$domain.settings", newScheduledThreadPool(1))
+}
