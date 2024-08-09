@@ -4,6 +4,7 @@ import com.gu.pandomainauth.model.{AuthenticatedUser, User}
 import com.gu.pandomainauth.service.CookieUtils.CookieIntegrityFailure.{MalformedCookieText, MissingOrMalformedUserData, SignatureNotValid}
 
 import java.security.{PrivateKey, PublicKey}
+import scala.util.Try
 
 object CookieUtils {
   sealed trait CookieIntegrityFailure
@@ -38,8 +39,8 @@ object CookieUtils {
       email <- data.get("email")
       system <- data.get("system")
       authedIn <- data.get("authedIn")
-      expires <- data.get("expires").flatMap(_.toLongOption)
-      multiFactor <- data.get("multifactor").flatMap(_.toBooleanOption)
+      expires <- data.get("expires").flatMap(text => Try(text.toLong).toOption)
+      multiFactor <- data.get("multifactor").flatMap(text => Try(text.toBoolean).toOption)
     } yield AuthenticatedUser(
       user = User(firstName, lastName, email, data.get("avatarUrl")),
       authenticatingSystem = system,
