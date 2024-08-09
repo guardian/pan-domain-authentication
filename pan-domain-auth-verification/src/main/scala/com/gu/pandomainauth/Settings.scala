@@ -50,6 +50,12 @@ case object InvalidBase64 extends SettingsFailure {
 
 object SettingsFailure {
   type SettingsResult[A] = Either[SettingsFailure, A]
+
+  implicit class RichSettingsResultSeq[A](result: Seq[SettingsResult[A]]) {
+    def sequence: SettingsResult[Seq[A]] = result.foldLeft[SettingsResult[List[A]]](Right(Nil)) { // Easier with Cats!
+      (acc, e) => for (keys <- acc; key <- e) yield key :: keys
+    }
+  }
 }
 
 object Settings {
@@ -77,6 +83,7 @@ object Settings {
   class Refresher[A](
     loader: Settings.Loader,
     settingsParser: Map[String, String] => SettingsResult[A],
+    changeMonitor: (A, A) => Unit,
     scheduler: ScheduledExecutorService = Executors.newScheduledThreadPool(1)
   ) {
     // This is deliberately designed to throw an exception during construction if we cannot immediately read the settings
@@ -94,7 +101,10 @@ object Settings {
     private def refresh(): Unit = loadAndParseSettings() match {
       case Right(newSettings) =>
         val oldSettings = store.getAndSet(newSettings)
-        if (oldSettings != newSettings) logger.info("Updated pan-domain settings")
+        if (oldSettings != newSettings) {
+          logger.info("Updated pan-domain settings")
+          changeMonitor(oldSettings, newSettings)
+        }
       case Left(err) =>
         logger.error("Failed to update pan-domain settings for $domain")
         err.logError(logger)

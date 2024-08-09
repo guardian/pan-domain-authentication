@@ -2,17 +2,16 @@ package com.gu.pandomainauth
 
 import com.gu.pandomainauth.model._
 import com.gu.pandomainauth.service.CookieUtils
-
-import java.security.PublicKey
+import com.gu.pandomainauth.service.CryptoConf.Verification
 
 
 object PanDomain {
   /**
    * Check the authentication status of the provided credentials by examining the signed cookie data.
    */
-  def authStatus(cookieData: String, publicKey: PublicKey, validateUser: AuthenticatedUser => Boolean,
+  def authStatus(cookieData: String, verification: Verification, validateUser: AuthenticatedUser => Boolean,
                  apiGracePeriod: Long, system: String, cacheValidation: Boolean, forceExpiry: Boolean): AuthenticationStatus = {
-    CookieUtils.parseCookieData(cookieData, publicKey).fold(InvalidCookie, { authedUser =>
+    CookieUtils.parseCookieData(cookieData, verification).fold(InvalidCookie, { authedUser =>
       checkStatus(authedUser, validateUser, apiGracePeriod, system, cacheValidation, forceExpiry)
     })
   }

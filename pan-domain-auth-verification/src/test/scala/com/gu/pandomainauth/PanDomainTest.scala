@@ -1,12 +1,13 @@
 package com.gu.pandomainauth
 
-import java.util.Date
-
 import com.gu.pandomainauth.model._
 import com.gu.pandomainauth.service.CookieUtils
-import org.scalatest.freespec.AnyFreeSpec
+import com.gu.pandomainauth.service.CryptoConf.OnlyVerification
 import org.scalatest.Inside
+import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
+
+import java.util.Date
 
 class PanDomainTest extends AnyFreeSpec with Matchers with Inside {
   import com.gu.pandomainauth.service.TestKeys._
@@ -19,9 +20,7 @@ class PanDomainTest extends AnyFreeSpec with Matchers with Inside {
     system: String = "testsuite",
     cacheValidation: Boolean = false,
     forceExpiry: Boolean = false,
-  ) = {
-    PanDomain.authStatus(cookieData, testPublicKey.key, validateUser, apiGracePeriod, system, cacheValidation, forceExpiry)
-  }
+  ) = PanDomain.authStatus(cookieData, OnlyVerification(testPublicKey.key), validateUser, apiGracePeriod, system, cacheValidation, forceExpiry)
 
   "authStatus" - {
     val authUser = AuthenticatedUser(User("test", "user", "test.user@example.com", None), "testsuite", Set("testsuite"), new Date().getTime + 86400, multiFactor = true)
