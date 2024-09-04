@@ -1,21 +1,20 @@
 package com.gu.pandomainauth.service
 
-import com.amazonaws.services.s3.AmazonS3
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import com.google.api.client.json.gson.GsonFactory
 import com.google.api.client.util.SecurityUtils
-import com.google.api.services.directory.Directory
 import com.google.api.services.directory.model.Groups
-import com.google.api.services.directory.DirectoryScopes
+import com.google.api.services.directory.{Directory, DirectoryScopes}
 import com.google.auth.http.HttpCredentialsAdapter
 import com.google.auth.oauth2.ServiceAccountCredentials
-
-import scala.jdk.CollectionConverters._
+import com.gu.pandomainauth.S3BucketLoader
 import com.gu.pandomainauth.model.{AuthenticatedUser, Google2FAGroupSettings}
 import org.slf4j.LoggerFactory
 
-class GroupChecker(config: Google2FAGroupSettings, bucketName: String, s3Client: AmazonS3, appName: String) {
+import scala.jdk.CollectionConverters._
+
+class GroupChecker(config: Google2FAGroupSettings, s3BucketLoader: S3BucketLoader, appName: String) {
   private val logger = LoggerFactory.getLogger(this.getClass)
 
   private val transport = GoogleNetHttpTransport.newTrustedTransport()
@@ -36,14 +35,13 @@ class GroupChecker(config: Google2FAGroupSettings, bucketName: String, s3Client:
     .build
 
   private def loadServiceAccountPrivateKey = {
-    val certInputStream = s3Client.getObject(bucketName, config.serviceAccountCert).getObjectContent
     val serviceAccountPrivateKey = SecurityUtils.loadPrivateKeyFromKeyStore(
       SecurityUtils.getPkcs12KeyStore,
-      certInputStream,
+      s3BucketLoader.inputStreamFetching(config.serviceAccountCert),
       "notasecret", "privatekey", "notasecret"
     )
 
-    try { certInputStream.close() } catch { case _ : Throwable => }
+    try { s3BucketLoader.inputStreamFetching(config.serviceAccountCert).close() } catch { case _ : Throwable => }
 
     serviceAccountPrivateKey
   }
@@ -72,11 +70,11 @@ class GroupChecker(config: Google2FAGroupSettings, bucketName: String, s3Client:
 
   private def hasMoreGroups(groupsResponse: Groups): Boolean = {
     val token = groupsResponse.getNextPageToken
-    token != null && token.length > 0
+    token != null && token.nonEmpty
   }
 }
 
-class GoogleGroupChecker(config: Google2FAGroupSettings, bucketName: String, s3Client: AmazonS3, appName: String) extends GroupChecker(config, bucketName, s3Client, appName) {
+class GoogleGroupChecker(config: Google2FAGroupSettings, s3BucketLoader: S3BucketLoader, appName: String) extends GroupChecker(config, s3BucketLoader, appName) {
 
   def checkGroups(authenticatedUser: AuthenticatedUser, groupIds: List[String]): Either[String, Boolean] = {
     val query = directory.groups().list().setUserKey(authenticatedUser.user.email)
@@ -86,10 +84,9 @@ class GoogleGroupChecker(config: Google2FAGroupSettings, bucketName: String, s3C
 
 }
 
-class Google2FAGroupChecker(config: Google2FAGroupSettings, bucketName: String, s3Client: AmazonS3, appName: String) extends GroupChecker(config, bucketName, s3Client, appName) {
+class Google2FAGroupChecker(config: Google2FAGroupSettings, s3BucketLoader: S3BucketLoader, appName: String) extends GroupChecker(config, s3BucketLoader, appName) {
 
-  def checkMultifactor(authenticatedUser: AuthenticatedUser): Boolean = {
+  def checkMultifactor(authenticatedUser: AuthenticatedUser): Boolean =
     hasGroup(authenticatedUser.user.email, config.multifactorGroupId)
-  }
 
 }

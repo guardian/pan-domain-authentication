@@ -1,6 +1,5 @@
 package com.gu.pandomainauth.service
 
-import com.gu.pandomainauth.service.Crypto.{privateKeyFor, publicKeyFor}
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 

@@ -1,9 +1,7 @@
 package com.gu.pandomainauth.service
 
-import org.apache.commons.codec.binary.Base64._
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 
-import java.security.spec.{PKCS8EncodedKeySpec, X509EncodedKeySpec}
 import java.security._
 
 
@@ -37,12 +35,4 @@ object Crypto {
     rsa.update(data)
     rsa.verify(signature)
   }
-
-  def publicKeyFor(base64EncodedKey: String): PublicKey =
-    keyFactory.generatePublic(new X509EncodedKeySpec(decodeBase64(base64EncodedKey)))
-  def privateKeyFor(base64EncodedKey: String): PrivateKey =
-    keyFactory.generatePrivate(new PKCS8EncodedKeySpec(decodeBase64(base64EncodedKey)))
-
-  def keyPairFrom(settingMap: Map[String,String]): KeyPair =
-    new KeyPair(publicKeyFor(settingMap("publicKey")), privateKeyFor(settingMap("privateKey")))
 }
