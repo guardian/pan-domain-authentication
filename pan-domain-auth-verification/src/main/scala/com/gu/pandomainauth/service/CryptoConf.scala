@@ -9,6 +9,8 @@ import org.apache.commons.codec.binary.Base64.{decodeBase64, isBase64}
 import java.security.spec.{InvalidKeySpecException, KeySpec, PKCS8EncodedKeySpec, X509EncodedKeySpec}
 import java.security.{KeyFactory, PrivateKey, PublicKey}
 import scala.util.Try
+import scala.collection.compat._
+import immutable.LazyList
 
 object CryptoConf {
   trait Signing {
@@ -19,7 +21,9 @@ object CryptoConf {
     val activePublicKey: PublicKey
     val alsoAccepted: Seq[PublicKey]
 
-    val acceptedPublicKeys: Stream[PublicKey] = Stream(activePublicKey) ++ alsoAccepted
+    val acceptedPublicKeys: LazyList[PublicKey] = LazyList(activePublicKey) ++ alsoAccepted
+
+    def acceptsActiveKeyFrom(other: Verification): Boolean = acceptedPublicKeys.contains(other.activePublicKey)
 
     def decode[A](f: PublicKey => Option[A]): Option[A] = acceptedPublicKeys.flatMap(f(_)).headOption
   }
@@ -77,10 +81,10 @@ object CryptoConf {
 
   object Change {
     def compare(oldConf: SigningAndVerification, newConf: SigningAndVerification): Option[CryptoConf.Change] =
-      if (newConf == oldConf) None else Some(Change(
-        activeKey = if (newConf.activeKeyPair == oldConf.activeKeyPair) None else Some(ActiveKey(
-          toleratingOldKey = newConf.alsoAccepted.contains(oldConf.activeKeyPair.publicKey),
-          newKeyAlreadyAccepted = oldConf.alsoAccepted.contains(newConf.activeKeyPair.publicKey)
+      Option.when(newConf != oldConf)(Change(
+        activeKey = Option.when(newConf.activeKeyPair != oldConf.activeKeyPair)(ActiveKey(
+          toleratingOldKey = newConf.acceptsActiveKeyFrom(oldConf),
+          newKeyAlreadyAccepted = oldConf.acceptsActiveKeyFrom(newConf)
         )),
         SeqDiff.compare(oldConf.alsoAccepted, newConf.alsoAccepted)
       ))
