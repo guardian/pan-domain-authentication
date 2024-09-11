@@ -1,6 +1,6 @@
 package com.gu.pandomainauth.model
 
-import com.gu.pandomainauth.SettingsFailure.SettingsResult
+import com.gu.pandomainauth.Settings.SettingsResult
 import com.gu.pandomainauth.service.CryptoConf
 import com.gu.pandomainauth.service.CryptoConf.SigningAndVerification
 

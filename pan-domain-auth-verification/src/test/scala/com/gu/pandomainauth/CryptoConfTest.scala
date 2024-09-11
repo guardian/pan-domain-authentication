@@ -11,7 +11,7 @@ import java.nio.charset.StandardCharsets.UTF_8
 
 class CryptoConfTest extends AnyFreeSpec with Matchers with EitherValues {
   "loading crypto configuration" - {
-    "funky" in {
+    "follow a safe set of transition steps" in {
       val legacyConf = loadExample("0.legacy")
       legacyConf.alsoAccepted shouldBe empty
 

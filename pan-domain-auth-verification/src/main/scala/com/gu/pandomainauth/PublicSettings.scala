@@ -1,8 +1,7 @@
 package com.gu.pandomainauth
 
 import com.amazonaws.services.s3.AmazonS3
-import com.gu.pandomainauth.Settings.Loader
-import com.gu.pandomainauth.SettingsFailure.SettingsResult
+import com.gu.pandomainauth.Settings.{Loader, SettingsResult}
 import com.gu.pandomainauth.service.CryptoConf
 import com.gu.pandomainauth.service.CryptoConf.Verification
 

@@ -1,6 +1,6 @@
 package com.gu.pandomainauth.service
 
-import com.gu.pandomainauth.SettingsFailure.SettingsResult
+import com.gu.pandomainauth.Settings.SettingsResult
 import com.gu.pandomainauth.service.CryptoConf.SettingsReader.{privateKeyFor, publicKeyFor}
 import com.gu.pandomainauth.service.CryptoConf.Signing
 
