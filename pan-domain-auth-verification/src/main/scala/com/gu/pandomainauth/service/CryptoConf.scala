@@ -23,7 +23,7 @@ object CryptoConf {
 
     val acceptedPublicKeys: LazyList[PublicKey] = LazyList(activePublicKey) ++ alsoAccepted
 
-    def acceptsActiveKeyFrom(other: Verification): Boolean = acceptedPublicKeys.contains(other.activePublicKey)
+    private[CryptoConf] def acceptsActiveKeyFrom(other: Verification): Boolean = acceptedPublicKeys.contains(other.activePublicKey)
 
     def decode[A](f: PublicKey => Option[A]): Option[A] = acceptedPublicKeys.flatMap(f(_)).headOption
   }
@@ -89,12 +89,20 @@ object CryptoConf {
         SeqDiff.compare(oldConf.alsoAccepted, newConf.alsoAccepted)
       ))
 
+    /**
+     * CryptoConf.Change.ActiveKey details the consequences of a change to the active key,
+     * allowing us to know if the change could disrupt existing user sessions.
+     */
     case class ActiveKey(toleratingOldKey: Boolean, newKeyAlreadyAccepted: Boolean) {
       val isBreakingChange: Boolean = !(toleratingOldKey && newKeyAlreadyAccepted)
       val summary: String = s"Active key changed: ${if (isBreakingChange) s"BREAKING - old-tolerated=$toleratingOldKey new-already-accepted=$newKeyAlreadyAccepted" else "non-breaking"}"
     }
   }
 
+  /**
+   * CryptoConf.Change denotes that there's been a change to the crypto settings. If the active key
+   * has changed, we'll have a CryptoConf.Change.ActiveKey detailing if the update is safe.
+   */
   case class Change(activeKey: Option[Change.ActiveKey], acceptedKeys: SeqDiff[PublicKey]) {
     val isBreakingChange: Boolean = activeKey.exists(_.isBreakingChange)
     val summary: String = (activeKey.map(_.summary).toSeq :+ s"acceptedKeys: ${acceptedKeys.summary}").mkString(" ")
