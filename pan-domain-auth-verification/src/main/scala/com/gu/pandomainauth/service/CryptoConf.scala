@@ -80,9 +80,9 @@ object CryptoConf {
   }
 
   object Change {
-    def compare(oldConf: SigningAndVerification, newConf: SigningAndVerification): Option[CryptoConf.Change] =
+    def compare(oldConf: Verification, newConf: Verification): Option[CryptoConf.Change] =
       Option.when(newConf != oldConf)(Change(
-        activeKey = Option.when(newConf.activeKeyPair != oldConf.activeKeyPair)(ActiveKey(
+        activeKey = Option.when(newConf.activePublicKey != oldConf.activePublicKey)(ActiveKey(
           toleratingOldKey = newConf.acceptsActiveKeyFrom(oldConf),
           newKeyAlreadyAccepted = oldConf.acceptsActiveKeyFrom(newConf)
         )),

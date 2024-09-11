@@ -39,12 +39,7 @@ class PanDomainAuthSettingsRefresher(
   private val settingsRefresher = new Settings.Refresher[PanDomainAuthSettings](
     new Settings.Loader(s3BucketLoader, settingsFileKey),
     PanDomainAuthSettings.apply,
-    (o, n) => {
-      for (change <- CryptoConf.Change.compare(o.signingAndVerification, n.signingAndVerification)) {
-        val message = s"PanDomainAuthSettings have changed for $domain: ${change.summary}"
-        if (change.isBreakingChange) logger.warn(message) else logger.info(message)
-      }
-    },
+    _.signingAndVerification,
     scheduler
   )
   settingsRefresher.start(1)

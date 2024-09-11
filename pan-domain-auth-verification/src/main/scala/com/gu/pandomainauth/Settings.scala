@@ -2,6 +2,8 @@ package com.gu.pandomainauth
 
 import com.amazonaws.util.IOUtils
 import com.gu.pandomainauth.SettingsFailure.SettingsResult
+import com.gu.pandomainauth.service.CryptoConf
+import com.gu.pandomainauth.service.CryptoConf.Verification
 import org.slf4j.{Logger, LoggerFactory}
 
 import java.io.ByteArrayInputStream
@@ -83,7 +85,7 @@ object Settings {
   class Refresher[A](
     loader: Settings.Loader,
     settingsParser: Map[String, String] => SettingsResult[A],
-    changeMonitor: (A, A) => Unit,
+    verificationIn: A => Verification,
     scheduler: ScheduledExecutorService = Executors.newScheduledThreadPool(1)
   ) {
     // This is deliberately designed to throw an exception during construction if we cannot immediately read the settings
@@ -101,9 +103,9 @@ object Settings {
     private def refresh(): Unit = loadAndParseSettings() match {
       case Right(newSettings) =>
         val oldSettings = store.getAndSet(newSettings)
-        if (oldSettings != newSettings) {
-          logger.info("Updated pan-domain settings")
-          changeMonitor(oldSettings, newSettings)
+        for (change <- CryptoConf.Change.compare(verificationIn(oldSettings), verificationIn(newSettings))) {
+          val message = s"Panda settings changed: ${change.summary}"
+          if (change.isBreakingChange) logger.warn(message) else logger.info(message)
         }
       case Left(err) =>
         logger.error("Failed to update pan-domain settings for $domain")

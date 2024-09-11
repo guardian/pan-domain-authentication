@@ -25,12 +25,7 @@ class PublicSettings(loader: Settings.Loader, scheduler: ScheduledExecutorServic
   private val settingsRefresher = new Settings.Refresher[Verification](
     loader,
     CryptoConf.SettingsReader(_).verificationConf,
-    (o, n) => {
-//      for (change <- CryptoConf.Change.compare(o, n)) {
-//        val message = s"PanDomainAuthSettings have changed for $domain: ${change.summary}"
-//        if (change.isBreakingChange) logger.warn(message) else logger.info(message)
-//      }
-    },
+    identity,
     scheduler
   )
 
