@@ -34,8 +34,6 @@ class PanDomainAuthSettingsRefresher(
     scheduler: ScheduledExecutorService = newScheduledThreadPool(1)
   ) = this(domain, system, S3BucketLoader.forAwsSdkV1(s3Client, bucketName), settingsFileKey, scheduler)
 
-  private val logger = LoggerFactory.getLogger(this.getClass)
-
   private val settingsRefresher = new Settings.Refresher[PanDomainAuthSettings](
     new Settings.Loader(s3BucketLoader, settingsFileKey),
     PanDomainAuthSettings.apply,

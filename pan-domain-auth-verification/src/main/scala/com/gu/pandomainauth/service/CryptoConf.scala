@@ -1,6 +1,6 @@
 package com.gu.pandomainauth.service
 
-import com.gu.pandomainauth.SettingsFailure.SettingsResult
+import com.gu.pandomainauth.Settings._
 import com.gu.pandomainauth.service.Crypto.keyFactory
 import com.gu.pandomainauth.service.CryptoConf.SettingsReader.{privateKeyFor, publicKeyFor}
 import com.gu.pandomainauth.{InvalidBase64, MissingSetting, PublicKeyFormatFailure}

@@ -1,7 +1,6 @@
 package com.gu.pandomainauth
 
 import com.amazonaws.util.IOUtils
-import com.gu.pandomainauth.SettingsFailure.SettingsResult
 import com.gu.pandomainauth.service.CryptoConf
 import com.gu.pandomainauth.service.CryptoConf.Verification
 import org.slf4j.{Logger, LoggerFactory}
@@ -50,7 +49,7 @@ case object InvalidBase64 extends SettingsFailure {
   override val description: String = "Settings file value for cryptographic key is not valid base64"
 }
 
-object SettingsFailure {
+object Settings {
   type SettingsResult[A] = Either[SettingsFailure, A]
 
   implicit class RichSettingsResultSeq[A](result: Seq[SettingsResult[A]]) {
@@ -58,9 +57,7 @@ object SettingsFailure {
       (acc, e) => for (keys <- acc; key <- e) yield key :: keys
     }
   }
-}
 
-object Settings {
   /**
    * @param settingsFileKey the name of the file that contains the private settings for the given domain
    */
