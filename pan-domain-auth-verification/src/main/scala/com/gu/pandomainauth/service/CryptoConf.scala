@@ -21,7 +21,7 @@ object CryptoConf {
     val activePublicKey: PublicKey
     val alsoAccepted: Seq[PublicKey]
 
-    val acceptedPublicKeys: LazyList[PublicKey] = LazyList(activePublicKey) ++ alsoAccepted
+    lazy val acceptedPublicKeys: LazyList[PublicKey] = LazyList(activePublicKey) ++ alsoAccepted
 
     private[CryptoConf] def acceptsActiveKeyFrom(other: Verification): Boolean = acceptedPublicKeys.contains(other.activePublicKey)
 
