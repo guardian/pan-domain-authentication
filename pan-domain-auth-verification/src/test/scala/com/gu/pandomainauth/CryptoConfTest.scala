@@ -18,6 +18,8 @@ class CryptoConfTest extends AnyFreeSpec with Matchers with EitherValues {
       val rotationUpcomingConf = loadExample("1.rotation-upcoming")
       rotationUpcomingConf.activeKeyPair should === (legacyConf.activeKeyPair)
       rotationUpcomingConf.alsoAccepted should not be empty
+      val expectedAcceptedPublicKeys = rotationUpcomingConf.activeKeyPair.publicKey +: rotationUpcomingConf.alsoAccepted
+      rotationUpcomingConf.acceptedPublicKeys should === (expectedAcceptedPublicKeys)
 
       val rotationInProgressConf = loadExample("2.rotation-in-progress")
       rotationInProgressConf.activeKeyPair should !== (legacyConf.activeKeyPair)
