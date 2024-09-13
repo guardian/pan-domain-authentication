@@ -6,9 +6,10 @@ import com.gu.pandomainauth.service.CryptoConf
 import com.gu.pandomainauth.service.CryptoConf.Verification
 
 import java.security.PublicKey
+import java.time.Duration
+import java.time.Duration.ofMinutes
 import java.util.concurrent.Executors.newScheduledThreadPool
 import java.util.concurrent.{Executors, ScheduledExecutorService}
-import scala.concurrent.duration._
 
 /**
  * Class that contains the static public settings and includes mechanism for fetching the public key. Once you have an
@@ -28,7 +29,7 @@ class PublicSettings(loader: Settings.Loader, scheduler: ScheduledExecutorServic
     scheduler
   )
 
-  def start(interval: FiniteDuration = 60.seconds): Unit = settingsRefresher.start(interval.toMinutes.toInt)
+  def start(interval: Duration = ofMinutes(1)): Unit = settingsRefresher.start(interval)
 
   def verification: Verification = settingsRefresher.get()
 

@@ -6,8 +6,10 @@ import com.gu.pandomainauth.service.CryptoConf.Verification
 import org.slf4j.{Logger, LoggerFactory}
 
 import java.io.ByteArrayInputStream
+import java.time.Duration
+import java.time.Duration.ofMinutes
 import java.util.Properties
-import java.util.concurrent.TimeUnit.MINUTES
+import java.util.concurrent.TimeUnit.MILLISECONDS
 import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.{Executors, ScheduledExecutorService}
 import scala.jdk.CollectionConverters._
@@ -92,7 +94,10 @@ object Settings {
 
     private val logger = LoggerFactory.getLogger(getClass)
 
-    def start(interval: Int): Unit = scheduler.scheduleAtFixedRate(() => refresh(), 0, interval, MINUTES)
+    def start(interval: Duration = ofMinutes(1)): Unit = {
+      logger.info(s"Starting logger with an interval of $interval")
+      scheduler.scheduleAtFixedRate(() => refresh(), 0, interval.toMillis, MILLISECONDS)
+    }
 
     def loadAndParseSettings(): SettingsResult[A] =
       loader.loadAndParseSettingsMap().flatMap(settingsParser)

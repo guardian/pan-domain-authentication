@@ -2,8 +2,6 @@ package com.gu.pandomainauth
 
 import com.amazonaws.services.s3.AmazonS3
 import com.gu.pandomainauth.model.PanDomainAuthSettings
-import com.gu.pandomainauth.service.CryptoConf
-import org.slf4j.LoggerFactory
 
 import java.util.concurrent.Executors.newScheduledThreadPool
 import java.util.concurrent.ScheduledExecutorService
@@ -40,7 +38,7 @@ class PanDomainAuthSettingsRefresher(
     _.signingAndVerification,
     scheduler
   )
-  settingsRefresher.start(1)
+  settingsRefresher.start()
 
   def settings: PanDomainAuthSettings = settingsRefresher.get()
 }
