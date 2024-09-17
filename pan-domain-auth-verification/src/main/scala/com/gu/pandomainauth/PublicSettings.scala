@@ -1,14 +1,15 @@
 package com.gu.pandomainauth
 
 import com.amazonaws.services.s3.AmazonS3
-import com.gu.pandomainauth.Settings.Loader
-import com.gu.pandomainauth.SettingsFailure.SettingsResult
+import com.gu.pandomainauth.Settings.{Loader, SettingsResult}
 import com.gu.pandomainauth.service.CryptoConf
+import com.gu.pandomainauth.service.CryptoConf.Verification
 
 import java.security.PublicKey
+import java.time.Duration
+import java.time.Duration.ofMinutes
 import java.util.concurrent.Executors.newScheduledThreadPool
 import java.util.concurrent.{Executors, ScheduledExecutorService}
-import scala.concurrent.duration._
 
 /**
  * Class that contains the static public settings and includes mechanism for fetching the public key. Once you have an
@@ -21,15 +22,19 @@ class PublicSettings(loader: Settings.Loader, scheduler: ScheduledExecutorServic
     new Settings.Loader(S3BucketLoader.forAwsSdkV1(s3Client, bucketName), settingsFileKey), scheduler
   )
 
-  private val settingsRefresher = new Settings.Refresher[PublicKey](
+  private val settingsRefresher = new Settings.Refresher[Verification](
     loader,
-    CryptoConf.SettingsReader(_).activePublicKey,
+    CryptoConf.SettingsReader(_).verificationConf,
+    identity,
     scheduler
   )
 
-  def start(interval: FiniteDuration = 60.seconds): Unit = settingsRefresher.start(interval.toMinutes.toInt)
+  def start(interval: Duration = ofMinutes(1)): Unit = settingsRefresher.start(interval)
 
-  def publicKey: PublicKey = settingsRefresher.get()
+  def verification: Verification = settingsRefresher.get()
+
+  @deprecated("Use `verification` instead, to allow smooth transition to new public keys")
+  def publicKey: PublicKey = verification.activePublicKey
 }
 
 /**
@@ -40,11 +45,6 @@ object PublicSettings {
 
   def apply(loader: Settings.Loader): PublicSettings = new PublicSettings(loader, newScheduledThreadPool(1))
 
-  /**
-   * Fetches the public key from the public S3 bucket
-   *
-   * @param domain the domain to fetch the public key for
-   */
-  def getPublicKey(loader: Loader): SettingsResult[PublicKey] =
-    loader.loadAndParseSettingsMap().flatMap(CryptoConf.SettingsReader(_).activePublicKey)
+  def getVerification(loader: Loader): SettingsResult[Verification] =
+    loader.loadAndParseSettingsMap().flatMap(CryptoConf.SettingsReader(_).verificationConf)
 }
