@@ -33,10 +33,10 @@ trait AuthActions {
     */
   def wsClient: WSClient
   def controllerComponents: ControllerComponents
-  def panDomainSettings: PanDomainAuthSettingsRefresher
+  val panDomainSettings: PanDomainAuthSettingsRefresher
 
-  private def system: String = panDomainSettings.system
-  private def domain: String = panDomainSettings.domain
+  private lazy val system: String = panDomainSettings.system
+  private lazy val domain: String = panDomainSettings.domain
   private def settings: PanDomainAuthSettings = panDomainSettings.settings
 
   private implicit val ec: ExecutionContext = controllerComponents.executionContext
@@ -82,14 +82,14 @@ trait AuthActions {
     */
   def authCallbackUrl: String
 
-  val OAuth = new OAuth(settings.oAuthSettings, system, authCallbackUrl)(ec, wsClient)
+  lazy val OAuth = new OAuth(settings.oAuthSettings, system, authCallbackUrl)(ec, wsClient)
 
   /**
     * Application name used for initialising Google API clients for directory group checking
     */
-  val applicationName: String = s"pan-domain-authentication-$system"
+  lazy val applicationName: String = s"pan-domain-authentication-$system"
 
-  val multifactorChecker: Option[Google2FAGroupChecker] = settings.google2FAGroupSettings.map {
+  lazy val multifactorChecker: Option[Google2FAGroupChecker] = settings.google2FAGroupSettings.map {
     new Google2FAGroupChecker(_, panDomainSettings.s3BucketLoader, applicationName)
   }
 
