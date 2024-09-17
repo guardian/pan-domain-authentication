@@ -157,7 +157,8 @@ publicKey=example_key
 
 ### Rotating Keys
 
-**Guardian Devs**: See the [Emergency Panda key-rotation Guide](https://docs.google.com/document/d/1haVnQ9D8zNYUU-fOfkudPC1WpPGrlelLygd8V7xb3eQ/edit?usp=sharing).
+**Guardian Devs**: See the [Panda key-rotation Guide](https://docs.google.com/document/d/1haVnQ9D8zNYUU-fOfkudPC1WpPGrlelLygd8V7xb3eQ/edit?usp=sharing)
+for Guardian-specific details of where config details are stored, etc.
 
 To avoid disruption to users, rotating keys requires 3 distinct settings updates, with pauses between each one. First
 obtain a copy of the current settings file (eg `current-from-s3.settings`), then use the sbt console to run
