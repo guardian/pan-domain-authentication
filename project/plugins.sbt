@@ -1,5 +1,5 @@
 // Use the Play sbt plugin for Play projects
-addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.9.0")
+addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.9.5")
 
 addSbtPlugin("com.github.sbt" % "sbt-release" % "1.4.0")
 
