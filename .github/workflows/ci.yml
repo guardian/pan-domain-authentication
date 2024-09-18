@@ -1,18 +1,22 @@
 name: CI
 on:
-  pull_request:
   workflow_dispatch:
+  pull_request:
+
+  # triggering CI default branch improves caching
+  # see https://docs.github.com/en/free-pro-team@latest/actions/guides/caching-dependencies-to-speed-up-workflows#restrictions-for-accessing-a-cache
   push:
     branches:
       - main
+      -
 jobs:
   CI:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
-
-      - uses: actions/setup-node@v3
+      - name: Checkout
+        uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version-file: 'pan-domain-node/.nvmrc'
           cache: npm
@@ -28,9 +32,9 @@ jobs:
 
           popd
 
-      - uses: actions/setup-java@v3
+      - uses: actions/setup-java@v4
         with:
-          java-version: '11'
+          java-version: '21'
           distribution: 'corretto'
           cache: 'sbt'
 
