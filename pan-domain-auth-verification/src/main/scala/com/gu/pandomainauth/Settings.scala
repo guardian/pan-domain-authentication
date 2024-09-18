@@ -1,12 +1,15 @@
 package com.gu.pandomainauth
 
 import com.amazonaws.util.IOUtils
-import com.gu.pandomainauth.SettingsFailure.SettingsResult
+import com.gu.pandomainauth.service.CryptoConf
+import com.gu.pandomainauth.service.CryptoConf.Verification
 import org.slf4j.{Logger, LoggerFactory}
 
 import java.io.ByteArrayInputStream
+import java.time.Duration
+import java.time.Duration.ofMinutes
 import java.util.Properties
-import java.util.concurrent.TimeUnit.MINUTES
+import java.util.concurrent.TimeUnit.MILLISECONDS
 import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.{Executors, ScheduledExecutorService}
 import scala.jdk.CollectionConverters._
@@ -48,11 +51,15 @@ case object InvalidBase64 extends SettingsFailure {
   override val description: String = "Settings file value for cryptographic key is not valid base64"
 }
 
-object SettingsFailure {
-  type SettingsResult[A] = Either[SettingsFailure, A]
-}
-
 object Settings {
+  type SettingsResult[A] = Either[SettingsFailure, A]
+
+  implicit class RichSettingsResultSeq[A](result: Seq[SettingsResult[A]]) {
+    def sequence: SettingsResult[Seq[A]] = result.foldLeft[SettingsResult[List[A]]](Right(Nil)) { // Easier with Cats!
+      (acc, e) => for (keys <- acc; key <- e) yield key :: keys
+    }
+  }
+
   /**
    * @param settingsFileKey the name of the file that contains the private settings for the given domain
    */
@@ -77,6 +84,7 @@ object Settings {
   class Refresher[A](
     loader: Settings.Loader,
     settingsParser: Map[String, String] => SettingsResult[A],
+    verificationIn: A => Verification,
     scheduler: ScheduledExecutorService = Executors.newScheduledThreadPool(1)
   ) {
     // This is deliberately designed to throw an exception during construction if we cannot immediately read the settings
@@ -86,7 +94,10 @@ object Settings {
 
     private val logger = LoggerFactory.getLogger(getClass)
 
-    def start(interval: Int): Unit = scheduler.scheduleAtFixedRate(() => refresh(), 0, interval, MINUTES)
+    def start(interval: Duration = ofMinutes(1)): Unit = {
+      logger.info(s"Starting refresh schedule with an interval of $interval")
+      scheduler.scheduleAtFixedRate(() => refresh(), 0, interval.toMillis, MILLISECONDS)
+    }
 
     def loadAndParseSettings(): SettingsResult[A] =
       loader.loadAndParseSettingsMap().flatMap(settingsParser)
@@ -94,7 +105,10 @@ object Settings {
     private def refresh(): Unit = loadAndParseSettings() match {
       case Right(newSettings) =>
         val oldSettings = store.getAndSet(newSettings)
-        if (oldSettings != newSettings) logger.info("Updated pan-domain settings")
+        for (change <- CryptoConf.Change.compare(verificationIn(oldSettings), verificationIn(newSettings))) {
+          val message = s"Panda settings changed: ${change.summary}"
+          if (change.isBreakingChange) logger.warn(message) else logger.info(message)
+        }
       case Left(err) =>
         logger.error("Failed to update pan-domain settings for $domain")
         err.logError(logger)

@@ -49,5 +49,5 @@ object Dependencies {
 
   // provide compatibility between scala 2.12 and 2.13
   // see https://github.com/scala/scala-collection-compat/issues/208
-  val scalaCollectionCompatDependencies = Seq("org.scala-lang.modules" %% "scala-collection-compat" % "2.1.6")
+  val scalaCollectionCompatDependencies = Seq("org.scala-lang.modules" %% "scala-collection-compat" % "2.12.0")
 }
