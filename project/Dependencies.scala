@@ -45,7 +45,7 @@ object Dependencies {
 
   val testDependencies = Seq("org.scalatest" %% "scalatest" % "3.2.19" % Test)
 
-  val loggingDependencies = Seq("org.slf4j" % "slf4j-api" % "1.7.30")
+  val loggingDependencies = Seq("org.slf4j" % "slf4j-api" % "1.7.36")
 
   // provide compatibility between scala 2.12 and 2.13
   // see https://github.com/scala/scala-collection-compat/issues/208
