@@ -1,14 +1,14 @@
-import sbt._
-import sbt.Keys._
-import Dependencies._
-import sbtrelease._
-import ReleaseStateTransformations._
-import xerial.sbt.Sonatype._
-import play.sbt.PlayImport.PlayKeys._
+import sbt.*
+import sbt.Keys.*
+import Dependencies.*
+import sbtrelease.*
+import ReleaseStateTransformations.*
+import xerial.sbt.Sonatype.*
+import play.sbt.PlayImport.PlayKeys.*
 import sbtversionpolicy.withsbtrelease.ReleaseVersion
 
 val scala212 = "2.12.19"
-val scala213 = "2.13.13"
+val scala213 = "2.13.14"
 
 ThisBuild / scalaVersion := scala213
 
