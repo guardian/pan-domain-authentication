@@ -3,10 +3,12 @@ package com.gu.pandomainauth.service
 import com.gu.pandomainauth.model.{AuthenticatedUser, User}
 import com.gu.pandomainauth.service.CookieUtils.CookieIntegrityFailure.{MalformedCookieText, SignatureNotValid}
 import com.gu.pandomainauth.service.CookieUtils.{deserializeAuthenticatedUser, parseCookieData, serializeAuthenticatedUser}
+import com.gu.pandomainauth.service.CryptoConf.{OnlyVerification, Signing}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.{EitherValues, OptionValues}
 
+import java.security.PrivateKey
 import java.util.Date
 
 
@@ -17,28 +19,30 @@ class CookieUtilsTest extends AnyFreeSpec with Matchers with EitherValues with O
 
   "generateCookieData" - {
     "generates a base64-encoded 'data.signature' cookie value" in {
-      CookieUtils.generateCookieData(authUser, testPrivateKey.key) should fullyMatch regex "[\\w+/]+=*\\.[\\w+/]+=*".r
+      CookieUtils.generateCookieData(authUser, signingWith(testPrivateKey.key)) should fullyMatch regex "[\\w+/]+=*\\.[\\w+/]+=*".r
     }
   }
 
   "parseCookieData" - {
-    "can extract an authenticatedUser from real cookie data" in {
-      val cookieData = CookieUtils.generateCookieData(authUser, testPrivateKey.key)
+    val cryptoConf = OnlyVerification(testPublicKey.key)
 
-      parseCookieData(cookieData, testPublicKey.key).value should equal(authUser)
+    "can extract an authenticatedUser from real cookie data" in {
+      val cookieData = CookieUtils.generateCookieData(authUser, signingWith(testPrivateKey.key))
+
+      parseCookieData(cookieData, cryptoConf).value should equal(authUser)
     }
 
     "fails to extract invalid data with a SignatureNotValid" in {
-      parseCookieData("data.invalidSignature", testPublicKey.key).left.value shouldBe SignatureNotValid
+      parseCookieData("data.invalidSignature", cryptoConf).left.value shouldBe SignatureNotValid
     }
 
     "fails to extract incorrectly signed data with a CookieSignatureInvalidException" in {
-      val cookieData = CookieUtils.generateCookieData(authUser, testINCORRECTPrivateKey.key)
-      parseCookieData(cookieData, testPublicKey.key).left.value should equal(SignatureNotValid)
+      val cookieData = CookieUtils.generateCookieData(authUser, signingWith(testINCORRECTPrivateKey.key))
+      parseCookieData(cookieData, cryptoConf).left.value should equal(SignatureNotValid)
     }
 
     "fails to extract completely incorrect cookie data with a CookieParseException" in {
-      parseCookieData("Completely incorrect cookie data", testPublicKey.key).left.value shouldBe MalformedCookieText
+      parseCookieData("Completely incorrect cookie data", cryptoConf).left.value shouldBe MalformedCookieText
     }
   }
 

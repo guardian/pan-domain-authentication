@@ -14,14 +14,13 @@ object Crypto {
    *
    * Note: you only need to pass the key ie the blob of base64 between the start and end markers in the pem file.
    */
-
   Security.addProvider(new BouncyCastleProvider())
 
-  val signatureAlgorithm: String = "SHA256withRSA"
   val keyFactory = KeyFactory.getInstance("RSA")
+  private def signatureInstance() = Signature.getInstance("SHA256withRSA", "BC")
 
   def signData(data: Array[Byte], prvKey: PrivateKey): Array[Byte] = {
-    val rsa = Signature.getInstance(signatureAlgorithm, "BC")
+    val rsa = signatureInstance()
     rsa.initSign(prvKey)
 
     rsa.update(data)
@@ -29,7 +28,7 @@ object Crypto {
   }
 
   def verifySignature(data: Array[Byte], signature: Array[Byte], pubKey: PublicKey) : Boolean = {
-    val rsa = Signature.getInstance(signatureAlgorithm, "BC")
+    val rsa = signatureInstance()
     rsa.initVerify(pubKey)
 
     rsa.update(data)

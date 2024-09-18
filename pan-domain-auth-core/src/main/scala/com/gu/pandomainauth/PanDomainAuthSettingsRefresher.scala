@@ -35,9 +35,10 @@ class PanDomainAuthSettingsRefresher(
   private val settingsRefresher = new Settings.Refresher[PanDomainAuthSettings](
     new Settings.Loader(s3BucketLoader, settingsFileKey),
     PanDomainAuthSettings.apply,
+    _.signingAndVerification,
     scheduler
   )
-  settingsRefresher.start(1)
+  settingsRefresher.start()
 
   def settings: PanDomainAuthSettings = settingsRefresher.get()
 }

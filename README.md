@@ -155,20 +155,27 @@ publicKey=example_key
 
 * **publicKey** - this is the public key used to verify the cookie
 
-### Generating Keys
+### Rotating Keys
 
-**Guardian Devs**: See the [Emergency Panda key-rotation Guide](https://docs.google.com/document/d/1haVnQ9D8zNYUU-fOfkudPC1WpPGrlelLygd8V7xb3eQ/edit?usp=sharing).
+**Guardian Devs**: See the [Panda key-rotation Guide](https://docs.google.com/document/d/1haVnQ9D8zNYUU-fOfkudPC1WpPGrlelLygd8V7xb3eQ/edit?usp=sharing)
+for Guardian-specific details of where config details are stored, etc.
 
-You can generate an rsa key pair as follows:
+To avoid disruption to users, rotating keys requires 3 distinct settings updates, with pauses between each one. First
+obtain a copy of the current settings file (eg `current-from-s3.settings`), then use the sbt console to run
+the `CryptoConfForRotation` Scala script on that `.settings` file to generate a new RSA 4096 keypair and the new
+required config files for each step:
 
-    openssl genrsa -out private_key.pem 4096
-    openssl rsa -pubout -in private_key.pem -out public_key.pem
+```
+pan-domain-auth-verification / Test / runMain com.gu.pandomainauth.CryptoConfForRotation current-from-s3.settings
+```
 
-There is a helper script in the root of this project that uses the commands above and outputs a new keypair in the format used by the panda settings file:
+3 new partial `.settings` files will be created, providing _just_ the updated crypto settings - you'll need to
+edit them into the existing `current-from-s3.settings` & `current-from-s3.settings.public` files before uploading
+those updates:
 
-    ./generateKeyPair.sh
-
-Note: you only need to pass the key ie the blob of base64 between the start and end markers in the pem file.
+* 1.rotation-upcoming.settings - give this 2 minutes of settling time 
+* 2.rotation-in-progress.settings - give this at least 1 hour of settling time
+* 3.rotation-complete.settings
 
 ## Integrating with your Scala app
 
