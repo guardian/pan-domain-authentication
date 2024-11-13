@@ -2,7 +2,7 @@ import sbt._
 
 object Dependencies {
 
-  val awsDependencies = Seq("com.amazonaws" % "aws-java-sdk-s3" % "1.12.772")
+  val awsDependencies = Seq("com.amazonaws" % "aws-java-sdk-s3" % "1.12.777")
 
   val playLibs_2_8 = {
     val version = "2.8.19"
