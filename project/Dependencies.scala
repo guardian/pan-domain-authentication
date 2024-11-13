@@ -33,19 +33,19 @@ object Dependencies {
   )
 
   val googleDirectoryApiDependencies = Seq(
-    "com.google.apis" % "google-api-services-admin-directory" % "directory_v1-rev20230124-2.0.0",
-    "com.google.auth" % "google-auth-library-credentials" % "1.16.0",
-    "com.google.auth" % "google-auth-library-oauth2-http" % "1.16.0",
+    "com.google.apis" % "google-api-services-admin-directory" % "directory_v1-rev20240903-2.0.0",
+    "com.google.auth" % "google-auth-library-credentials" % "1.16.1",
+    "com.google.auth" % "google-auth-library-oauth2-http" % "1.16.1",
   )
 
   val cryptoDependencies = Seq(
-    "org.bouncycastle" % "bcprov-jdk18on" % "1.78",
-    "commons-codec" % "commons-codec" % "1.14"
+    "org.bouncycastle" % "bcprov-jdk18on" % "1.78.1",
+    "commons-codec" % "commons-codec" % "1.17.1"
   )
 
   val testDependencies = Seq("org.scalatest" %% "scalatest" % "3.2.19" % Test)
 
-  val loggingDependencies = Seq("org.slf4j" % "slf4j-api" % "1.7.30")
+  val loggingDependencies = Seq("org.slf4j" % "slf4j-api" % "1.7.36")
 
   // provide compatibility between scala 2.12 and 2.13
   // see https://github.com/scala/scala-collection-compat/issues/208
