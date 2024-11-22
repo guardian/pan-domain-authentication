@@ -32,11 +32,11 @@ jobs:
 
           popd
 
-      - uses: actions/setup-java@v4
+      - uses: guardian/setup-scala@v1
+      - name: Build and Test
+        run: sbt -v clean +test
+      - name: Test Summary
+        uses: test-summary/action@v2
         with:
-          java-version: '21'
-          distribution: 'corretto'
-          cache: 'sbt'
-
-      - name: Scala Build
-        run: sbt clean +test
+          paths: "test-results/**/TEST-*.xml"
+        if: always()
