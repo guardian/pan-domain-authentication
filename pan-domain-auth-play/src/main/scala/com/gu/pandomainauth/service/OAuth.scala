@@ -2,7 +2,7 @@ package com.gu.pandomainauth.service
 
 import com.gu.pandomainauth.model.{AuthenticatedUser, OAuthSettings, User}
 import play.api.libs.json.JsValue
-import play.api.libs.ws.{WSClient, WSResponse}
+import play.api.libs.ws._
 import play.api.mvc.Results.Redirect
 import play.api.mvc.{RequestHeader, Result}
 
