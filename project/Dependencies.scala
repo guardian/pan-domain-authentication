@@ -29,7 +29,7 @@ object Dependencies {
   }
 
   val hmacLibs = Seq(
-    "com.gu" %% "hmac-headers" % "2.0.0"
+    "com.gu" %% "hmac-headers" % "2.0.1"
   )
 
   val googleDirectoryApiDependencies = Seq(
