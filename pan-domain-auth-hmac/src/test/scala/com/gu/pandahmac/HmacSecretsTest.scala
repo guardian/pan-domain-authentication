@@ -1,5 +1,6 @@
 package com.gu.pandahmac
 
+import com.madgag.sample.gslrw.Emphasiser
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
@@ -8,6 +9,8 @@ import java.time.format.DateTimeFormatter
 import java.time.{Clock, Instant, ZoneId}
 
 class HMACHeadersTest extends AnyWordSpec with Matchers {
+
+  val emp = Emphasiser
 
   val uri = new URI("http:///www.theguardian.com/signin?query=someData")
   val validSecret = "secret"

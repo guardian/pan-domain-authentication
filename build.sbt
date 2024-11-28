@@ -7,10 +7,22 @@ import xerial.sbt.Sonatype.*
 import play.sbt.PlayImport.PlayKeys.*
 import sbtversionpolicy.withsbtrelease.ReleaseVersion
 
+import java.io.FilenameFilter
+import java.net.URI
+import scala.collection.immutable.SortedMap
+import scala.util.Try
+import scala.xml.{Source, XML}
+import scala.sys.process.*
+
+
 val scala212 = "2.12.20"
 val scala213 = "2.13.14"
 
 ThisBuild / scalaVersion := scala213
+
+lazy val verifyDeps = taskKey[Unit]("Verify dependencies with Sigstore")
+
+
 
 val commonSettings =
   Seq(
@@ -46,7 +58,8 @@ lazy val panDomainAuthCore = subproject("pan-domain-auth-core")
       ++ googleDirectoryApiDependencies
       ++ cryptoDependencies
       ++ testDependencies
-      ++ scalaCollectionCompatDependencies,
+      ++ scalaCollectionCompatDependencies
+      :+ "com.madgag.totally-trustworthy" %% "widely-used-util" % "1.0.0"
   )
 
 lazy val panDomainAuthPlay_2_8 = subproject("pan-domain-auth-play_2-8")
@@ -93,6 +106,35 @@ lazy val panDomainAuthHmac_3_0 = subproject("panda-hmac-play_3-0")
   .settings(
     crossScalaVersions := Seq(scala213),
     libraryDependencies ++= hmacLibs ++ playLibs_3_0 ++ testDependencies,
+
+    verifyDeps := {
+      val s: TaskStreams = streams.value
+
+      val boom: Seq[(File, ModuleID, String)] = for {
+        entry <- (Compile /dependencyClasspath).value
+        artifactFile = entry.data
+        pomFile <- getPomForArtifact(artifactFile)
+        githubOrg <- extractGitHubOrgFromPomScm(pomFile)
+        mod <- entry.get(moduleID.key)  if mod.organization.startsWith("com.madgag.totally-trustworthy")
+      } yield {
+        (artifactFile, mod, githubOrg)
+      }
+      println(SortedMap(boom.groupBy(_._2.organization).mapValues(_.map(_._3).toSet).toSeq:_*).mkString("\n"))
+
+      for {
+        (artifactFile, mod, githubOrg) <- boom if mod.organization.startsWith("com.madgag")
+      } yield {
+        // --signer-repo guardian/gha-scala-library-release-workflow
+        println(artifactFile)
+        val command = s"gh attestation verify --owner totally-trustworthy-org $artifactFile"
+        val verifiedOk = 0 == command.!
+        if (!verifiedOk) {
+          s.log.error(s"Failed to verify $mod")
+        }
+      }
+
+    }
+
   ).dependsOn(panDomainAuthPlay_3_0)
 
 lazy val exampleApp = subproject("pan-domain-auth-example")
@@ -147,3 +189,37 @@ lazy val root = Project("pan-domain-auth-root", file(".")).aggregate(
 
 def subproject(path: String): Project =
   Project(path, file(path)).settings(commonSettings: _*)
+
+
+def getPomForArtifact(artifactFile: File): Option[File] = {
+  val files = artifactFile.getParentFile.listFiles(
+    new FilenameFilter {
+      override def accept(dir: File, name: String) = name.endsWith(".pom")
+    }).toSeq
+  println(s"Found .pom files: ${files.length}")
+  files.headOption
+}
+def extractGitHubOrgFromPomScm(pomFile: File): Option[String] = {
+  for {
+    node <- (XML.load(Source.fromFile(pomFile)) \\ "scm" \ "url").headOption
+    scmText = node.text
+    scmUrl <- Try(URI.create(scmText)).toOption
+    if scmUrl.getHost == "github.com"
+  } yield {
+    val scmText = node.text
+    println(scmText)
+    println(pomFile)
+    val githubOrg = scmUrl.getPath.split('/').toSeq(1)
+    githubOrg
+  }
+}
+
+/**
+ * Coursier can probably do this better, as according to the comments on https://github.com/coursier/coursier/issues/414
+ * it can resolve POM variables, like "${scm.github.url}", as used in
+ * https://central.sonatype.com/artifact/software.amazon.awssdk/aws-sdk-java-pom
+ */
+def getGitHubOrgForArtifact(artifactFile: File): Option[String] = for {
+  pomFile <- getPomForArtifact(artifactFile)
+  githubOrg <- extractGitHubOrgFromPomScm(pomFile)
+} yield githubOrg
