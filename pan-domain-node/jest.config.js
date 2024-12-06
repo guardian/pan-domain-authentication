@@ -3,6 +3,7 @@ module.exports = {
     "<rootDir>/src",
     "<rootDir>/test"
   ],
+  "clearMocks": true,
   "transform": {
     "^.+\\.tsx?$": "ts-jest"
   },
