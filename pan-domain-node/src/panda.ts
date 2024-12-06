@@ -108,7 +108,7 @@ export class PanDomainAuthentication {
     getPublicKey(): Promise<string> {
         return this.publicKey.then(({ key, lastUpdated }) => {
             const now = new Date();
-            const diff = now.getMilliseconds() - lastUpdated.getMilliseconds();
+            const diff = now.getTime() - lastUpdated.getTime();
 
             if(diff > this.keyCacheTime) {
                 this.publicKey = fetchPublicKey(this.region, this.bucket, this.keyFile);
@@ -124,7 +124,7 @@ export class PanDomainAuthentication {
             const cookies = cookie.parse(requestCookies);
             const pandaCookie = cookies[this.cookieName];
 
-            const now = new Date().getMilliseconds();
+            const now = new Date().getTime();
             return verifyUser(pandaCookie, publicKey, now, this.validateUser);
         });
     }
