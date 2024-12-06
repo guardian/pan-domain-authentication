@@ -1,0 +1,47 @@
+name: CD
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  CD:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      id-token: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v3
+        with:
+          node-version-file: ".nvmrc"
+          cache: npm
+
+      - name: Install
+        working-directory: pan-domain-node
+        run: npm ci
+
+      - name: Build
+        working-directory: pan-domain-node
+        run: npm run build
+
+      - name: Test
+        working-directory: pan-domain-node
+        run: npm run test
+
+      - name: Create Release Pull Request or Publish to npm
+        id: changesets
+        working-directory: pan-domain-node
+        uses: changesets/action@v1
+        with:
+          publish: npx changeset publish
+          title: "🦋 Release package updates"
+          commit: "Bump package version"
+
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
