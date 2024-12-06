@@ -46,7 +46,7 @@ export function createCookie(user: User, privateKey: string): string {
     return queryParamsString + "." + signature
 }
 
-export function verifyUser(pandaCookie: string | undefined, publicKey: string, currentTimestamp: number, validateUser: ValidateUserFn): AuthenticationResult {
+export function verifyUser(pandaCookie: string | undefined, publicKey: string, currentTime: Date, validateUser: ValidateUserFn): AuthenticationResult {
     if(!pandaCookie) {
         return { status: AuthenticationStatus.INVALID_COOKIE };
     }
@@ -56,6 +56,8 @@ export function verifyUser(pandaCookie: string | undefined, publicKey: string, c
     if(!verifySignature(data, signature, publicKey)) {
         return { status: AuthenticationStatus.INVALID_COOKIE };
     }
+
+    const currentTimestamp = currentTime.getTime();
 
     try {
         const user: User = parseUser(data);
@@ -124,8 +126,7 @@ export class PanDomainAuthentication {
             const cookies = cookie.parse(requestCookies);
             const pandaCookie = cookies[this.cookieName];
 
-            const now = new Date().getTime();
-            return verifyUser(pandaCookie, publicKey, now, this.validateUser);
+            return verifyUser(pandaCookie, publicKey, new Date(), this.validateUser);
         });
     }
 }
