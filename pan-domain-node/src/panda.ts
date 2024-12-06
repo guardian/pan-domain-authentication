@@ -35,11 +35,11 @@ export function verifyUser(pandaCookie: string | undefined, publicKey: string, c
         return { status: AuthenticationStatus.INVALID_COOKIE };
     }
 
-    const currentTimestamp = currentTime.getTime();
+    const currentTimestampInMilliseconds = currentTime.getTime();
 
     try {
         const user: User = parseUser(data);
-        const isExpired = user.expires < currentTimestamp;
+        const isExpired = user.expires < currentTimestampInMilliseconds;
 
         if(isExpired) {
             return { status: AuthenticationStatus.EXPIRED, user };
