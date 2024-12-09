@@ -24,6 +24,7 @@ jobs:
         with:
           node-version-file: "pan-domain-node/.nvmrc"
           cache: npm
+          cache-dependency-path: "pan-domain-node/package-lock.json"
 
       - name: Install
         run: npm ci
@@ -41,6 +42,7 @@ jobs:
           publish: npx changeset publish
           title: "🦋 Release package updates"
           commit: "Bump package version"
+          cwd: "pan-domain-node"
 
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
