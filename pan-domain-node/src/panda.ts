@@ -1,30 +1,8 @@
-import * as iniparser from 'iniparser';
 import * as cookie from 'cookie';
 
-import {base64ToPEM, httpGet, parseCookie, parseUser, sign, verifySignature} from './utils';
+import {parseCookie, parseUser, sign, verifySignature} from './utils';
 import {AuthenticationStatus, User, AuthenticationResult, ValidateUserFn} from './api';
-
-interface PublicKeyHolder {
-    key: string,
-    lastUpdated: Date
-}
-
-function fetchPublicKey(region: string, bucket: String, keyFile: String): Promise<PublicKeyHolder> {
-    const path = `https://s3.${region}.amazonaws.com/${bucket}/${keyFile}`;
-
-    return httpGet(path).then(response => {
-        const config: { publicKey?: string} = iniparser.parseString(response);
-
-        if(config.publicKey) {
-            return {
-                key: base64ToPEM(config.publicKey, "PUBLIC"),
-                lastUpdated: new Date()
-            };
-        } else {
-            throw new Error("Missing publicKey setting from config");
-        }
-    });
-}
+import { fetchPublicKey, PublicKeyHolder } from './fetch-public-key';
 
 export function createCookie(user: User, privateKey: string): string {
     let queryParams: string[] = [];
@@ -46,7 +24,7 @@ export function createCookie(user: User, privateKey: string): string {
     return queryParamsString + "." + signature
 }
 
-export function verifyUser(pandaCookie: string | undefined, publicKey: string, currentTimestamp: number, validateUser: ValidateUserFn): AuthenticationResult {
+export function verifyUser(pandaCookie: string | undefined, publicKey: string, currentTime: Date, validateUser: ValidateUserFn): AuthenticationResult {
     if(!pandaCookie) {
         return { status: AuthenticationStatus.INVALID_COOKIE };
     }
@@ -57,9 +35,11 @@ export function verifyUser(pandaCookie: string | undefined, publicKey: string, c
         return { status: AuthenticationStatus.INVALID_COOKIE };
     }
 
+    const currentTimestampInMilliseconds = currentTime.getTime();
+
     try {
         const user: User = parseUser(data);
-        const isExpired = user.expires < currentTimestamp;
+        const isExpired = user.expires < currentTimestampInMilliseconds;
 
         if(isExpired) {
             return { status: AuthenticationStatus.EXPIRED, user };
@@ -102,13 +82,14 @@ export class PanDomainAuthentication {
     stop(): void {
         if(this.keyUpdateTimer) {
             clearInterval(this.keyUpdateTimer);
+            this.keyUpdateTimer = undefined;
         }
     }
 
     getPublicKey(): Promise<string> {
         return this.publicKey.then(({ key, lastUpdated }) => {
             const now = new Date();
-            const diff = now.getMilliseconds() - lastUpdated.getMilliseconds();
+            const diff = now.getTime() - lastUpdated.getTime();
 
             if(diff > this.keyCacheTime) {
                 this.publicKey = fetchPublicKey(this.region, this.bucket, this.keyFile);
@@ -124,8 +105,7 @@ export class PanDomainAuthentication {
             const cookies = cookie.parse(requestCookies);
             const pandaCookie = cookies[this.cookieName];
 
-            const now = new Date().getMilliseconds();
-            return verifyUser(pandaCookie, publicKey, now, this.validateUser);
+            return verifyUser(pandaCookie, publicKey, new Date(), this.validateUser);
         });
     }
 }
