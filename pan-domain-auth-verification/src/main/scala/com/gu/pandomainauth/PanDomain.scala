@@ -11,7 +11,7 @@ object PanDomain {
    */
   def authStatus(cookieData: String, verification: Verification, validateUser: AuthenticatedUser => Boolean,
                  apiGracePeriod: Long, system: String, cacheValidation: Boolean, forceExpiry: Boolean): AuthenticationStatus = {
-    CookieUtils.parseCookieData(cookieData, verification).fold(InvalidCookie, { authedUser =>
+    CookieUtils.parseCookieData(cookieData, verification).fold(InvalidCookie(_), { authedUser =>
       checkStatus(authedUser, validateUser, apiGracePeriod, system, cacheValidation, forceExpiry)
     })
   }
