@@ -1,0 +1,37 @@
+package com.gu.pandomainauth
+
+import com.amazonaws.auth.profile.ProfileCredentialsProvider
+import com.amazonaws.auth.{AWSCredentialsProviderChain, DefaultAWSCredentialsProviderChain}
+import com.amazonaws.regions.Regions
+import com.amazonaws.services.s3.AmazonS3ClientBuilder
+import com.gu.pandomainauth.model.AuthenticatedUser
+import com.gu.pandomainauth.service.CookieUtils
+import com.gu.pandomainauth.service.CryptoConf.SigningAndVerification
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.{EitherValues, OptionValues}
+
+import java.time.Instant
+import java.time.temporal.ChronoUnit.HOURS
+
+class PanDomainAuthSettingsRefresherTest extends AnyFreeSpec with Matchers with EitherValues with OptionValues {
+
+  "Give an expired cookie" in {
+    val myRealCookie = // "Paste in your real cookie value here - from the 'gutoolsAuth-assym' cookie"
+//      "Zmlyc3ROYW1lPVJvYmVydG8mbGFzdE5hbWU9VHlsZXkmZW1haWw9cm9iZXJ0by50eWxleUBndWFyZGlhbi5jby51ayZhdmF0YXJVcmw9aHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUNnOG9jTGl1NVl5QmNPOUZSdWl6UVBrUzRCamo0N2g3d2g0eW5Va1UxOFdCc09uSTl1ai02TVU9czk2LWMmc3lzdGVtPWNvbXBvc2VyJmF1dGhlZEluPWNvbXBvc2VyLHdvcmtmbG93JmV4cGlyZXM9MTczMzg1NTkyNzAwMCZtdWx0aWZhY3Rvcj10cnVl.f5IU4/BpzXsP75Eyri8ZJ6LhZyBIB8bKkNf738x2IhgIanQxrGcGM9z3IFmNLacOovJIQtOlu9plBh4yoN1ZTvj8HRdGsHEJW8NeuhvkpbB1elrojVJRKwGb5+0OmEmcUu673+skcPt4g3S9N6ZkrZRzSyxy9ZrhceSJ14woUm0HpA05rSW2GPlmCZ04nfPhPJyG+DxdvvVUJq3KEoFQ1YX+4tHH5o1I+8dNGsqrfNHYh5hrjkmzyC+Ang18ae1dPLHsZYc6Qps0J/1nW7QS4SC/PtrEos744PpnJYkLg4zkNrEUEZ+eLUI/jhHaIO0vYJZgorTjKvDi3w+RrOvvqmWzanNljCPrY12DiA6pe+5Bo9O+MqjPUc8g/9r0BazQQdqb5tCPlPHexhUFb0LYgjEzVpLkne8erkYqwfqye8ctyAuPRWYIuJMn+zDdxYR1qJk/wGT4AnaritR4apfE6+tFx48u8raGr6PyCRvjnfmK2eqG5ZnMQ7Wtq71FiTj2l/kX4FK+2wcpluJVTgFh9Vw55BAQG5405jjvjTdAVkCvysjpmxs6F4i8gEguOBhDaVpNrNDIIIgBsVuEHTMkoITmLIqxNposst8Eh2qoI/O1No8ayA6NMFseAqekqdgLiXzNKB74ED5wncB/9WHVpUxonjltfpuYQtMuNJqQjoM="
+"Zmlyc3ROYW1lPVJvYmVydG8mbGFzdE5hbWU9VHlsZXkmZW1haWw9cm9iZXJ0by50eWxleUBndWFyZGlhbi5jby51ayZhdmF0YXJVcmw9aHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUNnOG9jTGl1NVl5QmNPOUZSdWl6UVBrUzRCamo0N2g3d2g0eW5Va1UxOFdCc09uSTl1ai02TVU9czk2LWMmc3lzdGVtPWNvbXBvc2VyJmF1dGhlZEluPWNvbXBvc2VyLHdvcmtmbG93JmV4cGlyZXM9MTczMzg1NjA3MTAwMCZtdWx0aWZhY3Rvcj10cnVl.IoJ8cpJFQybZJSXzgxrCWs6cHxBpX9ffbbl+igO8VKBXKm55IBfc4jNG26c6QzV6lTudWYZWNEBXCrYmZrqFKUPtJ2M/6VPHh52x8eOmYap9dtMOG/ECeBWcEo4lg4VZD7wLqvGR2A7dRayN8U8Yl0EvNNBsnlpvBZuMM6Y3RwcYLwmhSNwF0OJmIbqsEG5C/zWWghnE/SoCfPaRRP1iyoZYSBHZst5LQcbdQ/pyd6iSjOjqsIQW+lp299kC4GCXtcvFra8Qjdwm8uCK3aK5BrFF/aJ8Q67UsdgQxBoBIbHtqFI1lZzQPyTOZYOVMPR3BgxPXEA0XK2BVorxVVeTUriUAz+BDN/BXlewi5kmbtC2cRmdPMVuyIpuc6No69fqpoytFEuulCqBrz8kUEiVr+olwV41JwgHmPUsetwNIFMZW2HctZPSMqlmFhYzkZvrH+XJOpGjbJt1bpBGk+LpHrByaPv/K9CbMCa9ppt1ZeIlgmaVinD1rmrdZPqsR7L+gNakb+m5tNX5NrM+C7Rk4TbFFLfHpkoCQ2iQAcGPnqoBFbFLDXlYmNdyybXzIfrZgqTKS3JSpSI2m8Z5o6NFvzN0q92dpS6cHIEgaZl0Rw6l7OExedQDCigFFZo0zlxMiJylzKPPq9WOqJY9JdoFe7jK8KGvh1alTd16PNW5gOM="
+
+    val s3Client =
+      AmazonS3ClientBuilder.standard().withRegion(Regions.EU_WEST_1)
+        .withCredentials(new ProfileCredentialsProvider("workflow")).build()
+
+    val signingAndVerification: SigningAndVerification =
+      PanDomainAuthSettingsRefresher("gutools.co.uk", "testing",
+        S3BucketLoader.forAwsSdkV1(s3Client, "pan-domain-auth-settings")
+      ).settings.signingAndVerification
+    val user: AuthenticatedUser = CookieUtils.parseCookieData(myRealCookie, signingAndVerification).value
+    val expiredUser = user.copy(expires = Instant.now.minus(48, HOURS).toEpochMilli)
+    val expiredCookieText = CookieUtils.generateCookieData(expiredUser, signingAndVerification)
+    println(expiredCookieText)
+  }
+}
