@@ -23,6 +23,7 @@ dist
 ### Scala ###
 *.class
 *.log
+test-results/
 
 # sbt specific
 .cache/
