@@ -2,6 +2,9 @@
 
 [![pan-domain-auth-core Scala version support](https://index.scala-lang.org/guardian/pan-domain-authentication/pan-domain-auth-core/latest-by-scala-version.svg?platform=jvm)](https://index.scala-lang.org/guardian/pan-domain-authentication/pan-domain-auth-core)
 
+* This repo - General docs & Scala implementation
+* [pan-domain-node](https://github.com/guardian/pan-domain-node) - Typescript implementation
+
 Pan domain authentication provides distributed authentication for multiple webapps running in the same domain. Each
 application can authenticate users against an OAuth provider and store the authentication information in a common cookie.
 Each application can read this cookie and check if the user is allowed in the specific application and allow access accordingly.
@@ -58,7 +61,7 @@ mechanism and callback. This is the only framework specific implementation curre
 Guardian), this can be used as reference if you need to implement another framework implementation. This library is for applications
 that need to be able to issue and verify logins which is likely to include user-facing applications.
 
-The [pan-domain-node](#to-verify-login-in-nodejs) library provides an implementation of *verification only* for node apps.
+The [pan-domain-node](https://github.com/guardian/pan-domain-node) library provides an implementation of *verification only* for node apps.
 
 The `pan-domain-auth-example` provides an example Play 2.9 app with authentication. Additionally the nginx directory provides an example
 of how to set up an nginx configuration to allow you to run multiple authenticated apps locally as if they were all on the same domain which
@@ -289,49 +292,6 @@ properties:
 * **googleServiceAccountCert** - the name within the bucket of the certificate used to validate the service account
 * **google2faUser** - the admin user to connect to the directory api as, this is not the service account user but a user in your org who is authorised to access group information
 * **multifactorGroupId** - the name of the group that indicates and enforces that 2fa is turned on
-
-
-### To verify login in NodeJS
-
-[![npm version](https://badge.fury.io/js/%40guardian%2Fpan-domain-node.svg)](https://badge.fury.io/js/%40guardian%2Fpan-domain-node)
-
-```
-npm install --save-dev @guardian/pan-domain-node
-```
-
-```typescript
-import { PanDomainAuthentication, AuthenticationStatus, User, guardianValidation } from '@guardian/pan-domain-node';
-
-const panda = new PanDomainAuthentication(
-  "gutoolsAuth-assym", // cookie name
-  "eu-west-1", // AWS region
-  "pan-domain-auth-settings", // Settings bucket
-  "local.dev-gutools.co.uk.settings.public", // Settings file
-  guardianValidation
-);
-
-// alternatively customise the validation function and pass at construction
-function customValidation(user: User): boolean {
-  const isInCorrectDomain = user.email.indexOf('test.com') !== -1;
-  return isInCorrectDomain && user.multifactor;
-}
-
-// when handling a request
-function(request) {
-  // Pass the raw unparsed cookies
-  return panda.verify(request.headers['Cookie']).then(( { status, user }) => {
-    switch(status) {
-      case AuthenticationStatus.Authorised:
-        // Good user, handle the request!
-
-      default:
-        // Bad user. Return 4XX
-    }
-  });
-}
-
-```
-
 
 ### To verify machines
 

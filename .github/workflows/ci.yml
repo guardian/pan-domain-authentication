@@ -8,7 +8,7 @@ on:
   push:
     branches:
       - main
-      -
+
 jobs:
   CI:
     runs-on: ubuntu-latest
@@ -16,27 +16,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: 'pan-domain-node/.nvmrc'
-          cache: npm
-          cache-dependency-path: 'pan-domain-node/package-lock.json'
-
-      - name: JS Build
-        run: |
-          pushd pan-domain-node
-
-          npm ci
-          npm run build
-          npm test
-
-          popd
-
-      - uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'corretto'
-          cache: 'sbt'
+      - uses: guardian/setup-scala@v1
 
       - name: Scala Build
         run: sbt clean +test
