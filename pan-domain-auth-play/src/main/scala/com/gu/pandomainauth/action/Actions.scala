@@ -184,7 +184,7 @@ trait AuthActions {
             .withCookies(updatedCookie)
             .discardingCookies(discardCookies:_*)
         } else {
-          showUnauthedMessage(invalidUserMessage(claimedAuth))
+          showUnauthedMessage(invalidUserMessage(authedUserData))
         }
       }
     }) getOrElse {
