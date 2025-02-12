@@ -19,10 +19,10 @@ The library can be used in two ways:
  - **Verify**: read the Panda cookie and check whether the user is valid for the request
  - **Issue**: as above but redirecting the user to the OAuth provider to authenticate if the cookie is not present or expired
 
-Simply verifying the cookie is useful for APIs that cannot provided a user-facing OAuth dance to acquire credentials. It is also
+Simply verifying the cookie is useful for APIs that cannot provide a user-facing OAuth dance to acquire credentials. It is also
 useful to minimise the parts of your application that have to have knowledge of the private key.
 
-To ensure the cookie is not tampered with, public/private key pair encryption is use. An issuing application signs the cookie
+To ensure the cookie is not tampered with, public/private key pair encryption is used. An issuing application signs the cookie
 using the private key and both verifying and issuing applications verify using the public key.
 
 The cookie contains an expiry time generated at issue after which the user should be redirected to the OAuth provided again.
@@ -36,7 +36,7 @@ Each authenticated request that an application receives should be checked to see
 information should be checked and if the user is allowed in the app then the shared cookie should be set marking the user as valid
 in the application.
 
-* If there is a cookie but the cookie does not indicate that the the user is valid then the user should be validated for the application.
+* If there is a cookie but the cookie does not indicate that the user is valid then the user should be validated for the application.
 This is an application-specific concern such as verifying the email address or checking two-factor is enabled. If they are valid then the
 cookie should be updated to indicate this or an error page displayed.
 
@@ -49,11 +49,11 @@ On their return the existing cookie is updated with the new expiry time.
 
 Pan domain auth is split into 6 modules.
 
-The [pan-domain-auth-verification](#to-verify-logins) library provides the basic functionality for sigining and verifying login cookies in Scala.
+The [pan-domain-auth-verification](#to-verify-logins) library provides the basic functionality for signing and verifying login cookies in Scala.
 For JVM applications that only need to *VERIFY* an existing login (rather than issue logins themselves) this is the library to use.
 
 The `pan-domain-auth-core` library provides the core utilities to load settings, create and validate the cookie and
-check if the user has mutli-factor auth turned on when usng Google as the provider.
+check if the user has multi-factor auth turned on when using Google as the provider.
 
 The [pan-domain-auth-play_2-8, 2-9 and 3-0](#if-your-application-needs-to-issue-logins) libraries provide an implementation for play apps. There is an auth action
 that can be applied to the endpoints in your application that will do checking and setting of the cookie and will give you the OAuth authentication
@@ -75,7 +75,7 @@ who cannot perform OAuth authentication, by using HMAC-SHA-256.
 If you are adding a new application to an existing deployment of pan-domain-authentication then you can skip to
 [Integrating With Your App](#integrating-with-your-app)
 
-* At least one webapp running on subdomains of a single domain (eg. app1.example.com and app2.example.com)
+* At least one webapp running on subdomains of a single domain (e.g. app1.example.com and app2.example.com)
 
 * The apps must be using https - the cookie set by pan domain auth are set to secure and http only
 
