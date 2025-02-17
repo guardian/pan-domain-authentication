@@ -21,7 +21,7 @@ object Dependencies {
   }
 
   val playLibs_3_0 = {
-    val version = "3.0.0"
+    val version = "3.0.6"
     Seq(
       "org.playframework" %% "play" % version % "provided",
       "org.playframework" %% "play-ws" % version % "provided"
