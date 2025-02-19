@@ -1,5 +1,6 @@
 package com.gu.pandomainauth
 
+import com.gu.pandomainauth.SampleConf.loadExample
 import com.gu.pandomainauth.service.CryptoConf.{SettingsReader, SigningAndVerification}
 import com.gu.pandomainauth.service.TestKeys.testPublicKey
 import org.scalatest.EitherValues
@@ -8,6 +9,13 @@ import org.scalatest.matchers.should.Matchers
 
 import java.nio.charset.StandardCharsets.UTF_8
 
+object SampleConf {
+  def loadExample(name: String): SigningAndVerification = {
+    val settingsText =
+      new String(getClass.getResourceAsStream(s"/crypto-conf-rotation-example/$name.settings").readAllBytes(), UTF_8)
+    SettingsReader(Settings.extractSettings(settingsText).toOption.get).signingAndVerificationConf.toOption.get
+  }
+}
 
 class CryptoConfTest extends AnyFreeSpec with Matchers with EitherValues {
   "loading crypto configuration" - {
@@ -29,12 +37,6 @@ class CryptoConfTest extends AnyFreeSpec with Matchers with EitherValues {
       rotationCompleteConf.activeKeyPair should === (rotationInProgressConf.activeKeyPair)
       rotationCompleteConf.alsoAccepted shouldBe empty
     }
-  }
-
-  private def loadExample(name: String): SigningAndVerification = {
-    val settingsText =
-      new String(getClass.getResourceAsStream(s"/crypto-conf-rotation-example/$name.settings").readAllBytes(), UTF_8)
-    SettingsReader(Settings.extractSettings(settingsText).value).signingAndVerificationConf.value
   }
 
   "CryptoConf.SettingsReader" - {

@@ -1,6 +1,7 @@
 package com.gu.pandomainauth.service
 
 import com.gu.pandomainauth.Settings._
+import com.gu.pandomainauth.internal.{KeyHashId, NonActiveKeyMonitoring}
 import com.gu.pandomainauth.service.Crypto.keyFactory
 import com.gu.pandomainauth.service.CryptoConf.SettingsReader.{privateKeyFor, publicKeyFor}
 import com.gu.pandomainauth.{InvalidBase64, MissingSetting, PublicKeyFormatFailure}
@@ -23,9 +24,22 @@ object CryptoConf {
 
     lazy val acceptedPublicKeys: LazyList[PublicKey] = LazyList(activePublicKey) ++ alsoAccepted
 
+    private lazy val activeKeyId = KeyHashId.calculateFor(activePublicKey)
+
+    private lazy val acceptedKeysWithIds: LazyList[(PublicKey, KeyHashId)] =
+      acceptedPublicKeys.map(key => key -> KeyHashId.calculateFor(key))
+
     private[CryptoConf] def acceptsActiveKeyFrom(other: Verification): Boolean = acceptedPublicKeys.contains(other.activePublicKey)
 
-    def decode[A](f: PublicKey => Option[A]): Option[A] = acceptedPublicKeys.flatMap(f(_)).headOption
+    def decode[A](f: PublicKey => Option[A]): Option[A] = {
+      (for {
+        (key, keyId) <- acceptedKeysWithIds
+        result <- f(key)
+      } yield {
+        NonActiveKeyMonitoring.instance.monitor(keyId, activeKeyId)
+        result
+      }).headOption
+    }
   }
 
   case class SigningAndVerification(activeKeyPair: KeyPair, alsoAccepted: Seq[PublicKey]) extends Signing with Verification {
