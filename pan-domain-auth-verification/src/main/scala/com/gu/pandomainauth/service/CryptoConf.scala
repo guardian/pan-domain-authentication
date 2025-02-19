@@ -1,7 +1,9 @@
 package com.gu.pandomainauth.service
 
 import com.gu.pandomainauth.Settings._
+import com.gu.pandomainauth.internal.{KeyHashId, NonActiveKeyMonitoring}
 import com.gu.pandomainauth.service.Crypto.keyFactory
+import com.gu.pandomainauth.service.CryptoConf.Change.ActiveKey.TransitionCriteria
 import com.gu.pandomainauth.service.CryptoConf.SettingsReader.{privateKeyFor, publicKeyFor}
 import com.gu.pandomainauth.{InvalidBase64, MissingSetting, PublicKeyFormatFailure}
 import org.apache.commons.codec.binary.Base64.{decodeBase64, isBase64}
@@ -21,9 +23,24 @@ object CryptoConf {
 
     lazy val acceptedPublicKeys: LazyList[PublicKey] = LazyList(activePublicKey) ++ alsoAccepted
 
+    private[CryptoConf] lazy val activeKeyId = KeyHashId.calculateFor(activePublicKey)
+
+    private lazy val acceptedKeysWithIds: LazyList[(PublicKey, KeyHashId)] =
+      acceptedPublicKeys.map(key => key -> KeyHashId.calculateFor(key))
+
+    private[CryptoConf] lazy val alsoAcceptedKeyIds: Seq[KeyHashId] = alsoAccepted.map(KeyHashId.calculateFor)
+
     private[CryptoConf] def acceptsActiveKeyFrom(other: Verification): Boolean = acceptedPublicKeys.contains(other.activePublicKey)
 
-    def decode[A](f: PublicKey => Option[A]): Option[A] = acceptedPublicKeys.flatMap(f(_)).headOption
+    def decode[A](f: PublicKey => Option[A]): Option[A] = {
+      (for {
+        (key, keyId) <- acceptedKeysWithIds
+        result <- f(key)
+      } yield {
+        NonActiveKeyMonitoring.instance.monitor(keyId, activeKeyId)
+        result
+      }).headOption
+    }
   }
 
   case class SigningAndVerification(activeKeyPair: KeyPair, alsoAccepted: Seq[PublicKey]) extends Signing with Verification {
@@ -81,19 +98,37 @@ object CryptoConf {
     def compare(oldConf: Verification, newConf: Verification): Option[CryptoConf.Change] =
       Option.when(newConf != oldConf)(Change(
         activeKey = Option.when(newConf.activePublicKey != oldConf.activePublicKey)(ActiveKey(
-          toleratingOldKey = newConf.acceptsActiveKeyFrom(oldConf),
-          newKeyAlreadyAccepted = oldConf.acceptsActiveKeyFrom(newConf)
+          oldConf.activeKeyId,
+          newConf.activeKeyId,
+          TransitionCriteria.failedCriteriaFor(oldConf, newConf)
         )),
-        SeqDiff.compare(oldConf.alsoAccepted, newConf.alsoAccepted)
+        newConf.alsoAcceptedKeyIds, SeqDiff.compare(oldConf.alsoAcceptedKeyIds, newConf.alsoAcceptedKeyIds)
       ))
 
     /**
      * CryptoConf.Change.ActiveKey details the consequences of a change to the active key,
      * allowing us to know if the change could disrupt existing user sessions.
      */
-    case class ActiveKey(toleratingOldKey: Boolean, newKeyAlreadyAccepted: Boolean) {
-      val isBreakingChange: Boolean = !(toleratingOldKey && newKeyAlreadyAccepted)
-      val summary: String = s"Active key changed: ${if (isBreakingChange) s"BREAKING - old-tolerated=$toleratingOldKey new-already-accepted=$newKeyAlreadyAccepted" else "non-breaking"}"
+    case class ActiveKey(oldId: KeyHashId, newId: KeyHashId, failedTransitionCriteria: Seq[TransitionCriteria]) {
+      val isBreakingChange: Boolean = failedTransitionCriteria.nonEmpty
+      val summary: String = s"Active key changed from $oldId to $newId${if (isBreakingChange) s" (FAILED transition criteria: ${failedTransitionCriteria.mkString(", ")})" else ""}."
+    }
+
+    object ActiveKey {
+      sealed trait TransitionCriteria {
+        def passes(oldConf: Verification, newConf: Verification): Boolean
+      }
+      case object TolerateOldKey extends TransitionCriteria {
+        override def passes(oldConf: Verification, newConf: Verification): Boolean = newConf.acceptsActiveKeyFrom(oldConf)
+      }
+      case object PreAcceptNewKey extends TransitionCriteria {
+        override def passes(oldConf: Verification, newConf: Verification): Boolean = oldConf.acceptsActiveKeyFrom(newConf)
+      }
+      object TransitionCriteria {
+        val All: Seq[TransitionCriteria] = Seq(TolerateOldKey, PreAcceptNewKey)
+        def failedCriteriaFor(oldConf: Verification, newConf: Verification): Seq[TransitionCriteria] =
+          All.filterNot(_.passes(oldConf, newConf))
+      }
     }
   }
 
@@ -101,13 +136,15 @@ object CryptoConf {
    * CryptoConf.Change denotes that there's been a change to the crypto settings. If the active key
    * has changed, we'll have a CryptoConf.Change.ActiveKey detailing if the update is safe.
    */
-  case class Change(activeKey: Option[Change.ActiveKey], acceptedKeys: SeqDiff[PublicKey]) {
+  case class Change(activeKey: Option[Change.ActiveKey], alsoAcceptedKeys: Seq[KeyHashId], alsoAcceptedKeysDiff: SeqDiff[KeyHashId]) {
     val isBreakingChange: Boolean = activeKey.exists(_.isBreakingChange)
-    val summary: String = (activeKey.map(_.summary).toSeq :+ s"acceptedKeys: ${acceptedKeys.summary}").mkString(" ")
+    val summary: String = (activeKey.map(_.summary).toSeq :+ s"alsoAcceptedKeys: ${conciseList(alsoAcceptedKeys)} (${alsoAcceptedKeysDiff.summary})").mkString(" ")
   }
 
+  private def conciseList[T](s: Seq[T]): String = s.mkString("[", ",", "]")
+
   case class SeqDiff[T](added: Seq[T], removed: Seq[T]) {
-    val summary: String = s"added ${added.size}, removed ${removed.size}"
+    val summary: String = s"added ${conciseList(added)}, removed ${conciseList(removed)}"
   }
   object SeqDiff {
     def compare[T](oldItems: Seq[T], newItems: Seq[T]): SeqDiff[T] =
