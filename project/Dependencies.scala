@@ -10,7 +10,7 @@ object Dependencies {
     groupId: String,
     exactPlayVersion: String
   ) {
-    val projectIdSuffix = s"-play_$majorVersion-$minorVersion"
+    val suffix = s"play_$majorVersion-$minorVersion"
 
     val playLibs: Seq[ModuleID] =
       Seq("play", "play-ws").map(artifact => groupId %% artifact % exactPlayVersion)
