@@ -15,6 +15,7 @@ dist
 /RUNNING_PID
 /.settings
 /settings
+.DS_Store
 
 */conf/local.conf
 */conf/devtoprod.conf
