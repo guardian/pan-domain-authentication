@@ -4,20 +4,39 @@ import com.gu.pandomainauth.model._
 import com.gu.pandomainauth.service.CookieUtils
 import com.gu.pandomainauth.service.CryptoConf.Verification
 
+import java.time.Duration
+import java.time.Duration.ofHours
+
 
 object PanDomain {
+
+  /**
+   * Adding an expiry extension to `APIAuthAction`s allows for a delay between an applications authentication and their
+   * respective API XHR calls expiring.
+   *
+   * By default this is 23 hours, meaning API calls will start failing
+   * 24 hours after a cookie is issued (1 hour expiry + 23 hours grace).
+   * This is to avoid users having to do a disruptive re-auth within a working day.
+   *
+   * This is particularly useful for SPAs where users have third party cookies disabled.
+   *
+   * @return the amount of delay between App and API expiry
+   */
+  val DefaultApiGracePeriod: Duration = ofHours(23)
+
   /**
    * Check the authentication status of the provided credentials by examining the signed cookie data.
    */
   def authStatus(cookieData: String, verification: Verification, validateUser: AuthenticatedUser => Boolean,
-                 apiGracePeriod: Long, system: String, cacheValidation: Boolean, forceExpiry: Boolean): AuthenticationStatus = {
+                 system: String, cacheValidation: Boolean, forceExpiry: Boolean,
+                 apiGracePeriod: Duration = DefaultApiGracePeriod): AuthenticationStatus = {
     CookieUtils.parseCookieData(cookieData, verification).fold(InvalidCookie, { authedUser =>
       checkStatus(authedUser, validateUser, apiGracePeriod, system, cacheValidation, forceExpiry)
     })
   }
 
   private def checkStatus(authedUser: AuthenticatedUser, validateUser: AuthenticatedUser => Boolean,
-                          apiGracePeriod: Long, system: String, cacheValidation: Boolean,
+                          apiGracePeriod: Duration, system: String, cacheValidation: Boolean,
                           forceExpiry: Boolean): AuthenticationStatus = {
 
     if (authedUser.isExpired && authedUser.isInGracePeriod(apiGracePeriod)) {

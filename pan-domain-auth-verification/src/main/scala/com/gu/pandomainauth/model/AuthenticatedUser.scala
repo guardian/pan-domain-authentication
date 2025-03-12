@@ -1,9 +1,10 @@
 package com.gu.pandomainauth.model
 
-import java.util.Date
+import java.time.{Duration, Instant}
+import scala.math.Ordering.Implicits._
 
-case class AuthenticatedUser(user: User, authenticatingSystem: String, authenticatedIn: Set[String], expires: Long, multiFactor: Boolean) {
+case class AuthenticatedUser(user: User, authenticatingSystem: String, authenticatedIn: Set[String], expires: Instant, multiFactor: Boolean) {
 
-  def isExpired = expires < new Date().getTime
-  def isInGracePeriod(period: Long) = (expires + period) > new Date().getTime
+  def isExpired = Instant.now() > expires
+  def isInGracePeriod(period: Duration) = Instant.now() < (expires plus period)
 }

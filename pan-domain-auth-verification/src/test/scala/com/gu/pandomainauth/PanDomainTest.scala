@@ -1,12 +1,17 @@
 package com.gu.pandomainauth
 
 import com.gu.pandomainauth.model._
-import com.gu.pandomainauth.service.CookieUtils
+import com.gu.pandomainauth.service.{CookiePayload, CookieUtils}
+import com.gu.pandomainauth.service.CookieUtils.parseCookieData
 import com.gu.pandomainauth.service.CryptoConf.OnlyVerification
 import org.scalatest.Inside
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
+import java.time.Duration.ofHours
+import java.time.temporal.ChronoUnit
+import java.time.temporal.ChronoUnit.MILLIS
+import java.time.{Duration, Instant}
 import java.util.Date
 
 class PanDomainTest extends AnyFreeSpec with Matchers with Inside {
@@ -16,20 +21,29 @@ class PanDomainTest extends AnyFreeSpec with Matchers with Inside {
   def authStatus(
     cookieData: String,
     validateUser: AuthenticatedUser => Boolean = _ => true,
-    apiGracePeriod: Long = 0,
     system: String = "testsuite",
     cacheValidation: Boolean = false,
     forceExpiry: Boolean = false,
-  ) = PanDomain.authStatus(cookieData, OnlyVerification(testPublicKey.key), validateUser, apiGracePeriod, system, cacheValidation, forceExpiry)
+    apiGracePeriod: Duration = PanDomain.DefaultApiGracePeriod,
+  ) = PanDomain.authStatus(cookieData, OnlyVerification(testPublicKey.key), validateUser, system, cacheValidation, forceExpiry)
 
   "authStatus" - {
-    val authUser = AuthenticatedUser(User("test", "user", "test.user@example.com", None), "testsuite", Set("testsuite"), new Date().getTime + 86400, multiFactor = true)
+    val authUser = AuthenticatedUser(
+      User("test", "user", "test.user@example.com", None),
+      "testsuite",
+      Set("testsuite"),
+      // The expiry is serialised to millisecond accuracy
+      // so this needs to be at the same precision for comparison.
+      Instant.now().plusMillis(86400).truncatedTo(MILLIS),
+      multiFactor = true
+    )
     val validCookieData = CookieUtils.generateCookieData(authUser, signingWith(testPrivateKey.key))
 
     "returns `Authenticated` for valid cookie data that passes the validation check" in {
       def validateUser(au: AuthenticatedUser): Boolean = au.multiFactor && au.user.emailDomain == "example.com"
-      val cookieData = CookieUtils.generateCookieData(authUser, signingWith(testPrivateKey.key))
 
+      println(authUser)
+      val cookieData = CookieUtils.generateCookieData(authUser, signingWith(testPrivateKey.key))
       authStatus(cookieData, validateUser) shouldBe a [Authenticated]
     }
 
@@ -49,15 +63,15 @@ class PanDomainTest extends AnyFreeSpec with Matchers with Inside {
       authStatus(incorrectCookieData) shouldBe a [InvalidCookie]
     }
 
-    "returns `Expired` if the time is after the cookie's expiry" in {
-      val expiredAuthUser = authUser.copy(expires = new Date().getTime - 86400)
+    "returns `GracePeriod` if the time is after the cookie's expiry but within the grace period" in {
+      val expiredAuthUser = authUser.copy(expires = Instant.now() minus ofHours(1))
       val cookieData = CookieUtils.generateCookieData(expiredAuthUser, signingWith(testPrivateKey.key))
 
-      authStatus(cookieData) shouldBe a [Expired]
+      authStatus(cookieData) shouldBe a [GracePeriod]
     }
 
     "returns `Expired` if the cookie has expired and is outside the grace period" in {
-      val expiredAuthUser = authUser.copy(expires = new Date().getTime - 86400)
+      val expiredAuthUser = authUser.copy(expires = Instant.now() minus PanDomain.DefaultApiGracePeriod)
       val cookieData = CookieUtils.generateCookieData(expiredAuthUser, signingWith(testPrivateKey.key))
 
       authStatus(cookieData) shouldBe a [Expired]
@@ -69,10 +83,10 @@ class PanDomainTest extends AnyFreeSpec with Matchers with Inside {
     }
 
     "returns `GracePeriod` if the cookie has expired but is within the grace period" in {
-      val expiredAuthUser = authUser.copy(expires = new Date().getTime - 3000)
+      val expiredAuthUser = authUser.copy(expires = Instant.now().minusMillis(3000))
       val cookieData = CookieUtils.generateCookieData(expiredAuthUser, signingWith(testPrivateKey.key))
 
-      authStatus(cookieData, apiGracePeriod = 3600) shouldBe a [GracePeriod]
+      authStatus(cookieData, apiGracePeriod = Duration.ofMillis(3600)) shouldBe a [GracePeriod]
     }
 
     "returns `NotAuthorized` if the cookie does not pass the verification check" in {
@@ -121,7 +135,7 @@ class PanDomainTest extends AnyFreeSpec with Matchers with Inside {
   }
 
   "guardianValidation" - {
-    val validUser = AuthenticatedUser(User("example", "user", "example@guardian.co.uk", None), "tests", Set("tests"), new Date().getTime + 86400, multiFactor = true)
+    val validUser = AuthenticatedUser(User("example", "user", "example@guardian.co.uk", None), "tests", Set("tests"), Instant.now().plusMillis(86400), multiFactor = true)
 
     "returns true for a multi-factor user with a Guardian email address" in {
       PanDomain.guardianValidation(validUser) should equal(true)
