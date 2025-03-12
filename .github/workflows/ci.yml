@@ -17,6 +17,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - uses: guardian/setup-scala@v1
-
-      - name: Scala Build
-        run: sbt clean +test
+      - name: Build and Test
+        run: sbt -v clean +test
+      - name: Test Summary
+        uses: test-summary/action@v2
+        with:
+          paths: "test-results/**/TEST-*.xml"
+        if: always()
