@@ -34,8 +34,7 @@ lazy val panDomainAuthVerification = subproject("pan-domain-auth-verification")
       ++= cryptoDependencies
       ++ awsDependencies
       ++ testDependencies
-      ++ loggingDependencies
-      :+ scalaCollectionCompat,
+      ++ loggingDependencies,
   )
 
 lazy val panDomainAuthCore = subproject("pan-domain-auth-core")
@@ -45,8 +44,7 @@ lazy val panDomainAuthCore = subproject("pan-domain-auth-core")
       ++= awsDependencies
       ++ googleDirectoryApiDependencies
       ++ cryptoDependencies
-      ++ testDependencies
-      :+ scalaCollectionCompat,
+      ++ testDependencies,
   )
 
 def playBasedProject(playVersion: PlayVersion, projectPrefix: String, srcFolder: String) =
@@ -56,7 +54,7 @@ def playBasedProject(playVersion: PlayVersion, projectPrefix: String, srcFolder:
 
 def playSupportFor(playVersion: PlayVersion) =
   playBasedProject(playVersion, "pan-domain-auth", "pan-domain-auth-play").settings(
-    libraryDependencies ++= playVersion.playLibs :+ scalaCollectionCompat
+    libraryDependencies ++= playVersion.playLibs
   ).dependsOn(panDomainAuthCore)
 
 def hmacPlayProject(playVersion: PlayVersion, playSupportProject: Project) =

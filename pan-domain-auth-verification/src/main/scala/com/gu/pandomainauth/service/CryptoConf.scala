@@ -9,8 +9,6 @@ import org.apache.commons.codec.binary.Base64.{decodeBase64, isBase64}
 import java.security.spec.{InvalidKeySpecException, KeySpec, PKCS8EncodedKeySpec, X509EncodedKeySpec}
 import java.security.{KeyFactory, PrivateKey, PublicKey}
 import scala.util.Try
-import scala.collection.compat._
-import immutable.LazyList
 
 object CryptoConf {
   trait Signing {
