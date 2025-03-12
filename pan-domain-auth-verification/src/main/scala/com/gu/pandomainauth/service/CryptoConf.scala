@@ -9,8 +9,6 @@ import org.apache.commons.codec.binary.Base64.{decodeBase64, isBase64}
 import java.security.spec.{InvalidKeySpecException, KeySpec, PKCS8EncodedKeySpec, X509EncodedKeySpec}
 import java.security.{KeyFactory, PrivateKey, PublicKey}
 import scala.util.Try
-import scala.collection.compat._
-import immutable.LazyList
 
 object CryptoConf {
   trait Signing {
@@ -38,8 +36,8 @@ object CryptoConf {
   case class SettingsReader(settingMap: Map[String,String]) {
     def setting(key: String): SettingsResult[String] = settingMap.get(key).toRight(MissingSetting(key))
 
-    def signingAndVerificationConf: SettingsResult[SigningAndVerification] = makeConfWith(activeKeyPair)(SigningAndVerification)
-    def verificationConf: SettingsResult[Verification] = makeConfWith(activePublicKey)(OnlyVerification)
+    def signingAndVerificationConf: SettingsResult[SigningAndVerification] = makeConfWith(activeKeyPair)(SigningAndVerification(_, _))
+    def verificationConf: SettingsResult[Verification] = makeConfWith(activePublicKey)(OnlyVerification(_, _))
 
     val activePublicKey: SettingsResult[PublicKey] = setting("publicKey").flatMap(publicKeyFor)
 

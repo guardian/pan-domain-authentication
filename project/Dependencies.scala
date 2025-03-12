@@ -4,33 +4,24 @@ object Dependencies {
 
   val awsDependencies = Seq("com.amazonaws" % "aws-java-sdk-s3" % "1.12.772")
 
-  val playLibs_2_8 = {
-    val version = "2.8.19"
-    Seq(
-      "com.typesafe.play" %% "play" % version % "provided",
-      "com.typesafe.play" %% "play-ws" % version % "provided"
-    )
+  case class PlayVersion(
+    majorVersion: Int,
+    minorVersion: Int,
+    groupId: String,
+    exactPlayVersion: String
+  ) {
+    val projectIdSuffix = s"-play_$majorVersion-$minorVersion"
+
+    val playLibs: Seq[ModuleID] =
+      Seq("play", "play-ws").map(artifact => groupId %% artifact % exactPlayVersion)
   }
 
-  val playLibs_2_9 = {
-    val version = "2.9.0"
-    Seq(
-      "com.typesafe.play" %% "play" % version % "provided",
-      "com.typesafe.play" %% "play-ws" % version % "provided"
-    )
+  object PlayVersion {
+    val V29 = PlayVersion(2, 9, "com.typesafe.play", "2.9.6")
+    val V30 = PlayVersion(3, 0, "org.playframework", "3.0.6")
   }
 
-  val playLibs_3_0 = {
-    val version = "3.0.0"
-    Seq(
-      "org.playframework" %% "play" % version % "provided",
-      "org.playframework" %% "play-ws" % version % "provided"
-    )
-  }
-
-  val hmacLibs = Seq(
-    "com.gu" %% "hmac-headers" % "2.0.1"
-  )
+  val hmacHeaders = "com.gu" %% "hmac-headers" % "2.0.1"
 
   val googleDirectoryApiDependencies = Seq(
     "com.google.apis" % "google-api-services-admin-directory" % "directory_v1-rev20240903-2.0.0",
@@ -47,7 +38,4 @@ object Dependencies {
 
   val loggingDependencies = Seq("org.slf4j" % "slf4j-api" % "1.7.36")
 
-  // provide compatibility between scala 2.12 and 2.13
-  // see https://github.com/scala/scala-collection-compat/issues/208
-  val scalaCollectionCompatDependencies = Seq("org.scala-lang.modules" %% "scala-collection-compat" % "2.12.0")
 }
