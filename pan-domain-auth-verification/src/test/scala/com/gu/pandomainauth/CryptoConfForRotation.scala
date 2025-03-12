@@ -2,7 +2,7 @@ package com.gu.pandomainauth
 
 import com.gu.pandomainauth.service.CryptoConf.SigningAndVerification
 import com.gu.pandomainauth.service.{CryptoConf, KeyPair}
-import org.scalatest.EitherValues
+import org.scalatest.EitherValues.*
 
 import java.io.FileInputStream
 import java.nio.file.Files
@@ -14,7 +14,7 @@ import java.time.temporal.ChronoUnit.SECONDS
 import java.util.Base64
 
 /**
- * This class can be run from the sbt console with `pan-domain-auth-verification / Test / run`.
+ * This function can be run from the sbt console with `pan-domain-auth-verification / Test / run`.
  *
  * You need to supply the _current_ Panda .settings file as the command line argument, eg:
  *
@@ -23,13 +23,11 @@ import java.util.Base64
  * settings
  * }}}
  */
-object CryptoConfForRotation extends App with EitherValues {
+@main def run(settingsFilePath: String) = {
 
   val base64Encoder = Base64.getEncoder
 
-  args.headOption.fold(
-    Console.err.println("\nYou must supply the path to the current Panda .settings file, downloaded from S3.\n")
-  )(generateForExistingConf)
+  generateForExistingConf(settingsFilePath)
 
   def generateForExistingConf(pathForCurrentConf: String): Unit = {
     val keyPairGenerator: KeyPairGenerator = {
