@@ -11,14 +11,22 @@ import java.time.Duration.ofHours
 object PanDomain {
 
   /**
-   * Adding an expiry extension to `APIAuthAction`s allows for a delay between an applications authentication and their
-   * respective API XHR calls expiring.
+   * The Panda cookie expires after one hour, and top-level navigation that
+   * requests HTML will trigger a re-auth and refresh the session after this point.
    *
-   * By default this is 23 hours, meaning API calls will start failing
-   * 24 hours after a cookie is issued (1 hour expiry + 23 hours grace).
-   * This is to avoid users having to do a disruptive re-auth within a working day.
+   * However, fetch requests to API endpoints are unable to do this re-auth,
+   * and mechanisms for refreshing in the background without top-level nav or popups
+   * (such as iframes) are increasingly locked down by third-party cookie restrictions.
    *
-   * This is particularly useful for SPAs where users have third party cookies disabled.
+   * So for API requests, we provide a further 23 hours grace period within which requests
+   * will continue to work, and the app UI should signal to the user that they need
+   * to refresh the page to re-auth.
+   *
+   * Panda cookie:  issued       expires
+   *                |-- 1 hour --|
+   * Grace period:               [------------- 23 hours -------------]
+   * API request:   [-succeeds----------------------------------------][-fails---->
+   * Top-level nav: [-succeeds--][-fails-but-would-trigger-re-auth---------------->
    *
    * @return the amount of delay between App and API expiry
    */
