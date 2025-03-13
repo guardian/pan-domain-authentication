@@ -42,7 +42,6 @@ class PanDomainTest extends AnyFreeSpec with Matchers with Inside {
     "returns `Authenticated` for valid cookie data that passes the validation check" in {
       def validateUser(au: AuthenticatedUser): Boolean = au.multiFactor && au.user.emailDomain == "example.com"
 
-      println(authUser)
       val cookieData = CookieUtils.generateCookieData(authUser, signingWith(testPrivateKey.key))
       authStatus(cookieData, validateUser) shouldBe a [Authenticated]
     }
