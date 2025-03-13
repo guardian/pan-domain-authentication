@@ -96,7 +96,7 @@ class PanDomainTest extends AnyFreeSpec with Matchers with Inside {
 
     "returns `GracePeriod` if the cookie has expired but is within a custom grace period" in {
       val customGracePeriod = ofHours(2)
-      // The cookie expired 21 hour and 59 minutes ago.
+      // The cookie expired 1 hour and 59 minutes ago.
       // Therefore, we have one minute left of the grace period.
       val expiredAuthUser = authUser.copy(expires = now() minus customGracePeriod.minusMinutes(1))
       val cookieData = CookieUtils.generateCookieData(expiredAuthUser, signingWith(testPrivateKey.key))
