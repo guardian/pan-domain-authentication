@@ -3,16 +3,14 @@ package com.gu.pandomainauth.service
 import com.gu.pandomainauth.model.{AuthenticatedUser, User}
 import com.gu.pandomainauth.service.CookieUtils.CookieIntegrityFailure.{MalformedCookieText, SignatureNotValid}
 import com.gu.pandomainauth.service.CookieUtils.{deserializeAuthenticatedUser, parseCookieData, serializeAuthenticatedUser}
-import com.gu.pandomainauth.service.CryptoConf.{OnlyVerification, Signing}
+import com.gu.pandomainauth.service.CryptoConf.OnlyVerification
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.{EitherValues, OptionValues}
 
-import java.security.PrivateKey
+import java.time.Duration.ofHours
 import java.time.Instant
-import java.time.temporal.ChronoUnit
 import java.time.temporal.ChronoUnit.MILLIS
-import java.util.Date
 
 
 class CookieUtilsTest extends AnyFreeSpec with Matchers with EitherValues with OptionValues {
@@ -25,7 +23,7 @@ class CookieUtilsTest extends AnyFreeSpec with Matchers with EitherValues with O
       "another"),
     // The expiry is serialised to millisecond accuracy
     // so this needs to be at the same precision for comparison.
-    Instant.now().plusMillis(86400).truncatedTo(MILLIS),
+    Instant.now().plus(ofHours(1)).truncatedTo(MILLIS),
     multiFactor = true
   )
 

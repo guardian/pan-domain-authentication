@@ -41,7 +41,7 @@ class PanDomainTest extends AnyFreeSpec with Matchers with Inside {
       Set("testsuite"),
       // The expiry is serialised to millisecond accuracy
       // so this needs to be at the same precision for comparison.
-      now().plusMillis(86400).truncatedTo(MILLIS),
+      now().plus(ofHours(1)).truncatedTo(MILLIS),
       multiFactor = true
     )
     val validCookieData = CookieUtils.generateCookieData(authUser, signingWith(testPrivateKey.key))
@@ -70,7 +70,8 @@ class PanDomainTest extends AnyFreeSpec with Matchers with Inside {
     }
 
     "returns `Expired` if the cookie has expired and is outside the default grace period" in {
-      // We are one minute after the end of the grace period
+      // The cookie expired 23 hours and 1 minute ago.
+      // Therefore, we are one minute after the end of the grace period.
       val expiredAuthUser = authUser.copy(expires = now() minus PanDomain.DefaultApiGracePeriod.plusMinutes(1))
       val cookieData = CookieUtils.generateCookieData(expiredAuthUser, signingWith(testPrivateKey.key))
 
@@ -79,7 +80,8 @@ class PanDomainTest extends AnyFreeSpec with Matchers with Inside {
 
     "returns `Expired` if the cookie has expired and is outside a custom grace period" in {
       val customGracePeriod = ofHours(2)
-      // We are one minute after the end of the grace period
+      // The cookie expired 2 hours and 1 minute ago.
+      // Therefore, we are one minute after the end of the grace period.
       val expiredAuthUser = authUser.copy(expires = now() minus customGracePeriod.plusMinutes(1))
       val cookieData = CookieUtils.generateCookieData(expiredAuthUser, signingWith(testPrivateKey.key))
 
@@ -87,7 +89,8 @@ class PanDomainTest extends AnyFreeSpec with Matchers with Inside {
     }
 
     "returns `GracePeriod` if the cookie has expired but is within the default grace period" in {
-      // We have one minute left of the grace period
+      // The cookie expired 22 hour and 59 minutes ago.
+      // Therefore, we have one minute left of the grace period.
       val expiredAuthUser = authUser.copy(expires = now() minus PanDomain.DefaultApiGracePeriod.minusMinutes(1))
       val cookieData = CookieUtils.generateCookieData(expiredAuthUser, signingWith(testPrivateKey.key))
 
@@ -96,7 +99,8 @@ class PanDomainTest extends AnyFreeSpec with Matchers with Inside {
 
     "returns `GracePeriod` if the cookie has expired but is within a custom grace period" in {
       val customGracePeriod = ofHours(2)
-      // We have one minute left of the grace period
+      // The cookie expired 21 hour and 59 minutes ago.
+      // Therefore, we have one minute left of the grace period.
       val expiredAuthUser = authUser.copy(expires = now() minus customGracePeriod.minusMinutes(1))
       val cookieData = CookieUtils.generateCookieData(expiredAuthUser, signingWith(testPrivateKey.key))
 
@@ -155,7 +159,13 @@ class PanDomainTest extends AnyFreeSpec with Matchers with Inside {
   }
 
   "guardianValidation" - {
-    val validUser = AuthenticatedUser(User("example", "user", "example@guardian.co.uk", None), "tests", Set("tests"), now().plusMillis(86400), multiFactor = true)
+    val validUser = AuthenticatedUser(
+      User("example", "user", "example@guardian.co.uk", None),
+      authenticatingSystem = "tests",
+      authenticatedIn = Set("tests"),
+      expires = now().plus(ofHours(1)),
+      multiFactor = true
+    )
 
     "returns true for a multi-factor user with a Guardian email address" in {
       PanDomain.guardianValidation(validUser) should equal(true)
