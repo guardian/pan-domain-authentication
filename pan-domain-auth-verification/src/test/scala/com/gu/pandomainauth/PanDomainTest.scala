@@ -1,19 +1,16 @@
 package com.gu.pandomainauth
 
 import com.gu.pandomainauth.model._
-import com.gu.pandomainauth.service.{CookiePayload, CookieUtils}
-import com.gu.pandomainauth.service.CookieUtils.parseCookieData
+import com.gu.pandomainauth.service.CookieUtils
 import com.gu.pandomainauth.service.CryptoConf.OnlyVerification
 import org.scalatest.Inside
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
+import java.time.Duration
 import java.time.Duration.ofHours
 import java.time.Instant.now
-import java.time.temporal.ChronoUnit
 import java.time.temporal.ChronoUnit.MILLIS
-import java.time.{Duration, Instant}
-import java.util.Date
 
 class PanDomainTest extends AnyFreeSpec with Matchers with Inside {
   import com.gu.pandomainauth.service.TestKeys._

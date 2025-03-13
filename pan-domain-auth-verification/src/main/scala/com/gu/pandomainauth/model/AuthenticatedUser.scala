@@ -1,5 +1,6 @@
 package com.gu.pandomainauth.model
 
+import java.time.Instant.now
 import java.time.{Duration, Instant}
 import scala.math.Ordering.Implicits._
 
@@ -12,6 +13,6 @@ case class AuthenticatedUser(user: User, authenticatingSystem: String, authentic
   // issued ------------------------- fresh period over -------------------- grace period over
   // [--working-and-will-not-renew--------][---working-and-will-renew--------------------------][--not-working---]
 
-  def isExpired = Instant.now() > expires
-  def isInGracePeriod(period: Duration) = Instant.now() < (expires plus period)
+  def isExpired = now() > expires
+  def isInGracePeriod(period: Duration) = now() < (expires plus period)
 }

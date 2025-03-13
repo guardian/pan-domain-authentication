@@ -9,7 +9,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.{EitherValues, OptionValues}
 
 import java.time.Duration.ofHours
-import java.time.Instant
+import java.time.Instant.now
 import java.time.temporal.ChronoUnit.MILLIS
 
 
@@ -23,7 +23,7 @@ class CookieUtilsTest extends AnyFreeSpec with Matchers with EitherValues with O
       "another"),
     // The expiry is serialised to millisecond accuracy
     // so this needs to be at the same precision for comparison.
-    Instant.now().plus(ofHours(1)).truncatedTo(MILLIS),
+    now().plus(ofHours(1)).truncatedTo(MILLIS),
     multiFactor = true
   )
 
