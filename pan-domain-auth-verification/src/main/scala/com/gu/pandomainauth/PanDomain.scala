@@ -28,7 +28,7 @@ object PanDomain {
    * API request:   [-succeeds----------------------------------------][-fails---->
    * Top-level nav: [-succeeds--][-fails-but-would-trigger-re-auth---------------->
    *
-   * @return the amount of delay between App and API expiry
+   * @return delay between cookie expiry and API requests failing
    */
   val DefaultApiGracePeriod: Duration = ofHours(23)
 
