@@ -21,6 +21,7 @@ val commonSettings = Seq(
     "-deprecation",
     "-release:11"
   ),
+  libraryDependencies ++= testDependencies,
   Test / testOptions +=
     Tests.Argument(TestFrameworks.ScalaTest, "-u", s"test-results/scala-${scalaVersion.value}", "-o")
 )
@@ -48,7 +49,7 @@ lazy val panDomainAuthCore = subproject("pan-domain-auth-core")
   )
 
 def playBasedProject(playVersion: PlayVersion, projectPrefix: String, srcFolder: String) =
-  subproject(s"$projectPrefix${playVersion.projectIdSuffix}").settings(
+  subproject(s"$projectPrefix-${playVersion.suffix}").settings(
     sourceDirectory := (ThisBuild / baseDirectory).value / srcFolder / "src"
   )
 
@@ -57,10 +58,15 @@ def playSupportFor(playVersion: PlayVersion) =
     libraryDependencies ++= playVersion.playLibs
   ).dependsOn(panDomainAuthCore)
 
+lazy val panDomainAuthHmac = Project(s"panda-hmac-core", file("hmac/core")).settings(commonSettings).settings(
+  libraryDependencies += hmacHeaders
+)
+
 def hmacPlayProject(playVersion: PlayVersion, playSupportProject: Project) =
-  playBasedProject(playVersion, "panda-hmac", "pan-domain-auth-hmac").settings(
+  Project(s"panda-hmac-${playVersion.suffix}", file(s"hmac/play/${playVersion.suffix}"))
+    .settings(commonSettings).settings(
     libraryDependencies ++= hmacHeaders +: testDependencies
-  ).dependsOn(playSupportProject)
+  ).dependsOn(playSupportProject, panDomainAuthHmac)
 
 lazy val panDomainAuthPlay_2_9 = playSupportFor(PlayVersion.V29)
 lazy val panDomainAuthHmac_2_9 = hmacPlayProject(PlayVersion.V29, panDomainAuthPlay_2_9)
@@ -82,12 +88,13 @@ lazy val root = Project("pan-domain-auth-root", file(".")).aggregate(
   panDomainAuthCore,
   panDomainAuthPlay_2_9,
   panDomainAuthPlay_3_0,
+  panDomainAuthHmac,
   panDomainAuthHmac_2_9,
   panDomainAuthHmac_3_0,
   exampleApp
 ).settings(
   publish / skip := true,
-  releaseVersion := ReleaseVersion.fromAggregatedAssessedCompatibilityWithLatestRelease().value,
+  // releaseVersion := ReleaseVersion.fromAggregatedAssessedCompatibilityWithLatestRelease().value,
   releaseCrossBuild := true, // true if you cross-build the project for multiple Scala versions
   releaseProcess := Seq[ReleaseStep](
     checkSnapshotDependencies,
