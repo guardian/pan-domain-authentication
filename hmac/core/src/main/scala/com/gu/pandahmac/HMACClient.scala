@@ -4,9 +4,6 @@ import com.gu.hmac.HMACHeaders
 
 import java.net.URI
 
-/**
- * This class is used across several Guardian projects: `flexible-content`, `workflow`, `typerighter`, etc.
- */
 class HMACClient(app: String, stage: String, secretKey: String) extends HMACHeaders {
   def secret: String = secretKey
 
