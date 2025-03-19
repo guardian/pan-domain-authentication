@@ -17,7 +17,7 @@ object Dependencies {
   }
 
   object PlayVersion {
-    val V29 = PlayVersion(2, 9, "com.typesafe.play", "2.9.6")
+    val V29 = PlayVersion(2, 9, "com.typesafe.play", "2.9.7")
     val V30 = PlayVersion(3, 0, "org.playframework", "3.0.6")
   }
 
