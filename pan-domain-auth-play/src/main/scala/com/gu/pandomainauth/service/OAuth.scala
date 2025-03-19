@@ -8,6 +8,7 @@ import play.api.mvc.{RequestHeader, Result}
 
 import java.math.BigInteger
 import java.security.SecureRandom
+import java.time.Instant
 import java.util.concurrent.atomic.AtomicReference
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
@@ -96,8 +97,8 @@ class OAuth(config: OAuthSettings, system: String, redirectUrl: String)(implicit
                   ),
                   authenticatingSystem = system,
                   authenticatedIn = Set(system),
-                  jwt.claims.exp * 1000,
-                  false
+                  expires = Instant.ofEpochSecond(jwt.claims.exp), // https://stackoverflow.com/a/39926886/438886
+                  multiFactor = false
                 )
               }
             }

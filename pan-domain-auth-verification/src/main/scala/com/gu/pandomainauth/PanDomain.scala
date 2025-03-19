@@ -4,20 +4,22 @@ import com.gu.pandomainauth.model._
 import com.gu.pandomainauth.service.CookieUtils
 import com.gu.pandomainauth.service.CryptoConf.Verification
 
+import java.time.Duration
+
 
 object PanDomain {
   /**
    * Check the authentication status of the provided credentials by examining the signed cookie data.
    */
   def authStatus(cookieData: String, verification: Verification, validateUser: AuthenticatedUser => Boolean,
-                 apiGracePeriod: Long, system: String, cacheValidation: Boolean, forceExpiry: Boolean): AuthenticationStatus = {
+                 apiGracePeriod: Duration, system: String, cacheValidation: Boolean, forceExpiry: Boolean): AuthenticationStatus = {
     CookieUtils.parseCookieData(cookieData, verification).fold(InvalidCookie(_), { authedUser =>
       checkStatus(authedUser, validateUser, apiGracePeriod, system, cacheValidation, forceExpiry)
     })
   }
 
   private def checkStatus(authedUser: AuthenticatedUser, validateUser: AuthenticatedUser => Boolean,
-                          apiGracePeriod: Long, system: String, cacheValidation: Boolean,
+                          apiGracePeriod: Duration, system: String, cacheValidation: Boolean,
                           forceExpiry: Boolean): AuthenticationStatus = {
 
     if (authedUser.isExpired && authedUser.isInGracePeriod(apiGracePeriod)) {

@@ -9,6 +9,8 @@ import play.api.mvc.Results._
 import play.api.mvc._
 
 import java.net.{URLDecoder, URLEncoder}
+import java.time.Duration
+import java.time.Duration.ZERO
 import scala.concurrent.{ExecutionContext, Future}
 
 class UserRequest[A](val user: User, request: Request[A]) extends WrappedRequest[A](request)
@@ -71,7 +73,7 @@ trait AuthActions {
     *
     * @return the amount of delay between App and API expiry in milliseconds
     */
-  def apiGracePeriod: Long = 0 // ms
+  def apiGracePeriod: Duration = ZERO
 
   /**
     * The auth callback url. This is where the OAuth provider will send the user after authentication.
