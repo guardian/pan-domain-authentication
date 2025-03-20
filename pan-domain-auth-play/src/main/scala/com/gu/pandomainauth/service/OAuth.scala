@@ -97,7 +97,11 @@ class OAuth(config: OAuthSettings, system: String, redirectUrl: String)(implicit
                   ),
                   authenticatingSystem = system,
                   authenticatedIn = Set(system),
-                  expires = Instant.ofEpochSecond(jwt.claims.exp), // https://stackoverflow.com/a/39926886/438886
+                  // The JWT standard specifies that `exp` is a `NumericDate`,
+                  // which is defined as an epoch time in *seconds*
+                  // (unlike the Panda cookie `expires` which is in milliseconds)
+                  // https://www.rfc-editor.org/rfc/rfc7519#section-4.1.4
+                  expires = Instant.ofEpochSecond(jwt.claims.exp),
                   multiFactor = false
                 )
               }
