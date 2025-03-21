@@ -9,8 +9,6 @@ import play.api.mvc.Results._
 import play.api.mvc._
 
 import java.net.{URLDecoder, URLEncoder}
-import java.time.Duration
-import java.time.Duration.ZERO
 import scala.concurrent.{ExecutionContext, Future}
 
 class UserRequest[A](val user: User, request: Request[A]) extends WrappedRequest[A](request)
@@ -62,18 +60,6 @@ trait AuthActions {
     * @return true if you want to only check the validity of the user once for the lifetime of the user's auth session
     */
   def cacheValidation: Boolean = false
-
-  /**
-    * Adding an expiry extension to `APIAuthAction`s allows for a delay between an applications authentication and their
-    * respective API XHR calls expiring.
-    *
-    * By default this is 0 and thus disabled.
-    *
-    * This is particularly useful for SPAs where users have third party cookies disabled.
-    *
-    * @return the amount of delay between App and API expiry in milliseconds
-    */
-  def apiGracePeriod: Duration = ZERO
 
   /**
     * The auth callback url. This is where the OAuth provider will send the user after authentication.
@@ -237,7 +223,7 @@ trait AuthActions {
     */
   def extractAuth(request: RequestHeader): AuthenticationStatus = {
     readCookie(request).map { cookie =>
-      PanDomain.authStatus(cookie.cookie.value, settings.signingAndVerification, validateUser, apiGracePeriod, system, cacheValidation, cookie.forceExpiry)
+      PanDomain.authStatus(cookie.cookie.value, settings.signingAndVerification, validateUser, system, cacheValidation, cookie.forceExpiry)
     } getOrElse NotAuthenticated
   }
 

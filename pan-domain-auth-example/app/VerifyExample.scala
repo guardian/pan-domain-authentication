@@ -45,7 +45,7 @@ object VerifyExample {
   val cacheValidation = false
 
   // To verify, call the authStatus method with the encoded cookie data
-  val status = PanDomain.authStatus("<<cookie data>>>", verification, validateUser, apiGracePeriod, system, cacheValidation, forceExpiry = false)
+  val status = PanDomain.authStatus("<<cookie data>>>", verification, validateUser, system, cacheValidation, forceExpiry = false)
 
   status match {
     case Authenticated(_) | GracePeriod(_) =>
