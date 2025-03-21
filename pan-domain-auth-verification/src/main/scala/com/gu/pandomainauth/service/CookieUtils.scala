@@ -4,6 +4,7 @@ import com.gu.pandomainauth.model.{AuthenticatedUser, User}
 import com.gu.pandomainauth.service.CookieUtils.CookieIntegrityFailure.{MalformedCookieText, MissingOrMalformedUserData, SignatureNotValid}
 import com.gu.pandomainauth.service.CryptoConf.{Signing, Verification}
 
+import java.time.Instant
 import scala.util.Try
 
 object CookieUtils {
@@ -23,7 +24,7 @@ object CookieUtils {
       authUser.user.avatarUrl.map(a => s"&avatarUrl=$a").getOrElse("") +
       s"&system=${authUser.authenticatingSystem}" +
       s"&authedIn=${authUser.authenticatedIn.mkString(",")}" +
-      s"&expires=${authUser.expires}" +
+      s"&expires=${authUser.expires.toEpochMilli}" +
       s"&multifactor=${authUser.multiFactor}"
 
   private[service] def deserializeAuthenticatedUser(serializedForm: String): Option[AuthenticatedUser] = {
@@ -45,7 +46,7 @@ object CookieUtils {
       user = User(firstName, lastName, email, data.get("avatarUrl")),
       authenticatingSystem = system,
       authenticatedIn = Set(authedIn.split(",").toSeq :_*),
-      expires = expires,
+      expires = Instant.ofEpochMilli(expires),
       multiFactor = multiFactor
     )
   }

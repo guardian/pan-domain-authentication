@@ -6,6 +6,8 @@ import com.gu.pandomainauth.model.{Authenticated, AuthenticatedUser, GracePeriod
 import com.gu.pandomainauth.service.CryptoConf
 import com.gu.pandomainauth.{PanDomain, PublicSettings, Settings}
 
+import java.time.Duration
+
 object VerifyExample {
   // Change this to point to the S3 bucket and key for the settings file
   val settingsFileKey = "local.dev-gutools.co.uk.settings.public"
@@ -29,7 +31,7 @@ object VerifyExample {
 
   // Adding a grace period allows for XHR requests to continue for a period if there a delay between a user expiring and
   // their re-authentication with the OAuth provider, especially if this is done by inserting an iframe client-side.
-  val apiGracePeriod = 0
+  val apiGracePeriod = Duration.ZERO
 
   // Check the user is valid for your app by inspecting the fields provided
   // The `PanDomain.guardianValidation` helper should be used for Guardian apps
