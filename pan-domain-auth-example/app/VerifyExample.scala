@@ -29,10 +29,6 @@ object VerifyExample {
   // The name of this particular application
   val system = "test"
 
-  // Adding a grace period allows for XHR requests to continue for a period if there a delay between a user expiring and
-  // their re-authentication with the OAuth provider, especially if this is done by inserting an iframe client-side.
-  val apiGracePeriod = Duration.ZERO
-
   // Check the user is valid for your app by inspecting the fields provided
   // The `PanDomain.guardianValidation` helper should be used for Guardian apps
   def validateUser(authUser: AuthenticatedUser): Boolean = {
@@ -45,7 +41,7 @@ object VerifyExample {
   val cacheValidation = false
 
   // To verify, call the authStatus method with the encoded cookie data
-  val status = PanDomain.authStatus("<<cookie data>>>", verification, validateUser, apiGracePeriod, system, cacheValidation, forceExpiry = false)
+  val status = PanDomain.authStatus("<<cookie data>>>", verification, validateUser, system, cacheValidation, forceExpiry = false)
 
   status match {
     case Authenticated(_) | GracePeriod(_) =>
