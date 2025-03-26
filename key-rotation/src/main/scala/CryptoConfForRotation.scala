@@ -1,8 +1,6 @@
-package com.gu.pandomainauth
-
+import com.gu.pandomainauth.Settings
 import com.gu.pandomainauth.service.CryptoConf.SigningAndVerification
 import com.gu.pandomainauth.service.{CryptoConf, KeyPair}
-import org.scalatest.EitherValues.*
 
 import java.io.FileInputStream
 import java.nio.file.Files
@@ -14,12 +12,12 @@ import java.time.temporal.ChronoUnit.SECONDS
 import java.util.Base64
 
 /**
- * This function can be run from the sbt console with `pan-domain-auth-verification / Test / run`.
+ * This function can be run from the sbt console with `key-rotation/run`.
  *
  * You need to supply the _current_ Panda .settings file as the command line argument, eg:
  *
  * {{{
- * pan-domain-auth-verification / Test / run pan-domain-auth-verification/src/test/resources/crypto-conf-rotation-example/0.legacy.
+ * key-rotation/run pan-domain-auth-verification/src/test/resources/crypto-conf-rotation-example/0.legacy.
  * settings
  * }}}
  */
@@ -46,7 +44,16 @@ import java.util.Base64
       _ => new FileInputStream(pathForCurrentConf),
       ""
     )
-    val originalConf = CryptoConf.SettingsReader(loader.loadAndParseSettingsMap().value).signingAndVerificationConf.value
+
+    val originalConfigOrFailure = loader.loadAndParseSettingsMap().flatMap(CryptoConf.SettingsReader(_).signingAndVerificationConf)
+
+    val originalConf = originalConfigOrFailure match {
+      case Right(conf) => conf
+      case Left(failure) =>
+        Console.err.println(failure.description)
+        sys.exit(1)
+    }
+
     val rotationInProgressConf = originalConf.copy(activeKeyPair = newTargetKeyPair, alsoAccepted = Seq(originalConf.activePublicKey))
 
     val tempDirWithPrefix = Files.createTempDirectory("panda-rotation")
@@ -74,7 +81,7 @@ import java.util.Base64
     ) ++ conf.alsoAccepted.zipWithIndex.map {
       case (key, index) => s"alsoAccept.$index.publicKey" -> base64For(key)
     }
-    assert(CryptoConf.SettingsReader(keyValues.toMap).signingAndVerificationConf.value == conf)
+    assert(CryptoConf.SettingsReader(keyValues.toMap).signingAndVerificationConf == Right(conf))
     keyValues.map {
       case (key, value) =>  s"$key=$value\n"
     }.mkString("\n")

@@ -32,7 +32,7 @@ trait FailureWithCause extends SettingsFailure {
 }
 
 case class SettingsDownloadFailure(cause: Throwable) extends FailureWithCause {
-  override val description: String = "Unable to download public key"
+  override val description: String = "Unable to access settings file"
 }
 
 case class MissingSetting(name: String) extends SettingsFailure {
