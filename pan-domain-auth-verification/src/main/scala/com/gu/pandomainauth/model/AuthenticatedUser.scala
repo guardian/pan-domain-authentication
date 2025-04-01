@@ -21,4 +21,7 @@ case class AuthenticatedUser(user: User, authenticatingSystem: String, authentic
 
   val cookieAge: CookieAge = CookieAge(expires)
 
+  def requiringAdditional(system: String): Option[AuthenticatedUser] = Option.when(!authenticatedIn(system))(copy(
+    authenticatedIn = authenticatedIn + system
+  ))
 }
