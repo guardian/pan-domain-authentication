@@ -21,4 +21,19 @@ case class AuthenticatedUser(user: User, authenticatingSystem: String, authentic
 
   val cookieAge: CookieAge = CookieAge(expires)
 
+  def requiringAdditional(system: String): Option[AuthenticatedUser] = 
+    Option.when(!authenticatedIn(system))(withAuthorisationIn(system))
+  
+  def withAuthorisationIn(system: String): AuthenticatedUser = copy(authenticatedIn = authenticatedIn + system)
+
+  def augmentWith(priorAuth: AuthenticationStatus): AuthenticatedUser = {
+    val authedSystemsFromPriorAuth: Set[String] = (priorAuth match {
+      case auth: AcceptableAuthForApiRequests => Some(auth.authedUser)
+      case _ => None
+    }).filter(_.user.email == user.email).toSet.flatMap[String](_.authenticatedIn)
+
+    copy(authenticatedIn = authenticatedIn ++ authedSystemsFromPriorAuth)
+  }
+
+  def isAuthorisedInMoreThan(systems: Set[String]): Boolean = authenticatedIn.exists(!systems.contains(_))
 }
