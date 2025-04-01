@@ -35,21 +35,20 @@ object PanDomain {
   /**
    * Check the authentication status of the provided credentials by examining the signed cookie data.
    */
-  def authStatus(cookieData: String, verification: Verification, validateUser: AuthenticatedUser => Boolean,
-                 system: String, cacheValidation: Boolean, forceExpiry: Boolean,
+  def authStatus(cookieData: String, verification: Verification, systemAuthorisation: SystemAuthorisation, forceExpiry: Boolean,
                  apiGracePeriod: Duration = DefaultApiGracePeriod): AuthenticationStatus = {
     CookieUtils.parseCookieData(cookieData, verification).fold(InvalidCookie(_), { authedUser =>
-      checkStatus(authedUser, validateUser, apiGracePeriod, system, cacheValidation, forceExpiry)
+      checkStatus(authedUser, systemAuthorisation, apiGracePeriod, forceExpiry)
     })
   }
 
-  private def checkStatus(authedUser: AuthenticatedUser, validateUser: AuthenticatedUser => Boolean,
-                          apiGracePeriod: Duration, system: String, cacheValidation: Boolean,
+  def checkStatus(authedUser: AuthenticatedUser, systemAuthorisation: SystemAuthorisation,
+                          apiGracePeriod: Duration,
                           forceExpiry: Boolean): AuthenticationStatus = {
     val cookieAge = authedUser.cookieAge
     
     if (!cookieAge.isAcceptable(apiGracePeriod) || forceExpiry) Expired(authedUser)
-    else if ((cacheValidation && authedUser.authenticatedIn(system)) || validateUser(authedUser)) {
+    else if (systemAuthorisation.isAuthorised(authedUser)) {
       if (cookieAge.isFresh()) Authenticated(authedUser) else GracePeriod(authedUser)
     } else NotAuthorized(authedUser)
   }

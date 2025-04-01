@@ -2,7 +2,7 @@ import software.amazon.awssdk.regions.Region
 import com.gu.pandomainauth.S3BucketLoader.forAwsSdkV2
 import com.gu.pandomainauth.model.{Authenticated, AuthenticatedUser, GracePeriod}
 import com.gu.pandomainauth.service.CryptoConf
-import com.gu.pandomainauth.{PanDomain, PublicSettings, Settings}
+import com.gu.pandomainauth.{PanDomain, PublicSettings, Settings, SystemAuthorisation}
 
 import java.time.Duration
 import software.amazon.awssdk.services.s3.S3Client
@@ -40,9 +40,11 @@ object VerifyExample {
   // only call the function when authentication is performed for the first time on this system. In other cases it should
   // be false.
   val cacheValidation = false
+  
+  val systemAuthorisation = SystemAuthorisation(system, validateUser, cacheValidation)
 
   // To verify, call the authStatus method with the encoded cookie data
-  val status = PanDomain.authStatus("<<cookie data>>>", verification, validateUser, system, cacheValidation, forceExpiry = false)
+  val status = PanDomain.authStatus("<<cookie data>>>", verification, systemAuthorisation, forceExpiry = false)
 
   status match {
     case Authenticated(_) | GracePeriod(_) =>

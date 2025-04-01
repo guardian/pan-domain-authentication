@@ -24,10 +24,13 @@ class PanDomainTest extends AnyFreeSpec with Matchers with Inside {
     // Don't force the tests to set a custom apiGracePeriod,
     // but also don't duplicate the default from the `PanDomain` library function.
     apiGracePeriod: Option[Duration] = None,
-  ) = apiGracePeriod match {
-    // Make sure we use the default parameter value for `gracePeriod` if the test has not explicitly set one
-    case Some(gracePeriod) => PanDomain.authStatus(cookieData, OnlyVerification(testPublicKey.key), validateUser, system, cacheValidation, forceExpiry, gracePeriod)
-    case None => PanDomain.authStatus(cookieData, OnlyVerification(testPublicKey.key), validateUser, system, cacheValidation, forceExpiry)
+  ) = {
+    val systemAuthorisation: SystemAuthorisation = SystemAuthorisation(system, validateUser, cacheValidation)
+    apiGracePeriod match {
+      // Make sure we use the default parameter value for `gracePeriod` if the test has not explicitly set one
+      case Some(gracePeriod) => PanDomain.authStatus(cookieData, OnlyVerification(testPublicKey.key), systemAuthorisation, forceExpiry, gracePeriod)
+      case None => PanDomain.authStatus(cookieData, OnlyVerification(testPublicKey.key), systemAuthorisation, forceExpiry)
+    }
   }
 
   "authStatus" - {
