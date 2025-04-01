@@ -1,16 +1,18 @@
 package com.gu.pandomainauth.service
 
+import com.gu.pandomainauth.oauth.DiscoveryDocument
 import play.api.libs.json._
 import play.api.libs.json.Reads._
 import play.api.libs.functional.syntax._
 import org.apache.commons.codec.binary.Base64
 
-case class DiscoveryDocument(authorization_endpoint: String, token_endpoint: String, userinfo_endpoint: String)
 object DiscoveryDocument {
   implicit val discoveryDocumentReads: Reads[DiscoveryDocument] = Json.reads[DiscoveryDocument]
   def fromJson(json: JsValue) = Json.fromJson[DiscoveryDocument](json).getOrElse(
     throw new IllegalArgumentException("Invalid discovery document")
   )
+
+  def fromString(str: String): DiscoveryDocument = fromJson(Json.parse(str))
 }
 
 case class Token(access_token:String, token_type:String, expires_in:Long, id_token:String) {
@@ -36,15 +38,19 @@ object JwtClaims {
   implicit val claimsReads: Reads[JwtClaims] = Json.reads[JwtClaims]
 }
 
+/*
+ * https://www.oauth.com/oauth2-servers/signing-in-with-google/verifying-the-user-info/
+ */
 case class UserInfo(sub: Option[String], name: String, given_name: String, family_name: String, profile: Option[String],
                     picture: Option[String], email: String, locale: Option[String], hd: Option[String])
 object UserInfo {
   implicit val userInfoReads: Reads[UserInfo] = Json.reads[UserInfo]
 
-  def fromJson(json:JsValue):UserInfo = {
+  def fromJson(json: JsValue): UserInfo = {
     json.as[UserInfo]
   }
 }
+
 
 case class JsonWebToken(jwt: String) {
   val jwtParts: Array[String] = jwt.split('.')

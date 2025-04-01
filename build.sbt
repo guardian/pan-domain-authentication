@@ -24,7 +24,10 @@ val artifactProductionSettings = Seq(
     "-feature",
     "-deprecation",
     "-release:11"
-  ),
+  ) ++ (CrossVersion.partialVersion(scalaVersion.value) match {
+    case Some((2, _)) => Seq("-Xsource:3") // flag only needed in Scala 2
+    case _ => Seq.empty
+  }),
 )
 
 def directSubfolderProject(path: String): Project = Project(path, file(path)).settings(commonSettings)
