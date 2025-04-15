@@ -169,7 +169,7 @@ the `CryptoConfForRotation` Scala script on that `.settings` file to generate a 
 required config files for each step:
 
 ```
-pan-domain-auth-verification / Test / runMain com.gu.pandomainauth.CryptoConfForRotation current-from-s3.settings
+key-rotation/run current-from-s3.settings
 ```
 
 3 new partial `.settings` files will be created, providing _just_ the updated crypto settings - you'll need to
