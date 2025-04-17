@@ -36,15 +36,19 @@ object JwtClaims {
   implicit val claimsReads: Reads[JwtClaims] = Json.reads[JwtClaims]
 }
 
+/*
+ * https://www.oauth.com/oauth2-servers/signing-in-with-google/verifying-the-user-info/
+ */
 case class UserInfo(sub: Option[String], name: String, given_name: String, family_name: String, profile: Option[String],
                     picture: Option[String], email: String, locale: Option[String], hd: Option[String])
 object UserInfo {
   implicit val userInfoReads: Reads[UserInfo] = Json.reads[UserInfo]
 
-  def fromJson(json:JsValue):UserInfo = {
+  def fromJson(json: JsValue): UserInfo = {
     json.as[UserInfo]
   }
 }
+
 
 case class JsonWebToken(jwt: String) {
   val jwtParts: Array[String] = jwt.split('.')

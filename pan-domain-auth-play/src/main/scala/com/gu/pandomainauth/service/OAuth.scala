@@ -1,16 +1,20 @@
 package com.gu.pandomainauth.service
 
 import com.gu.pandomainauth.model.{AuthenticatedUser, OAuthSettings, User}
+import org.apache.http.NameValuePair
+import org.apache.http.client.utils.URIBuilder
+import org.apache.http.message.BasicNameValuePair
 import play.api.libs.json.JsValue
 import play.api.libs.ws._
-import play.api.mvc.Results.Redirect
-import play.api.mvc.{RequestHeader, Result}
+import play.api.mvc.RequestHeader
 
 import java.math.BigInteger
+import java.net.URI
 import java.security.SecureRandom
 import java.time.Instant
 import java.util.concurrent.atomic.AtomicReference
 import scala.concurrent.{ExecutionContext, Future}
+import scala.jdk.CollectionConverters._
 import scala.language.postfixOps
 
 
@@ -51,21 +55,25 @@ class OAuth(config: OAuthSettings, system: String, redirectUrl: String)(implicit
     }
   }
 
-  def redirectToOAuthProvider(antiForgeryToken: String, email: Option[String] = None)
-                      (implicit context: ExecutionContext): Future[Result] = {
-    val queryString: Map[String, Seq[String]] = Map(
-      "client_id" -> Seq(config.clientId),
-      "response_type" -> Seq("code"),
-      "scope" -> Seq("openid email profile"),
-      "redirect_uri" -> Seq(redirectUrl),
-      "state" -> Seq(antiForgeryToken)
-    ) ++ email.map("login_hint" -> Seq(_)) ++ config.organizationDomain.map("hd" -> Seq(_))
+  def redirectToOAuthProvider(antiForgeryToken: String, email: Option[String] = None): Future[URI] = {
+    val queryString: Map[String, String] = Map(
+      "client_id" -> config.clientId,
+      "response_type" -> "code",
+      "scope" -> "openid email profile",
+      "redirect_uri" -> redirectUrl,
+      "state" -> antiForgeryToken
+    ) ++ email.map("login_hint" -> _) ++ config.organizationDomain.map("hd" -> _)
 
-    discoveryDocument.map(dd => Redirect(s"${dd.authorization_endpoint}", queryString))
+    discoveryDocument.map {
+      dd =>
+        new URIBuilder(dd.authorization_endpoint).addParameters(queryString.map {
+          case (k, v) => new BasicNameValuePair(k, v) : NameValuePair
+        }.toBuffer.asJava).build()
+    }
   }
 
   def validatedUserIdentity(expectedAntiForgeryToken: String)
-                           (implicit request: RequestHeader, context: ExecutionContext, ws: WSClient): Future[AuthenticatedUser] = {
+                           (implicit request: RequestHeader, ws: WSClient): Future[AuthenticatedUser] = {
     if (!request.queryString.getOrElse("state", Nil).contains(expectedAntiForgeryToken)) {
       throw new IllegalArgumentException("The anti forgery token did not match")
     } else {
@@ -111,4 +119,5 @@ class OAuth(config: OAuthSettings, system: String, redirectUrl: String)(implicit
       }
     }
   }
+
 }
