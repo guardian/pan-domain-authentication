@@ -42,7 +42,7 @@ lazy val panDomainAuthCore = directSubfolderProject("pan-domain-auth-core")
   .dependsOn(panDomainAuthVerification)
   .settings(
     artifactProductionSettings,
-    libraryDependencies ++= googleDirectoryApiDependencies
+    libraryDependencies ++= googleDirectoryApiDependencies :+ "org.typelevel" %% "cats-core" % "2.13.0"
   )
 
 def playSupportFor(playVersion: PlayVersion) = directSubfolderProject(s"pan-domain-auth-${playVersion.suffix}")

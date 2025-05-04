@@ -1,5 +1,7 @@
 package com.gu.pandomainauth
 
+import cats._
+import cats.syntax.all._
 import com.gu.pandomainauth.ApiResponse.{DisallowApiAccess, HttpStatusCode}
 import com.gu.pandomainauth.PageRequestHandlingStrategy.{ANTI_FORGERY_KEY, LOGIN_ORIGIN_KEY, TemporaryCookiesUsedForOAuth}
 import com.gu.pandomainauth.ResponseModification.NoResponseModification
@@ -98,78 +100,27 @@ object PageRequestHandlingStrategy {
   val TemporaryCookiesUsedForOAuth: Set[String] = Set(LOGIN_ORIGIN_KEY, ANTI_FORGERY_KEY, FORCE_EXPIRY_KEY)
 }
 
-class PageRequestHandlingStrategy(
+class PageRequestHandlingStrategy[F[_]: Monad](
   system: String,
-  domain: String,
-  cookieSettings: CookieSettings,
-  oAuthValidator: OAuthValidator,
-  oAuthUrl: OAuthUrl,
-  signing: () => Signing
+  cookieResponses: CookieResponses,
+  oAuthValidator: OAuthValidator[F],
+  oAuthUrl: OAuthUrl
 )(implicit
   authStatusFromRequest: AuthStatusFromRequest
 ) extends AuthStatusHandler[PageResponse] {
   require(authStatusFromRequest.system == system)
-  require(authStatusFromRequest.cookieSettings == cookieSettings)
+  require(authStatusFromRequest.cookieSettings == cookieResponses.cookieSettings)
   
   import PageResponse.*
-
-  private def updateCookieToAddSystemIfNecessary(authedUser: AuthenticatedUser): ResponseModification =
-    authedUser.requiringAdditional(system).fold(NoResponseModification) { updatedUser => cookieResponseFor(updatedUser) }
-
-  private def cookieResponseFor(user: AuthenticatedUser, wipeTemporaryCookiesUsedForOAuth: Boolean = false) =
-    ResponseModification(cookieChanges = Some(CookieChanges(
-      domain,
-      setSessionCookies = Map(cookieSettings.cookieName -> generateCookieData(user, signing())),
-      wipeCookies = if (wipeTemporaryCookiesUsedForOAuth) TemporaryCookiesUsedForOAuth else Set.empty
-    )))
-
+  val F: Monad[F] = Monad[F]
+  
   private val random = new SecureRandom()
 
   private def redirectForAuth(loginHintEmail: Option[String] = None, wipeAuthCookie: Boolean = false): Plan[PageResponse] = {
     val antiForgeryToken: String = new BigInteger(130, random).toString(32)
-
     Plan(PageResponse.Redirect(oAuthUrl.redirectToOAuthProvider(antiForgeryToken, loginHintEmail)),
-      ResponseModification(cookieChanges = Some(CookieChanges(
-        domain, // ?? Should only the main auth cookie be on the shared domain, while temp OAuth cookies be on the app-specific domain, to avoid clashes?
-        setSessionCookies = Map(ANTI_FORGERY_KEY -> antiForgeryToken),
-        wipeCookies = if (wipeAuthCookie) Set(cookieSettings.cookieName) else Set.empty
-      )))
+      cookieResponses.responseForRedirectForAuth(antiForgeryToken, wipeAuthCookie)
     )
-  }
-
-  val processLogout: ResponseModification = ResponseModification(
-    cookieChanges = Some(CookieChanges(domain, wipeCookies = Set(cookieSettings.cookieName)))
-  )
-  
-  
-  def processOAuthCallback(request: PageRequest)(implicit ec: ExecutionContext): Future[Plan[OAuthCallbackResponse]] = {
-    def decodeCookie(name: String): Option[String] =
-      request.cookies.get(name).map(value => URLDecoder.decode(value, UTF_8))
-
-    (for {
-      expectedAntiForgeryToken <- decodeCookie(ANTI_FORGERY_KEY)
-      antiForgeryTokenFromQueryParams <- request.queryParams.get("state") if antiForgeryTokenFromQueryParams == expectedAntiForgeryToken
-      returnUrl <- decodeCookie(LOGIN_ORIGIN_KEY)
-      code <- request.queryParams.get("code")
-      } yield oAuthValidator.validate(code).map(newAuth => planFor(newAuth, request.authenticationStatus(), returnUrl))
-    ) getOrElse Future.successful(Plan(???, ???)) // Future.successful(BadRequest("Missing cookies, bad anti-forgery, etc"))
-  }
-
-  private def planFor(newlyClaimedAuth: AuthenticatedUser, priorAuth: AuthenticationStatus, returnUrl: String) = {
-    val authedSystemsFromPriorAuth: Set[String] = (priorAuth match {
-      case Authenticated(authedUser) => Some(authedUser)
-      case GracePeriod(authedUser) => Some(authedUser)
-      case _ => None
-    }).filter(_.user.email == newlyClaimedAuth.user.email).toSet.flatMap[String](_.authenticatedIn)
-    val authedUserData = newlyClaimedAuth.copy(
-      authenticatingSystem = system,
-      authenticatedIn = authedSystemsFromPriorAuth + system,
-      multiFactor = ??? // checkMultifactor(claimedAuth)
-    )
-
-    if (???) { // validateUser(authedUserData)
-      Plan(PageResponse.Redirect(URI.create(returnUrl)), cookieResponseFor(authedUserData, wipeTemporaryCookiesUsedForOAuth = true))
-    } else Plan(PageResponse.NotAuthorized(newlyClaimedAuth.user))
   }
 
   def planForAuthStatus(authStatus: AuthenticationStatus): Plan[PageResponse] = authStatus match {
@@ -177,7 +128,7 @@ class PageRequestHandlingStrategy(
     case InvalidCookie(_) => redirectForAuth(wipeAuthCookie = true)
     case stale: StaleUserAuthentication => redirectForAuth(loginHintEmail = Some(stale.authedUser.user.email))
     case com.gu.pandomainauth.model.NotAuthorized(authedUser) => Plan(NotAuthorized(authedUser.user))
-    case Authenticated(authedUser) => Plan(AllowAccess(authedUser.user), updateCookieToAddSystemIfNecessary(authedUser))
+    case Authenticated(authedUser) => Plan(AllowAccess(authedUser.user), cookieResponses.updateCookieToAddSystemIfNecessary(authedUser))
   }
 }
 

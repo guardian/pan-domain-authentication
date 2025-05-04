@@ -69,7 +69,7 @@ trait AuthActions {
 //    new PageRequestHandlingStrategy(system, domain, settings.cookieSettings, oAuthValidator, () => settings.signingAndVerification)
 //  }
 
-  val topLevelPageThing: TopLevelPageThing[RequestHeader, Result] = ???
+  val topLevelPageThing: TopLevelPageThing[RequestHeader, Result, Future] = ???
 
 
   private implicit val ec: ExecutionContext = controllerComponents.executionContext
@@ -116,7 +116,7 @@ trait AuthActions {
 
   /**
     * invoked when the user is not logged in a can't be authed - this may be when the user is not valid in yur system
-    * or when they have exoplicitly logged out.
+    * or when they have explicitly logged out.
     *
     * Override this to add a logged out screen and display maeesages for your app. The default implementation is
     * to ust return a 403 response
@@ -194,9 +194,11 @@ trait AuthActions {
     override def parser: BodyParser[AnyContent]               = AuthActions.this.controllerComponents.parsers.default
     override protected def executionContext: ExecutionContext = AuthActions.this.controllerComponents.executionContext
 
-    val topLevelApiThing: TopLevelApiThing[RequestHeader, Result] = new TopLevelApiThing(
-      apiResponseHandler = ApiResponseHandler[Result](PlayFrameworkAdapter)
-    )
+    val topLevelApiThing: TopLevelApiThing[RequestHeader, Result, Future] = 
+      new TopLevelApiThing[RequestHeader, Result, Future](
+        ???,
+        PlayFrameworkAdapter
+      )
 
     def authenticateRequest(request: RequestHeader)(produceResultGivenAuthedUser: User => Future[Result]): Future[Result] =
       topLevelApiThing.authenticateRequest(request)(produceResultGivenAuthedUser)

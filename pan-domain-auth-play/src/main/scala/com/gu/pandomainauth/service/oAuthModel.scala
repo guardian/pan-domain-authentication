@@ -1,9 +1,9 @@
 package com.gu.pandomainauth.service
 
-import com.gu.pandomainauth.oauth.DiscoveryDocument
-import play.api.libs.json._
-import play.api.libs.json.Reads._
-import play.api.libs.functional.syntax._
+import com.gu.pandomainauth.oauth.{DiscoveryDocument, UserInfo}
+import play.api.libs.json.*
+import play.api.libs.json.Reads.*
+import play.api.libs.functional.syntax.*
 import org.apache.commons.codec.binary.Base64
 
 object DiscoveryDocument {
@@ -27,9 +27,7 @@ object Token {
     (JsPath \ "id_token").read[String]
   )(Token.apply _)
 
-  def fromJson(json:JsValue):Token = {
-    Json.fromJson[Token](json).get
-  }
+  def fromJson(json:JsValue):Token = Json.fromJson[Token](json).get
 }
 
 case class JwtClaims(iss: String, sub: String, azp: Option[String], email: Option[String], at_hash: String,
@@ -38,17 +36,10 @@ object JwtClaims {
   implicit val claimsReads: Reads[JwtClaims] = Json.reads[JwtClaims]
 }
 
-/*
- * https://www.oauth.com/oauth2-servers/signing-in-with-google/verifying-the-user-info/
- */
-case class UserInfo(sub: Option[String], name: String, given_name: String, family_name: String, profile: Option[String],
-                    picture: Option[String], email: String, locale: Option[String], hd: Option[String])
 object UserInfo {
   implicit val userInfoReads: Reads[UserInfo] = Json.reads[UserInfo]
 
-  def fromJson(json: JsValue): UserInfo = {
-    json.as[UserInfo]
-  }
+  def fromJson(json: JsValue): UserInfo = json.as[UserInfo]
 }
 
 
