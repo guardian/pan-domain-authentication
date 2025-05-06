@@ -9,14 +9,14 @@ import com.gu.pandomainauth.oauth.OAuthCallbackPlanner
 import com.gu.pandomainauth.webframeworks.WebFrameworkAdapter
 import com.gu.pandomainauth.webframeworks.WebFrameworkAdapter.*
 
-class AuthPlanner[AuthResponseType](authStatusHandler: AuthStatusHandler[AuthResponseType])(implicit
+class AuthPlanner[AuthResponseType <: AuthedEndpointResponse](authStatusHandler: AuthStatusHandler[AuthResponseType])(implicit
   authStatusFromRequest: AuthStatusFromRequest
 ) {
   def planFor(request: PageRequest): Plan[AuthResponseType] =
     authStatusHandler.planForAuthStatus(request.authenticationStatus())
 }
 
-abstract class TopLevelAuthThing[Req: PageRequestAdapter, Resp, AuthResponseType, F[_]: Monad](
+abstract class TopLevelAuthThing[Req: PageRequestAdapter, Resp, AuthResponseType <: AuthedEndpointResponse, F[_]: Monad](
   authPlanner: AuthPlanner[AuthResponseType],
   responseAdapter: WebFrameworkAdapter.ResponseAdapter[Resp]
 ) {
@@ -28,20 +28,20 @@ abstract class TopLevelAuthThing[Req: PageRequestAdapter, Resp, AuthResponseType
   def authenticateRequest(request: Req)(produceResultGivenAuthedUser: User => F[Resp]): F[Resp] = {
     val plan = authPlanner.planFor(request.asPandaRequest)
 
-    poop(plan.typ)(produceResultGivenAuthedUser).map(modifyResponseWith(plan.responseModification))
+    handleAuthResponse(plan.typ)(produceResultGivenAuthedUser).map(modifyResponseWith(plan.responseModification))
   }
 
-  def poop(pandaResp: AuthResponseType)(produceResultGivenAuthedUser: User => F[Resp]): F[Resp]
+  def handleAuthResponse(pandaResp: AuthResponseType)(produceResultGivenAuthedUser: User => F[Resp]): F[Resp]
 }
 
-class TopLevelPageThing[Req: PageRequestAdapter, Resp: WebFrameworkAdapter.PageResponseAdapter, F[+_]: Monad](
+class TopLevelPageThing[Req: PageRequestAdapter, Resp, F[+_]: Monad](
   authPlanner: AuthPlanner[PageResponse],
   oAuthCallbackPlanner: OAuthCallbackPlanner[F],
   responseAdapter: WebFrameworkAdapter.PageResponseAdapter[Resp],
   logoutResponse: Resp
 ) extends TopLevelAuthThing[Req, Resp, PageResponse, F](authPlanner, responseAdapter) {
 
-  def poop(pandaResp: PageResponse)(produceResultGivenAuthedUser: User => F[Resp]): F[Resp] = pandaResp match {
+  def handleAuthResponse(pandaResp: PageResponse)(produceResultGivenAuthedUser: User => F[Resp]): F[Resp] = pandaResp match {
     case PageResponse.AllowAccess(user) => produceResultGivenAuthedUser(user)
     case NotAuthorized(user) => F.pure(responseAdapter.handleNotAuthorised(user))
     case Redirect(uri) => F.pure(responseAdapter.handleRedirect(uri))
@@ -62,7 +62,7 @@ class TopLevelApiThing[Req: PageRequestAdapter, Resp, F[_]: Monad](
   responseAdapter: WebFrameworkAdapter.ApiResponseAdapter[Resp]
 ) extends TopLevelAuthThing[Req, Resp, ApiResponse, F](authPlanner, responseAdapter) {
 
-  override def poop(pandaResp: ApiResponse)(produceResultGivenAuthedUser: User => F[Resp]): F[Resp] = pandaResp match {
+  override def handleAuthResponse(pandaResp: ApiResponse)(produceResultGivenAuthedUser: User => F[Resp]): F[Resp] = pandaResp match {
     case ApiResponse.AllowAccess(user) => produceResultGivenAuthedUser(user)
     case disallow: DisallowApiAccess => F.pure(responseAdapter.handleDisallow(disallow.statusCode))
   }

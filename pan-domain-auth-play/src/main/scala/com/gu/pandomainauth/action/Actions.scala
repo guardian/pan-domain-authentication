@@ -4,6 +4,8 @@ import com.gu.pandomainauth.*
 import com.gu.pandomainauth.webframeworks.WebFrameworkAdapter.*
 import com.gu.pandomainauth.internal.PlayFrameworkAdapter
 import com.gu.pandomainauth.model.*
+import com.gu.pandomainauth.oauth.{DiscoveryDocument, OAuthCallbackPlanner, OAuthValidator}
+import com.gu.pandomainauth.oauth.OAuthValidator.TokenRequestParamsGenerator
 import com.gu.pandomainauth.service.*
 import com.gu.pandomainauth.webframeworks.WebFrameworkAdapter
 import org.slf4j.LoggerFactory
@@ -69,8 +71,31 @@ trait AuthActions {
 //    new PageRequestHandlingStrategy(system, domain, settings.cookieSettings, oAuthValidator, () => settings.signingAndVerification)
 //  }
 
-  val topLevelPageThing: TopLevelPageThing[RequestHeader, Result, Future] = ???
+  val ddCache = new com.gu.pandomainauth.oauth.DiscoveryDocument.Cache(com.gu.pandomainauth.service.DiscoveryDocument.fromString)
+  val oAuthValidator = new PlayOAuthValidator(
+    TokenRequestParamsGenerator(panDomainSettings.settings.oAuthSettings, URI.create(authCallbackUrl)),
+    () => ddCache.get(),
+    wsClient,
+    system
+  )
 
+  private val cookieResponses: CookieResponses = CookieResponses(panDomainSettings)
+
+  val topLevelPageThing: TopLevelPageThing[RequestHeader, Result, Future] = new TopLevelPageThing(
+    new AuthPlanner[PageResponse](new PageRequestHandlingStrategy[Future](
+      system,
+      cookieResponses,
+      new OAuthUrl(
+        panDomainSettings.settings.oAuthSettings.clientId,
+        URI.create(authCallbackUrl),
+        organizationDomain= ???, // eg guardian.co.uk
+        authorizationEndpoint = () => URI.create(ddCache.get().authorization_endpoint)
+      )
+    )),
+    new OAuthCallbackPlanner(oAuthValidator, cookieResponses, system),
+    PlayFrameworkAdapter,
+    showUnauthedMessage("logged out")
+  )
 
   private implicit val ec: ExecutionContext = controllerComponents.executionContext
 
@@ -141,18 +166,7 @@ trait AuthActions {
   def processOAuthCallback()(implicit request: RequestHeader): Future[Result] =
     topLevelPageThing.processOAuthCallback(request)
 
-  def processLogout(implicit request: RequestHeader) = {
-    flushCookie(showUnauthedMessage("logged out"))
-  }
-
-  def flushCookie(result: Result): Result = {
-    val clearCookie = DiscardingCookie(
-      name = settings.cookieSettings.cookieName,
-      domain = Some(domain),
-      secure = true
-    )
-    result.discardingCookies(clearCookie)
-  }
+  def processLogout(implicit request: RequestHeader) = topLevelPageThing.processLogout()
 
   /**
     * Action that ensures the user is logged in and validated.
@@ -196,7 +210,7 @@ trait AuthActions {
 
     val topLevelApiThing: TopLevelApiThing[RequestHeader, Result, Future] = 
       new TopLevelApiThing[RequestHeader, Result, Future](
-        ???,
+        new AuthPlanner[ApiResponse](ApiRequestHandlingStrategy),
         PlayFrameworkAdapter
       )
 

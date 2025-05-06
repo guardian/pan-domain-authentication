@@ -22,7 +22,10 @@ case class CookieChanges(
   wipeCookies: Set[String] = Set.empty
 )
 
-case class ResponseModification(responseHeaders: Map[String, String] = Map.empty, cookieChanges: Option[CookieChanges] = None)
+case class ResponseModification(
+  responseHeaders: Map[String, String] = Map.empty,
+  cookieChanges: Option[CookieChanges] = None
+)
 
 object ResponseModification {
   val NoResponseModification: ResponseModification = ResponseModification()
@@ -38,7 +41,8 @@ object ResponseModification {
  */
 case class Plan[+T](typ: T, responseModification: ResponseModification = NoResponseModification)
 
-sealed trait PageResponse
+trait AuthedEndpointResponse
+sealed trait PageResponse extends AuthedEndpointResponse
 sealed trait OAuthCallbackResponse
 
 object PageResponse {
@@ -47,7 +51,7 @@ object PageResponse {
   case class Redirect(uri: URI) extends PageResponse with OAuthCallbackResponse
 }
 
-sealed trait ApiResponse
+sealed trait ApiResponse extends AuthedEndpointResponse
 
 object ApiResponse {
   case class HttpStatusCode(code: Int, message: String)
@@ -103,7 +107,6 @@ object PageRequestHandlingStrategy {
 class PageRequestHandlingStrategy[F[_]: Monad](
   system: String,
   cookieResponses: CookieResponses,
-  oAuthValidator: OAuthValidator[F],
   oAuthUrl: OAuthUrl
 )(implicit
   authStatusFromRequest: AuthStatusFromRequest
