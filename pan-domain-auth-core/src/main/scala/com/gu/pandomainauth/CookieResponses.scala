@@ -3,15 +3,14 @@ package com.gu.pandomainauth
 import com.gu.pandomainauth.PageRequestHandlingStrategy.{ANTI_FORGERY_KEY, TemporaryCookiesUsedForOAuth}
 import com.gu.pandomainauth.ResponseModification.NoResponseModification
 import com.gu.pandomainauth.model.{AuthenticatedUser, CookieSettings}
-import com.gu.pandomainauth.oauth.OAuthValidator
 import com.gu.pandomainauth.service.CookieUtils.generateCookieData
 import com.gu.pandomainauth.service.CryptoConf.Signing
 
 class CookieResponses(
-  system: String,
-  domain: String,
   val cookieSettings: CookieSettings,
-  signing: () => Signing
+  signing: () => Signing,
+  system: String,
+  domain: String
 ) {
   def updateCookieToAddSystemIfNecessary(authedUser: AuthenticatedUser): ResponseModification =
     authedUser.requiringAdditional(system).fold(NoResponseModification) { updatedUser => cookieResponseFor(updatedUser) }
@@ -33,5 +32,13 @@ class CookieResponses(
 
   val processLogout: ResponseModification = ResponseModification(
     cookieChanges = Some(CookieChanges(domain, wipeCookies = Set(cookieSettings.cookieName)))
+  )
+}
+
+object CookieResponses {
+  def apply(settingsRefresher: PanDomainAuthSettingsRefresher): CookieResponses = new CookieResponses(
+    settingsRefresher.settings.cookieSettings,
+    () => settingsRefresher.settings.signingAndVerification,
+    system = settingsRefresher.system, domain = settingsRefresher.domain
   )
 }

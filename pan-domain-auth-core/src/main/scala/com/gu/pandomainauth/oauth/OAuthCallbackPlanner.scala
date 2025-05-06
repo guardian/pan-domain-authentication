@@ -15,9 +15,7 @@ class OAuthCallbackPlanner[F[+_]: Monad](
   oAuthValidator: OAuthValidator[F],
   val cookieResponses: CookieResponses,
   system: String
-)(implicit
-  authStatusFromRequest: AuthStatusFromRequest
-) {
+)(implicit authStatusFromRequest: AuthStatusFromRequest) {
   val F: Monad[F] = Monad[F]
 
   def processOAuthCallback(request: PageRequest): F[Plan[OAuthCallbackResponse]] = {
