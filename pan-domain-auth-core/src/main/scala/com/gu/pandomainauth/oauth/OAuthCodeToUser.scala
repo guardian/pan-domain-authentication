@@ -24,7 +24,7 @@ import scala.concurrent.{ExecutionContext, Future}
  * DiscoveryDocument for token_endpoint & userinfo_endpoint
  * Also needs to be able to parse JSON and JWT
  */
-abstract class OAuthValidator[F[_]: Monad] {
+abstract class OAuthCodeToUser[F[_]: Monad] {
   /**
    * @param code
    */
@@ -33,7 +33,7 @@ abstract class OAuthValidator[F[_]: Monad] {
 
 class OAuthException(val message: String, val throwable: Throwable = null) extends Exception(message, throwable)
 
-object OAuthValidator {
+object OAuthCodeToUser {
   case class TokenRequestParamsGenerator(oAuthSettings: OAuthSettings, oAuthCallbackUri: URI) {
     def paramsFor(code: String): Map[String, String] = Map(
       "code" -> code,

@@ -6,7 +6,7 @@ import com.gu.pandomainauth.ApiResponse.{DisallowApiAccess, HttpStatusCode}
 import com.gu.pandomainauth.PageRequestHandlingStrategy.{ANTI_FORGERY_KEY, LOGIN_ORIGIN_KEY, TemporaryCookiesUsedForOAuth}
 import com.gu.pandomainauth.ResponseModification.NoResponseModification
 import com.gu.pandomainauth.model.*
-import com.gu.pandomainauth.oauth.OAuthValidator
+import com.gu.pandomainauth.oauth.OAuthCodeToUser
 import com.gu.pandomainauth.service.CookieUtils.generateCookieData
 import com.gu.pandomainauth.service.CryptoConf.Signing
 
@@ -121,7 +121,7 @@ class PageRequestHandlingStrategy[F[_]: Monad](
 
   private def redirectForAuth(loginHintEmail: Option[String] = None, wipeAuthCookie: Boolean = false): Plan[PageResponse] = {
     val antiForgeryToken: String = new BigInteger(130, random).toString(32)
-    Plan(PageResponse.Redirect(oAuthUrl.redirectToOAuthProvider(antiForgeryToken, loginHintEmail)),
+    Plan(PageResponse.Redirect(oAuthUrl.uriOfOAuthProvider(antiForgeryToken, loginHintEmail)),
       cookieResponses.responseForRedirectForAuth(antiForgeryToken, wipeAuthCookie)
     )
   }

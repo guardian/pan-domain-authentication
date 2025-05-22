@@ -12,7 +12,7 @@ import com.gu.pandomainauth.model.{Authenticated, GracePeriod}
 import java.net.{URI, URLDecoder}
 
 class OAuthCallbackPlanner[F[+_]: Monad](
-  oAuthValidator: OAuthValidator[F],
+  oAuthValidator: OAuthCodeToUser[F],
   val cookieResponses: CookieResponses,
   system: String
 )(implicit authStatusFromRequest: AuthStatusFromRequest) {
