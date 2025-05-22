@@ -2,8 +2,8 @@ package com.gu.pandomainauth
 
 import cats.*
 import cats.syntax.all.*
-import com.gu.pandomainauth.ApiResponse.{AllowAccess, DisallowApiAccess}
-import com.gu.pandomainauth.PageResponse.{AllowAccess, NotAuthorized, Redirect}
+import com.gu.pandomainauth.ApiResponse.DisallowApiAccess
+import com.gu.pandomainauth.PageResponse.{NotAuthorized, Redirect}
 import com.gu.pandomainauth.model.*
 import com.gu.pandomainauth.oauth.OAuthCallbackPlanner
 import com.gu.pandomainauth.webframeworks.WebFrameworkAdapter
@@ -31,7 +31,12 @@ abstract class TopLevelAuthThing[Req: PageRequestAdapter, Resp, AuthResponseType
     handleAuthResponse(plan.typ)(produceResultGivenAuthedUser).map(modifyResponseWith(plan.responseModification))
   }
 
-  def handleAuthResponse(pandaResp: AuthResponseType)(produceResultGivenAuthedUser: User => F[Resp]): F[Resp]
+  def handleAuthResponse(pandaResp: AuthResponseType)(produceResultGivenAuthedUser: User => F[Resp]): F[Resp] = pandaResp match {
+    case AllowAccess(user) => produceResultGivenAuthedUser(user)
+    case withholdAccess: AuthResponseType with WithholdAccess => F.pure(handleWithholdAccess(withholdAccess))
+  }
+
+  def handleWithholdAccess(pandaResp: AuthResponseType with WithholdAccess): Resp
 }
 
 class TopLevelPageThing[Req: PageRequestAdapter, Resp, F[+_]: Monad](
@@ -41,10 +46,9 @@ class TopLevelPageThing[Req: PageRequestAdapter, Resp, F[+_]: Monad](
   logoutResponse: Resp
 ) extends TopLevelAuthThing[Req, Resp, PageResponse, F](authPlanner, responseAdapter) {
 
-  def handleAuthResponse(pandaResp: PageResponse)(produceResultGivenAuthedUser: User => F[Resp]): F[Resp] = pandaResp match {
-    case PageResponse.AllowAccess(user) => produceResultGivenAuthedUser(user)
-    case NotAuthorized(user) => F.pure(responseAdapter.handleNotAuthorised(user))
-    case Redirect(uri) => F.pure(responseAdapter.handleRedirect(uri))
+  override def handleWithholdAccess(pandaResp: PageResponse with WithholdAccess): Resp = pandaResp match {
+    case NotAuthorized(user) => responseAdapter.handleNotAuthorised(user)
+    case Redirect(uri) => responseAdapter.handleRedirect(uri)
   }
 
   def processOAuthCallback(request: Req): F[Resp] = for {
@@ -62,8 +66,7 @@ class TopLevelApiThing[Req: PageRequestAdapter, Resp, F[_]: Monad](
   responseAdapter: WebFrameworkAdapter.ApiResponseAdapter[Resp]
 ) extends TopLevelAuthThing[Req, Resp, ApiResponse, F](authPlanner, responseAdapter) {
 
-  override def handleAuthResponse(pandaResp: ApiResponse)(produceResultGivenAuthedUser: User => F[Resp]): F[Resp] = pandaResp match {
-    case ApiResponse.AllowAccess(user) => produceResultGivenAuthedUser(user)
-    case disallow: DisallowApiAccess => F.pure(responseAdapter.handleDisallow(disallow.statusCode))
+  override def handleWithholdAccess(pandaResp: ApiResponse with WithholdAccess): Resp = pandaResp match {
+    case disallow: DisallowApiAccess => responseAdapter.handleDisallow(disallow.statusCode)
   }
 }
