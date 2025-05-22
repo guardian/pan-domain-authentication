@@ -4,8 +4,8 @@ import com.gu.pandomainauth.*
 import com.gu.pandomainauth.webframeworks.WebFrameworkAdapter.*
 import com.gu.pandomainauth.internal.PlayFrameworkAdapter
 import com.gu.pandomainauth.model.*
-import com.gu.pandomainauth.oauth.{DiscoveryDocument, OAuthCallbackPlanner, OAuthValidator}
-import com.gu.pandomainauth.oauth.OAuthValidator.TokenRequestParamsGenerator
+import com.gu.pandomainauth.oauth.{DiscoveryDocument, OAuthCallbackPlanner, OAuthCodeToUser}
+import com.gu.pandomainauth.oauth.OAuthCodeToUser.TokenRequestParamsGenerator
 import com.gu.pandomainauth.service.*
 import com.gu.pandomainauth.webframeworks.WebFrameworkAdapter
 import org.slf4j.LoggerFactory
@@ -49,53 +49,34 @@ trait AuthActions {
 
   private def settings: PanDomainAuthSettings = panDomainSettings.settings
 
-//  val pageResponseHandlerFoo: PageResponseHandlerFoo[Result] = PageResponseHandlerFoo[Result](PlayFrameworkAdapter)
   implicit val authStatusFromRequest: AuthStatusFromRequest = new AuthStatusFromRequest(
     settings.cookieSettings, system,
     () => settings.signingAndVerification,
     validateUser: AuthenticatedUser => Boolean,
     cacheValidation)
 
-//  val pageStrat: PageRequestHandlingStrategy = {
-//    val discoveryDocCache: com.gu.pandomainauth.oauth.DiscoveryDocument.Cache =
-//      new com.gu.pandomainauth.oauth.DiscoveryDocument.Cache(DiscoveryDocument.fromString)
-//
-//    val oAuthValidator = new PlayOAuthValidator(
-//      settings.oAuthSettings,
-//      () => discoveryDocCache.get(),
-//      wsClient,
-//      system,
-//      URI.create(authCallbackUrl)
-//    )
-//
-//    new PageRequestHandlingStrategy(system, domain, settings.cookieSettings, oAuthValidator, () => settings.signingAndVerification)
-//  }
-
   val ddCache = new com.gu.pandomainauth.oauth.DiscoveryDocument.Cache(com.gu.pandomainauth.service.DiscoveryDocument.fromString)
-  val oAuthValidator = new PlayOAuthValidator(
-    TokenRequestParamsGenerator(panDomainSettings.settings.oAuthSettings, URI.create(authCallbackUrl)),
-    () => ddCache.get(),
-    wsClient,
-    system
+
+  val oAuthInteractions: OAuthInteractions[Future] = OAuthInteractions(
+    new OAuthUrl(
+      panDomainSettings.settings.oAuthSettings.clientId,
+      URI.create(authCallbackUrl),
+      organizationDomain = ???, // eg guardian.co.uk
+      authorizationEndpoint = () => URI.create(ddCache.get().authorization_endpoint)
+    ),
+    new PlayOAuthCodeToUser(
+      TokenRequestParamsGenerator(panDomainSettings.settings.oAuthSettings, URI.create(authCallbackUrl)),
+      () => ddCache.get(),
+      wsClient,
+      system
+    )
   )
 
-  private val cookieResponses: CookieResponses = CookieResponses(panDomainSettings)
+  val pagePlanners: PagePlanners[Future] =
+    PagePlanners(CookieResponses(panDomainSettings), oAuthInteractions, system)
 
-  val topLevelPageThing: TopLevelPageThing[RequestHeader, Result, Future] = new TopLevelPageThing(
-    new AuthPlanner[PageResponse](new PageRequestHandlingStrategy[Future](
-      system,
-      cookieResponses,
-      new OAuthUrl(
-        panDomainSettings.settings.oAuthSettings.clientId,
-        URI.create(authCallbackUrl),
-        organizationDomain= ???, // eg guardian.co.uk
-        authorizationEndpoint = () => URI.create(ddCache.get().authorization_endpoint)
-      )
-    )),
-    new OAuthCallbackPlanner(oAuthValidator, cookieResponses, system),
-    PlayFrameworkAdapter,
-    showUnauthedMessage("logged out")
-  )
+  val topLevelPageThing: TopLevelPageThing[RequestHeader, Result, Future] =
+    new TopLevelPageThing(pagePlanners, PlayFrameworkAdapter, showUnauthedMessage("logged out"))
 
   private implicit val ec: ExecutionContext = controllerComponents.executionContext
 

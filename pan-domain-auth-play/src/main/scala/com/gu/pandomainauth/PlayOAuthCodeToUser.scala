@@ -1,8 +1,8 @@
 package com.gu.pandomainauth
 
 import com.gu.pandomainauth.model.{AuthenticatedUser, OAuthSettings, User}
-import com.gu.pandomainauth.oauth.OAuthValidator.TokenRequestParamsGenerator
-import com.gu.pandomainauth.oauth.{OAuthException, OAuthValidator}
+import com.gu.pandomainauth.oauth.OAuthCodeToUser.TokenRequestParamsGenerator
+import com.gu.pandomainauth.oauth.{OAuthException, OAuthCodeToUser}
 import com.gu.pandomainauth.service.{Error, Token, UserInfo}
 import play.api.libs.json.JsValue
 import play.api.libs.ws.*
@@ -11,12 +11,12 @@ import java.net.URI
 import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
 
-class PlayOAuthValidator(
+class PlayOAuthCodeToUser(
   tokenRequestParamsGenerator: TokenRequestParamsGenerator,
   discoveryDocument: () => com.gu.pandomainauth.oauth.DiscoveryDocument,
   ws: WSClient,
   system: String,
-)(implicit ec: ExecutionContext) extends OAuthValidator[Future] {
+)(implicit ec: ExecutionContext) extends OAuthCodeToUser[Future] {
 
   override def validate(code: String): Future[AuthenticatedUser] = 
     fetchTokenFor(code).flatMap(token => authenticatedUserFor(token))
@@ -32,7 +32,7 @@ class PlayOAuthValidator(
       .get().map { response =>
         oAuthResponse(response) { json =>
           val jwt = token.jwt
-          OAuthValidator.authenticatedUserFor(
+          OAuthCodeToUser.authenticatedUserFor(
             UserInfo.fromJson(json),
             // The JWT standard specifies that `exp` is a `NumericDate`,
             // which is defined as an epoch time in *seconds*

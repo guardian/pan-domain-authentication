@@ -5,7 +5,7 @@ import cats.syntax.all.*
 import com.gu.pandomainauth.ApiResponse.DisallowApiAccess
 import com.gu.pandomainauth.PageResponse.{NotAuthorized, Redirect}
 import com.gu.pandomainauth.model.*
-import com.gu.pandomainauth.oauth.OAuthCallbackPlanner
+import com.gu.pandomainauth.oauth.{OAuthCallbackPlanner, OAuthCodeToUser}
 import com.gu.pandomainauth.webframeworks.WebFrameworkAdapter
 import com.gu.pandomainauth.webframeworks.WebFrameworkAdapter.*
 
@@ -39,12 +39,32 @@ abstract class TopLevelAuthThing[Req: PageRequestAdapter, Resp, AuthResponseType
   def handleWithholdAccess(pandaResp: AuthResponseType with WithholdAccess): Resp
 }
 
+case class PagePlanners[F[+_]: Monad](
+  auth: AuthPlanner[PageResponse],
+  oAuthCallback: OAuthCallbackPlanner[F]
+)
+
+case class OAuthInteractions[F[+_]: Monad](
+  providerUrl: OAuthUrl,
+  codeToUser: OAuthCodeToUser[F],
+)
+
+object PagePlanners {
+  def apply[F[+_]: Monad](
+    cookieResponses: CookieResponses,
+    oAuth: OAuthInteractions[F],
+    system: String
+  )(implicit authStatus: AuthStatusFromRequest): PagePlanners[F] = PagePlanners(
+    new AuthPlanner[PageResponse](new PageRequestHandlingStrategy[F](system, cookieResponses, oAuth.providerUrl)),
+    new OAuthCallbackPlanner(oAuth.codeToUser, cookieResponses, system)
+  )
+}
+
 class TopLevelPageThing[Req: PageRequestAdapter, Resp, F[+_]: Monad](
-  authPlanner: AuthPlanner[PageResponse],
-  oAuthCallbackPlanner: OAuthCallbackPlanner[F],
+  pagePlanners: PagePlanners[F],
   responseAdapter: WebFrameworkAdapter.PageResponseAdapter[Resp],
   logoutResponse: Resp
-) extends TopLevelAuthThing[Req, Resp, PageResponse, F](authPlanner, responseAdapter) {
+) extends TopLevelAuthThing[Req, Resp, PageResponse, F](pagePlanners.auth, responseAdapter) {
 
   override def handleWithholdAccess(pandaResp: PageResponse with WithholdAccess): Resp = pandaResp match {
     case NotAuthorized(user) => responseAdapter.handleNotAuthorised(user)
@@ -52,13 +72,14 @@ class TopLevelPageThing[Req: PageRequestAdapter, Resp, F[+_]: Monad](
   }
 
   def processOAuthCallback(request: Req): F[Resp] = for {
-    plan <- oAuthCallbackPlanner.processOAuthCallback(request.asPandaRequest)
+    plan <- pagePlanners.oAuthCallback.processOAuthCallback(request.asPandaRequest)
   } yield modifyResponseWith(plan.responseModification)(plan.typ match {
     case NotAuthorized(user) => responseAdapter.handleNotAuthorised(user)
     case Redirect(uri) => responseAdapter.handleRedirect(uri)
   })
 
-  def processLogout(): Resp = modifyResponseWith(oAuthCallbackPlanner.cookieResponses.processLogout)(logoutResponse)
+  def processLogout(): Resp =
+    modifyResponseWith(pagePlanners.oAuthCallback.cookieResponses.processLogout)(logoutResponse)
 }
 
 class TopLevelApiThing[Req: PageRequestAdapter, Resp, F[_]: Monad](

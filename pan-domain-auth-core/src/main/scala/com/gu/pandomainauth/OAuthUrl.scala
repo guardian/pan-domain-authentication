@@ -16,7 +16,7 @@ class OAuthUrl(
   organizationDomain: Option[String], // eg guardian.co.uk
   authorizationEndpoint: () => URI // this can be caching endpoint that reads from the discovery document
 ) {
-  def redirectToOAuthProvider(antiForgeryToken: String, loginHintEmail: Option[String] = None): URI = {
+  def uriOfOAuthProvider(antiForgeryToken: String, loginHintEmail: Option[String] = None): URI = {
     val queryString: Map[String, String] = Map(
       "client_id" -> clientId,
       "response_type" -> "code",
