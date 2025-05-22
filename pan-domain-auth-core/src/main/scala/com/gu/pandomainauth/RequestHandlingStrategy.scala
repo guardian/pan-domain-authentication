@@ -1,7 +1,7 @@
 package com.gu.pandomainauth
 
-import cats._
-import cats.syntax.all._
+import cats.*
+import cats.syntax.all.*
 import com.gu.pandomainauth.ApiResponse.{DisallowApiAccess, HttpStatusCode}
 import com.gu.pandomainauth.PageRequestHandlingStrategy.{ANTI_FORGERY_KEY, LOGIN_ORIGIN_KEY, TemporaryCookiesUsedForOAuth}
 import com.gu.pandomainauth.ResponseModification.NoResponseModification
@@ -43,12 +43,14 @@ case class Plan[+T](typ: T, responseModification: ResponseModification = NoRespo
 
 trait AuthedEndpointResponse
 sealed trait PageResponse extends AuthedEndpointResponse
+sealed trait WithholdAccess
 sealed trait OAuthCallbackResponse
 
+case class AllowAccess(user: User) extends PageResponse with ApiResponse
+
 object PageResponse {
-  case class AllowAccess(user: User) extends PageResponse
-  case class NotAuthorized(user: User) extends PageResponse with OAuthCallbackResponse
-  case class Redirect(uri: URI) extends PageResponse with OAuthCallbackResponse
+  case class NotAuthorized(user: User) extends PageResponse with WithholdAccess with OAuthCallbackResponse
+  case class Redirect(uri: URI) extends PageResponse with WithholdAccess with OAuthCallbackResponse
 }
 
 sealed trait ApiResponse extends AuthedEndpointResponse
@@ -56,12 +58,10 @@ sealed trait ApiResponse extends AuthedEndpointResponse
 object ApiResponse {
   case class HttpStatusCode(code: Int, message: String)
 
-  trait DisallowApiAccess extends ApiResponse {
+  trait DisallowApiAccess extends ApiResponse with WithholdAccess {
     val statusCode: HttpStatusCode
   }
-
-  case class AllowAccess(user: User) extends ApiResponse
-
+  
   case object NotAuthorized extends DisallowApiAccess {
     val statusCode: HttpStatusCode = HttpStatusCode(403, "User is not authorized to use this tool")
   }
