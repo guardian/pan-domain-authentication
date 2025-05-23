@@ -49,11 +49,11 @@ trait AuthActions {
 
   private def settings: PanDomainAuthSettings = panDomainSettings.settings
 
-  implicit val authStatusFromRequest: AuthStatusFromRequest = new AuthStatusFromRequest(
-    settings.cookieSettings, system,
-    () => settings.signingAndVerification,
-    validateUser: AuthenticatedUser => Boolean,
-    cacheValidation)
+  implicit val authStatusFromRequest: AuthStatusFromRequest = AuthStatusFromRequest(
+    panDomainSettings,
+    validateUser = ???,
+    cacheValidation = ???
+  )
 
   val ddCache = new com.gu.pandomainauth.oauth.DiscoveryDocument.Cache(com.gu.pandomainauth.service.DiscoveryDocument.fromString)
 

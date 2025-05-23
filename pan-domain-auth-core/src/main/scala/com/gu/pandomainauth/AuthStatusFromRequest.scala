@@ -20,3 +20,15 @@ class AuthStatusFromRequest(
     PanDomain.authStatus(cookie, verification(), validateUser, system, cacheValidation, forceExpiry, apiGracePeriod)
   } getOrElse NotAuthenticated
 }
+
+object AuthStatusFromRequest {
+  def apply(
+    settingsRefresher: PanDomainAuthSettingsRefresher,
+    validateUser: AuthenticatedUser => Boolean,
+    cacheValidation: Boolean
+  ): AuthStatusFromRequest = new AuthStatusFromRequest(
+    settingsRefresher.settings.cookieSettings, settingsRefresher.system,
+    () => settingsRefresher.settings.signingAndVerification,
+    validateUser: AuthenticatedUser => Boolean,
+    cacheValidation)
+}

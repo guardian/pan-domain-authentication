@@ -1,8 +1,9 @@
 package com.gu.pandomainauth
 
-import com.gu.pandomainauth.model.{AuthenticatedUser, OAuthSettings, User}
+import cats.Monad
+import com.gu.pandomainauth.model.AuthenticatedUser
 import com.gu.pandomainauth.oauth.OAuthCodeToUser.TokenRequestParamsGenerator
-import com.gu.pandomainauth.oauth.{OAuthException, OAuthCodeToUser}
+import com.gu.pandomainauth.oauth.{OAuthCodeToUser, OAuthException}
 import com.gu.pandomainauth.service.{Error, Token, UserInfo}
 import play.api.libs.json.JsValue
 import play.api.libs.ws.*
@@ -10,6 +11,12 @@ import play.api.libs.ws.*
 import java.net.URI
 import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
+
+
+
+class PlayImplOfProcessingForOAuth extends ProcessingForOAuth[Future] {
+  
+}
 
 class PlayOAuthCodeToUser(
   tokenRequestParamsGenerator: TokenRequestParamsGenerator,

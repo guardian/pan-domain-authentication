@@ -9,6 +9,16 @@ import com.gu.pandomainauth.oauth.{OAuthCallbackPlanner, OAuthCodeToUser}
 import com.gu.pandomainauth.webframeworks.WebFrameworkAdapter
 import com.gu.pandomainauth.webframeworks.WebFrameworkAdapter.*
 
+import java.net.URI
+
+trait ProcessingForOAuth[F[_] : Monad] {
+
+  def fetchToken(uri: URI, params: Map[String, String]): F[Token]
+
+  def fetchAuthenticatedUser(uri: URI, token: Token): F[AuthenticatedUser]
+}
+
+
 class AuthPlanner[AuthResponseType <: AuthedEndpointResponse](authStatusHandler: AuthStatusHandler[AuthResponseType])(implicit
   authStatusFromRequest: AuthStatusFromRequest
 ) {
@@ -42,7 +52,11 @@ abstract class TopLevelAuthThing[Req: PageRequestAdapter, Resp, AuthResponseType
 case class PagePlanners[F[+_]: Monad](
   auth: AuthPlanner[PageResponse],
   oAuthCallback: OAuthCallbackPlanner[F]
-)
+) {
+  // check that cookieResponses is the same on both auth & oAuthCallback ?
+
+  val cookieResponses: CookieResponses = oAuthCallback.cookieResponses
+}
 
 case class OAuthInteractions[F[+_]: Monad](
   providerUrl: OAuthUrl,
@@ -56,7 +70,7 @@ object PagePlanners {
     system: String
   )(implicit authStatus: AuthStatusFromRequest): PagePlanners[F] = PagePlanners(
     new AuthPlanner[PageResponse](new PageRequestHandlingStrategy[F](system, cookieResponses, oAuth.providerUrl)),
-    new OAuthCallbackPlanner(oAuth.codeToUser, cookieResponses, system)
+    new OAuthCallbackPlanner(system, cookieResponses, oAuth.codeToUser)
   )
 }
 
@@ -79,7 +93,7 @@ class TopLevelPageThing[Req: PageRequestAdapter, Resp, F[+_]: Monad](
   })
 
   def processLogout(): Resp =
-    modifyResponseWith(pagePlanners.oAuthCallback.cookieResponses.processLogout)(logoutResponse)
+    modifyResponseWith(pagePlanners.cookieResponses.processLogout)(logoutResponse)
 }
 
 class TopLevelApiThing[Req: PageRequestAdapter, Resp, F[_]: Monad](
