@@ -11,11 +11,7 @@ import com.gu.pandomainauth.model.{Authenticated, GracePeriod}
 
 import java.net.{URI, URLDecoder}
 
-class OAuthCallbackPlanner[F[+_]: Monad](
-  oAuthValidator: OAuthCodeToUser[F],
-  val cookieResponses: CookieResponses,
-  system: String
-)(implicit authStatusFromRequest: AuthStatusFromRequest) {
+class OAuthCallbackPlanner[F[+_]: Monad](system: String, val cookieResponses: CookieResponses, oAuthValidator: OAuthCodeToUser[F])(implicit authStatusFromRequest: AuthStatusFromRequest) {
   val F: Monad[F] = Monad[F]
 
   def processOAuthCallback(request: PageRequest): F[Plan[OAuthCallbackResponse]] = {
