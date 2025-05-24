@@ -4,7 +4,7 @@ import com.gu.pandomainauth.*
 import com.gu.pandomainauth.webframeworks.WebFrameworkAdapter.*
 import com.gu.pandomainauth.internal.PlayFrameworkAdapter
 import com.gu.pandomainauth.model.*
-import com.gu.pandomainauth.oauth.{DiscoveryDocument, OAuthCallbackPlanner, OAuthCodeToUser}
+import com.gu.pandomainauth.oauth.{DiscoveryDocument, OAuthCallbackPlanner, OAuthCodeToUser, OAuthUrl}
 import com.gu.pandomainauth.oauth.OAuthCodeToUser.TokenRequestParamsGenerator
 import com.gu.pandomainauth.service.*
 import com.gu.pandomainauth.webframeworks.WebFrameworkAdapter
@@ -54,22 +54,12 @@ trait AuthActions {
     validateUser = ???,
     cacheValidation = ???
   )
-
-  val ddCache = new com.gu.pandomainauth.oauth.DiscoveryDocument.Cache(com.gu.pandomainauth.service.DiscoveryDocument.fromString)
-
+  
   val oAuthInteractions: OAuthInteractions[Future] = OAuthInteractions(
-    new OAuthUrl(
-      panDomainSettings.settings.oAuthSettings.clientId,
-      URI.create(authCallbackUrl),
-      organizationDomain = ???, // eg guardian.co.uk
-      authorizationEndpoint = () => URI.create(ddCache.get().authorization_endpoint)
-    ),
-    new PlayOAuthCodeToUser(
-      TokenRequestParamsGenerator(panDomainSettings.settings.oAuthSettings, URI.create(authCallbackUrl)),
-      () => ddCache.get(),
-      wsClient,
-      system
-    )
+    system,
+    panDomainSettings.settings.oAuthSettings,
+    new PlayImplOfOAuthHttpClient(wsClient),
+    URI.create(authCallbackUrl)
   )
 
   val pagePlanners: PagePlanners[Future] =

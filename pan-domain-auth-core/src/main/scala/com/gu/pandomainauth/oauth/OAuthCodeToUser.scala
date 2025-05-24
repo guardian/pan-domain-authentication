@@ -1,11 +1,13 @@
 package com.gu.pandomainauth.oauth
 
 import cats.*
+import cats.syntax.all.*
+import com.gu.pandomainauth.OAuthHttpClient
 import com.gu.pandomainauth.model.{AuthenticatedUser, OAuthSettings, User}
+import upickle.default.*
 
 import java.net.URI
 import java.time.Instant
-import scala.concurrent.{ExecutionContext, Future}
 
 /**
  * Performs steps 4 & 5 of the OpenID Connect Server flow:
@@ -24,11 +26,36 @@ import scala.concurrent.{ExecutionContext, Future}
  * DiscoveryDocument for token_endpoint & userinfo_endpoint
  * Also needs to be able to parse JSON and JWT
  */
-abstract class OAuthCodeToUser[F[_]: Monad] {
-  /**
-   * @param code
-   */
-  def validate(code: String): F[AuthenticatedUser]
+class OAuthCodeToUser[F[_]: Monad](
+  tokenRequestParamsGenerator: OAuthCodeToUser.TokenRequestParamsGenerator,
+  system: String,
+  httpClient: OAuthHttpClient[F],
+  discoveryDocument: () => DiscoveryDocument
+) {
+
+  def validate(code: String): F[AuthenticatedUser] =
+    fetchTokenFor(code).flatMap(token => authenticatedUserFor(token))
+
+  private def fetchTokenFor(code: String): F[com.gu.pandomainauth.oauth.Token] =
+    httpClient.httpPost(discoveryDocument().tokenEndpoint, bodyParams = tokenRequestParamsGenerator.paramsFor(code))
+    .map(read[Token](_))
+
+  private def authenticatedUserFor(token: com.gu.pandomainauth.oauth.Token): F[AuthenticatedUser] = httpClient
+    .httpGet(discoveryDocument().userinfoEndpoint, Map("Authorization" -> s"Bearer ${token.accessToken}"))
+    .map { userInfoJson =>
+      val jwt = JsonWebToken.claimsFrom(token.idToken)
+
+      OAuthCodeToUser.authenticatedUserFor(
+        read[UserInfo](userInfoJson),
+        // The JWT standard specifies that `exp` is a `NumericDate`,
+        // which is defined as an epoch time in *seconds*
+        // (unlike the Panda cookie `expires` which is in milliseconds)
+        // https://www.rfc-editor.org/rfc/rfc7519#section-4.1.4
+        Instant.ofEpochSecond(jwt.exp),
+        jwt.email,
+        system
+      )
+    }
 }
 
 class OAuthException(val message: String, val throwable: Throwable = null) extends Exception(message, throwable)

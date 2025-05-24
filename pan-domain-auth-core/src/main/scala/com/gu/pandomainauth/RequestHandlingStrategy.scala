@@ -6,7 +6,7 @@ import com.gu.pandomainauth.ApiResponse.{DisallowApiAccess, HttpStatusCode}
 import com.gu.pandomainauth.PageRequestHandlingStrategy.{ANTI_FORGERY_KEY, LOGIN_ORIGIN_KEY, TemporaryCookiesUsedForOAuth}
 import com.gu.pandomainauth.ResponseModification.NoResponseModification
 import com.gu.pandomainauth.model.*
-import com.gu.pandomainauth.oauth.OAuthCodeToUser
+import com.gu.pandomainauth.oauth.{OAuthCodeToUser, OAuthUrl}
 import com.gu.pandomainauth.service.CookieUtils.generateCookieData
 import com.gu.pandomainauth.service.CryptoConf.Signing
 
