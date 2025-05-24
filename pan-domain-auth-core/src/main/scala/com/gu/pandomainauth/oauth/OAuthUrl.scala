@@ -1,11 +1,11 @@
-package com.gu.pandomainauth
+package com.gu.pandomainauth.oauth
 
 import org.apache.http.NameValuePair
 import org.apache.http.client.utils.URIBuilder
 import org.apache.http.message.BasicNameValuePair
 
 import java.net.URI
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
 /**
  * https://developers.google.com/identity/openid-connect/openid-connect#sendauthrequest

@@ -5,17 +5,30 @@ import cats.syntax.all.*
 import com.gu.pandomainauth.ApiResponse.DisallowApiAccess
 import com.gu.pandomainauth.PageResponse.{NotAuthorized, Redirect}
 import com.gu.pandomainauth.model.*
-import com.gu.pandomainauth.oauth.{OAuthCallbackPlanner, OAuthCodeToUser}
+import com.gu.pandomainauth.oauth.OAuthCodeToUser.TokenRequestParamsGenerator
+import com.gu.pandomainauth.oauth.{DiscoveryDocument, OAuthCallbackPlanner, OAuthCodeToUser, OAuthUrl, Token}
 import com.gu.pandomainauth.webframeworks.WebFrameworkAdapter
 import com.gu.pandomainauth.webframeworks.WebFrameworkAdapter.*
 
 import java.net.URI
 
-trait ProcessingForOAuth[F[_] : Monad] {
+abstract class OAuthHttpClient[F[_] : Monad] {
 
-  def fetchToken(uri: URI, params: Map[String, String]): F[Token]
+  /**
+   * Make an HTTP POST request to the supplied URI, with the supplied params as the request body, return the body response as a string.
+   *
+   * Used for step 4 of the OpenID Connect Server flow: "Exchange code for access token and ID token"
+   * https://developers.google.com/identity/openid-connect/openid-connect#exchangecode
+   */
+  def httpPost(uri: URI, bodyParams: Map[String, String]): F[String]
 
-  def fetchAuthenticatedUser(uri: URI, token: Token): F[AuthenticatedUser]
+  /**
+   * Make an HTTP GET request to the supplied URI with the http headers, return the body response as a string.
+   *
+   * Used for step 5 of the OpenID Connect Server flow: "Obtain user information from the ID token"
+   * https://developers.google.com/identity/openid-connect/openid-connect#obtainuserinfo
+   */
+  def httpGet(uri: URI, httpHeaders: Map[String, String]): F[String]
 }
 
 
@@ -58,10 +71,37 @@ case class PagePlanners[F[+_]: Monad](
   val cookieResponses: CookieResponses = oAuthCallback.cookieResponses
 }
 
-case class OAuthInteractions[F[+_]: Monad](
+case class OAuthInteractions[F[_]: Monad](
   providerUrl: OAuthUrl,
   codeToUser: OAuthCodeToUser[F],
 )
+
+object OAuthInteractions {
+  def apply[F[_]: Monad](
+    system: String,
+    oAuthSettings: OAuthSettings,
+    httpClient: OAuthHttpClient[F],
+    authCallbackUrl: URI
+  ): OAuthInteractions[F] = {
+    val ddCache = new DiscoveryDocument.Cache()
+    
+    new OAuthInteractions(
+       new OAuthUrl(
+        oAuthSettings.clientId,
+        authCallbackUrl,
+        organizationDomain = ???, // eg guardian.co.uk
+        authorizationEndpoint = () => ddCache.get().authorizationEndpoint
+      ),
+      new OAuthCodeToUser(
+        TokenRequestParamsGenerator(oAuthSettings, authCallbackUrl),
+        system,
+        httpClient,
+        () => ddCache.get()
+      )
+    )
+
+  }
+}
 
 object PagePlanners {
   def apply[F[+_]: Monad](
