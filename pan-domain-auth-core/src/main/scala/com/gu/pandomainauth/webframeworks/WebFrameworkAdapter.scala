@@ -1,7 +1,7 @@
 package com.gu.pandomainauth.webframeworks
 
 import com.gu.pandomainauth.ApiResponse.HttpStatusCode
-import com.gu.pandomainauth.model.User
+import com.gu.pandomainauth.model.AuthenticatedUser
 import com.gu.pandomainauth.{PageRequest, ResponseModification}
 
 import java.net.URI
@@ -25,7 +25,7 @@ object WebFrameworkAdapter {
   }
 
   trait PageResponseAdapter[Resp] extends ResponseAdapter[Resp] {
-    def handleNotAuthorised(user: User): Resp
+    def handleNotAuthorised(user: AuthenticatedUser): Resp //  'User' would be better than 'AuthenticatedUser'
 
     def handleRedirect(redirect: URI): Resp
   }

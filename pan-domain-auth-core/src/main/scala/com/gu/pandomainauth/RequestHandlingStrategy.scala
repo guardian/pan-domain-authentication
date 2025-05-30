@@ -49,7 +49,7 @@ sealed trait OAuthCallbackResponse
 case class AllowAccess(user: User) extends PageResponse with ApiResponse
 
 object PageResponse {
-  case class NotAuthorized(user: User) extends PageResponse with WithholdAccess with OAuthCallbackResponse
+  case class NotAuthorized(user: AuthenticatedUser) extends PageResponse with WithholdAccess with OAuthCallbackResponse
   case class Redirect(uri: URI) extends PageResponse with WithholdAccess with OAuthCallbackResponse
 }
 
@@ -130,7 +130,7 @@ class PageRequestHandlingStrategy[F[_]: Monad](
     case NotAuthenticated => redirectForAuth()
     case InvalidCookie(_) => redirectForAuth(wipeAuthCookie = true)
     case stale: StaleUserAuthentication => redirectForAuth(loginHintEmail = Some(stale.authedUser.user.email))
-    case com.gu.pandomainauth.model.NotAuthorized(authedUser) => Plan(NotAuthorized(authedUser.user))
+    case com.gu.pandomainauth.model.NotAuthorized(authedUser) => Plan(NotAuthorized(authedUser))
     case Authenticated(authedUser) => Plan(AllowAccess(authedUser.user), cookieResponses.updateCookieToAddSystemIfNecessary(authedUser))
   }
 }

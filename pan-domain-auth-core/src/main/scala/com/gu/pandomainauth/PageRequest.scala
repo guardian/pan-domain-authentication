@@ -7,6 +7,11 @@ import java.net.URI
 import java.nio.charset.StandardCharsets.UTF_8
 import scala.jdk.CollectionConverters.*
 
+/**
+ *
+ * @param requestUrl may be relative, eg "/foo", or absolute
+ * @param cookies
+ */
 case class PageRequest(requestUrl: URI, cookies: Map[String, String]) {
   val queryParams: Map[String, String] = {
     URLEncodedUtils.parse(requestUrl.getQuery, UTF_8).asScala.map(nvp => nvp.getName -> nvp.getValue).toMap
