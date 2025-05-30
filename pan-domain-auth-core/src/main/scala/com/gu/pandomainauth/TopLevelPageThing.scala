@@ -128,7 +128,7 @@ class TopLevelPageThing[Req: PageRequestAdapter, Resp, F[+_]: Monad](
   def processOAuthCallback(request: Req): F[Resp] = for {
     plan <- pagePlanners.oAuthCallback.processOAuthCallback(request.asPandaRequest)
   } yield modifyResponseWith(plan.responseModification)(plan.typ match {
-    case NotAuthorized(user) => responseAdapter.handleNotAuthorised(user)
+    case NotAuthorized(authenticatedUser) => responseAdapter.handleNotAuthorised(authenticatedUser)
     case Redirect(uri) => responseAdapter.handleRedirect(uri)
   })
 

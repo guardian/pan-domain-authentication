@@ -41,6 +41,6 @@ class OAuthCallbackPlanner[F[+_]: Monad](system: String, val cookieResponses: Co
 
     if (???) { // validateUser(authedUserData)
       Plan(PageResponse.Redirect(returnUrl), cookieResponses.cookieResponseFor(authedUserData, wipeTemporaryCookiesUsedForOAuth = true))
-    } else Plan(PageResponse.NotAuthorized(newlyClaimedAuth.user))
+    } else Plan(PageResponse.NotAuthorized(newlyClaimedAuth))
   }
 }

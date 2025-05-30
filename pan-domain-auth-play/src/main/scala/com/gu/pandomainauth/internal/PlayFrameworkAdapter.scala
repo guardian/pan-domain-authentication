@@ -1,6 +1,6 @@
 package com.gu.pandomainauth.internal
 
-import com.gu.pandomainauth.model.User
+import com.gu.pandomainauth.model.{AuthenticatedUser, User}
 import com.gu.pandomainauth.webframeworks.WebFrameworkAdapter
 import com.gu.pandomainauth.{ApiResponse, ResponseModification}
 import play.api.mvc.{Cookie, DiscardingCookie, Result, Results}
@@ -37,7 +37,7 @@ object PlayFrameworkAdapter extends Results
     modifiers.foldLeft(initialResult)((result, f) => f(result))
   }
 
-  override def handleNotAuthorised(user: User): Result = ??? // TODO showUnauthedMessage(invalidUserMessage(user))
+  override def handleNotAuthorised(user: AuthenticatedUser): Result = ??? // TODO showUnauthedMessage(invalidUserMessage(user))
 
   override def handleRedirect(redirect: URI): Result = Redirect(redirect.toString)
 
