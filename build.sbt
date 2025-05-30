@@ -24,7 +24,10 @@ val artifactProductionSettings = Seq(
     "-feature",
     "-deprecation",
     "-release:11"
-  ),
+  ) ++ (CrossVersion.partialVersion(scalaVersion.value) match {
+    case Some((2, _)) => Seq("-Xsource:3") // flag only needed in Scala 2
+    case _ => Seq.empty
+  }),
 )
 
 def directSubfolderProject(path: String): Project = Project(path, file(path)).settings(commonSettings)
@@ -39,7 +42,10 @@ lazy val panDomainAuthCore = directSubfolderProject("pan-domain-auth-core")
   .dependsOn(panDomainAuthVerification)
   .settings(
     artifactProductionSettings,
-    libraryDependencies ++= googleDirectoryApiDependencies
+    libraryDependencies ++= googleDirectoryApiDependencies ++ Seq(
+      "org.typelevel" %% "cats-core" % "2.13.0",
+      "com.lihaoyi" %% "upickle" % "4.2.1"
+    )
   )
 
 def playSupportFor(playVersion: PlayVersion) = directSubfolderProject(s"pan-domain-auth-${playVersion.suffix}")
