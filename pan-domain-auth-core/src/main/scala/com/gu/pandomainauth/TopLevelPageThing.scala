@@ -145,3 +145,12 @@ class TopLevelApiThing[Req: PageRequestAdapter, Resp, F[_]: Monad](
     case disallow: DisallowApiAccess => responseAdapter.handleDisallow(disallow.statusCode)
   }
 }
+
+object TopLevelApiThing {
+  def apply[Req: PageRequestAdapter, Resp, F[_]: Monad](responseAdapter: WebFrameworkAdapter.ApiResponseAdapter[Resp])(
+    implicit authStatusFromRequest: AuthStatusFromRequest
+  ) = new TopLevelApiThing[Req, Resp, F](
+    new AuthPlanner[ApiResponse](ApiRequestHandlingStrategy),
+    responseAdapter
+  )
+}
