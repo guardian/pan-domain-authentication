@@ -6,7 +6,6 @@ import com.gu.pandomainauth.service.CryptoConf.Verification
 
 import java.time.Duration
 
-
 class AuthStatusFromRequest(
   val cookieSettings: CookieSettings,
   val system: String,
