@@ -4,14 +4,14 @@ import cats.*
 import cats.syntax.all.*
 import com.gu.pandomainauth.PageRequestHandlingStrategy.{ANTI_FORGERY_KEY, LOGIN_ORIGIN_KEY}
 import com.gu.pandomainauth.model.{AuthenticatedUser, AuthenticationStatus}
-import com.gu.pandomainauth.{AuthStatusFromRequest, CookieResponses, OAuthCallbackResponse, PageRequest, PageResponse, Plan}
+import com.gu.pandomainauth.{AuthStatusFromRequest, CookieResponses, OAuthCallbackResponse, PageRequest, PageResponse, Plan, WithholdAccess}
 
 import java.nio.charset.StandardCharsets.UTF_8
 import com.gu.pandomainauth.model.{Authenticated, GracePeriod}
 
 import java.net.{URI, URLDecoder}
 
-class OAuthCallbackPlanner[F[+_]: Monad](system: String, val cookieResponses: CookieResponses, oAuthValidator: OAuthCodeToUser[F])(implicit authStatusFromRequest: AuthStatusFromRequest) {
+class OAuthCallbackPlanner[F[_]: Monad](system: String, val cookieResponses: CookieResponses, oAuthValidator: OAuthCodeToUser[F])(implicit authStatusFromRequest: AuthStatusFromRequest) {
   val F: Monad[F] = Monad[F]
 
   def processOAuthCallback(request: PageRequest): F[Plan[OAuthCallbackResponse]] = {
@@ -27,7 +27,7 @@ class OAuthCallbackPlanner[F[+_]: Monad](system: String, val cookieResponses: Co
       ) getOrElse F.pure(Plan[OAuthCallbackResponse](???, ???)) // Future.successful(BadRequest("Missing cookies, bad anti-forgery, etc"))
   }
 
-  private def planFor(newlyClaimedAuth: AuthenticatedUser, priorAuth: AuthenticationStatus, returnUrl: URI) = {
+  private def planFor(newlyClaimedAuth: AuthenticatedUser, priorAuth: AuthenticationStatus, returnUrl: URI): Plan[OAuthCallbackResponse] = {
     val authedSystemsFromPriorAuth: Set[String] = (priorAuth match {
       case Authenticated(authedUser) => Some(authedUser)
       case GracePeriod(authedUser) => Some(authedUser)

@@ -62,7 +62,7 @@ abstract class TopLevelAuthThing[Req: PageRequestAdapter, Resp, AuthResponseType
   def handleWithholdAccess(pandaResp: AuthResponseType with WithholdAccess): Resp
 }
 
-case class PagePlanners[F[+_]: Monad](
+case class PagePlanners[F[_]: Monad](
   auth: AuthPlanner[PageResponse],
   oAuthCallback: OAuthCallbackPlanner[F]
 ) {
@@ -83,7 +83,7 @@ object OAuthInteractions {
     httpClient: OAuthHttpClient[F],
     authCallbackUrl: URI
   ): OAuthInteractions[F] = {
-    val ddCache = new DiscoveryDocument.Cache()
+    val ddCache = DiscoveryDocument.Cache
     
     new OAuthInteractions(
        new OAuthUrl(
@@ -104,7 +104,7 @@ object OAuthInteractions {
 }
 
 object PagePlanners {
-  def apply[F[+_]: Monad](
+  def apply[F[_]: Monad](
     cookieResponses: CookieResponses,
     oAuth: OAuthInteractions[F],
     system: String
@@ -114,7 +114,7 @@ object PagePlanners {
   )
 }
 
-class TopLevelPageThing[Req: PageRequestAdapter, Resp, F[+_]: Monad](
+class TopLevelPageThing[Req: PageRequestAdapter, Resp, F[_]: Monad](
   pagePlanners: PagePlanners[F],
   responseAdapter: WebFrameworkAdapter.PageResponseAdapter[Resp],
   logoutResponse: Resp
