@@ -5,32 +5,9 @@ import cats.syntax.all.*
 import com.gu.pandomainauth.ApiResponse.DisallowApiAccess
 import com.gu.pandomainauth.PageResponse.{NotAuthorized, Redirect}
 import com.gu.pandomainauth.model.*
-import com.gu.pandomainauth.oauth.OAuthCodeToUser.TokenRequestParamsGenerator
-import com.gu.pandomainauth.oauth.{DiscoveryDocument, OAuthCallbackPlanner, OAuthCodeToUser, OAuthUrl, Token}
+import com.gu.pandomainauth.oauth.*
 import com.gu.pandomainauth.webframeworks.WebFrameworkAdapter
 import com.gu.pandomainauth.webframeworks.WebFrameworkAdapter.*
-
-import java.net.URI
-
-abstract class OAuthHttpClient[F[_] : Monad] {
-
-  /**
-   * Make an HTTP POST request to the supplied URI, with the supplied params as the request body, return the body response as a string.
-   *
-   * Used for step 4 of the OpenID Connect Server flow: "Exchange code for access token and ID token"
-   * https://developers.google.com/identity/openid-connect/openid-connect#exchangecode
-   */
-  def httpPost(uri: URI, bodyParams: Map[String, String]): F[String]
-
-  /**
-   * Make an HTTP GET request to the supplied URI with the http headers, return the body response as a string.
-   *
-   * Used for step 5 of the OpenID Connect Server flow: "Obtain user information from the ID token"
-   * https://developers.google.com/identity/openid-connect/openid-connect#obtainuserinfo
-   */
-  def httpGet(uri: URI, httpHeaders: Map[String, String]): F[String]
-}
-
 
 class AuthPlanner[AuthResponseType <: AuthedEndpointResponse](authStatusHandler: AuthStatusHandler[AuthResponseType])(implicit
   authStatusFromRequest: AuthStatusFromRequest
@@ -51,18 +28,16 @@ abstract class TopLevelAuthThing[Req: PageRequestAdapter, Resp, AuthResponseType
   def authenticateRequest(request: Req)(produceResultGivenAuthedUser: User => F[Resp]): F[Resp] = {
     val plan = authPlanner.planFor(request.asPandaRequest)
 
-    handleAuthResponse(plan.typ)(produceResultGivenAuthedUser).map(modifyResponseWith(plan.responseModification))
-  }
-
-  def handleAuthResponse(pandaResp: AuthResponseType)(produceResultGivenAuthedUser: User => F[Resp]): F[Resp] = pandaResp match {
-    case AllowAccess(user) => produceResultGivenAuthedUser(user)
-    case withholdAccess: AuthResponseType with WithholdAccess => F.pure(handleWithholdAccess(withholdAccess))
+    (plan.typ match {
+      case AllowAccess(user) => produceResultGivenAuthedUser(user)
+      case withholdAccess: AuthResponseType with WithholdAccess => F.pure(handleWithholdAccess(withholdAccess))
+    }).map(modifyResponseWith(plan.responseModification))
   }
 
   def handleWithholdAccess(pandaResp: AuthResponseType with WithholdAccess): Resp
 }
 
-case class PagePlanners[F[+_]: Monad](
+case class PagePlanners[F[_]: Monad](
   auth: AuthPlanner[PageResponse],
   oAuthCallback: OAuthCallbackPlanner[F]
 ) {
@@ -71,40 +46,8 @@ case class PagePlanners[F[+_]: Monad](
   val cookieResponses: CookieResponses = oAuthCallback.cookieResponses
 }
 
-case class OAuthInteractions[F[_]: Monad](
-  providerUrl: OAuthUrl,
-  codeToUser: OAuthCodeToUser[F],
-)
-
-object OAuthInteractions {
-  def apply[F[_]: Monad](
-    system: String,
-    oAuthSettings: OAuthSettings,
-    httpClient: OAuthHttpClient[F],
-    authCallbackUrl: URI
-  ): OAuthInteractions[F] = {
-    val ddCache = new DiscoveryDocument.Cache()
-    
-    new OAuthInteractions(
-       new OAuthUrl(
-        oAuthSettings.clientId,
-        authCallbackUrl,
-        organizationDomain = ???, // eg guardian.co.uk
-        authorizationEndpoint = () => ddCache.get().authorizationEndpoint
-      ),
-      new OAuthCodeToUser(
-        TokenRequestParamsGenerator(oAuthSettings, authCallbackUrl),
-        system,
-        httpClient,
-        () => ddCache.get()
-      )
-    )
-
-  }
-}
-
 object PagePlanners {
-  def apply[F[+_]: Monad](
+  def apply[F[_]: Monad](
     cookieResponses: CookieResponses,
     oAuth: OAuthInteractions[F],
     system: String
@@ -112,9 +55,18 @@ object PagePlanners {
     new AuthPlanner[PageResponse](new PageRequestHandlingStrategy[F](system, cookieResponses, oAuth.providerUrl)),
     new OAuthCallbackPlanner(system, cookieResponses, oAuth.codeToUser)
   )
+
+  def apply[F[_]: Monad](
+    settingsRefresher: PanDomainAuthSettingsRefresher,
+    appSpecifics: OAuthInteractions.AppSpecifics[F]
+  )(implicit authStatus: AuthStatusFromRequest): PagePlanners[F] = PagePlanners(
+    CookieResponses(settingsRefresher),
+    OAuthInteractions(settingsRefresher.system, settingsRefresher.settings.oAuthSettings, appSpecifics),
+    settingsRefresher.system
+  )
 }
 
-class TopLevelPageThing[Req: PageRequestAdapter, Resp, F[+_]: Monad](
+class TopLevelPageThing[Req: PageRequestAdapter, Resp, F[_]: Monad](
   pagePlanners: PagePlanners[F],
   responseAdapter: WebFrameworkAdapter.PageResponseAdapter[Resp],
   logoutResponse: Resp
@@ -149,8 +101,5 @@ class TopLevelApiThing[Req: PageRequestAdapter, Resp, F[_]: Monad](
 object TopLevelApiThing {
   def apply[Req: PageRequestAdapter, Resp, F[_]: Monad](responseAdapter: WebFrameworkAdapter.ApiResponseAdapter[Resp])(
     implicit authStatusFromRequest: AuthStatusFromRequest
-  ) = new TopLevelApiThing[Req, Resp, F](
-    new AuthPlanner[ApiResponse](ApiRequestHandlingStrategy),
-    responseAdapter
-  )
+  ) = new TopLevelApiThing[Req, Resp, F](new AuthPlanner[ApiResponse](ApiRequestHandlingStrategy), responseAdapter)
 }

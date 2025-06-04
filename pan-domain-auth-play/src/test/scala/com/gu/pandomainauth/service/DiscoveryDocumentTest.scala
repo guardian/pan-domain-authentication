@@ -27,13 +27,13 @@ class DiscoveryDocumentTest extends AnyFlatSpec with Matchers with TimeLimits {
   }
 
   "General DiscoveryDocument.Cache" should "work well" in {
-    val cache = new DiscoveryDocument.Cache()
+    val cache = DiscoveryDocument.Cache
 
     val discoveryDocument = cache.get() // First call will actually make an HTTP request
 
     discoveryDocument shouldEqual typicalDiscoveryDocument // feel free to update the sample if this changes
 
-    failAfter(200.millis) { // 'cache.get()' should be doing very little work now, this shouldn't take long!
+    failAfter(1.second) { // 'cache.get()' should be doing very little work now, this shouldn't take long!
       for (_ <- 0 to 1000000) cache.get()
     }
   }

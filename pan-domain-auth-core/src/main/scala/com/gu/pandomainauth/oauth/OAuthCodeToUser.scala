@@ -2,7 +2,6 @@ package com.gu.pandomainauth.oauth
 
 import cats.*
 import cats.syntax.all.*
-import com.gu.pandomainauth.OAuthHttpClient
 import com.gu.pandomainauth.model.{AuthenticatedUser, OAuthSettings, User}
 import upickle.default.*
 

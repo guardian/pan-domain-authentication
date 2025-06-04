@@ -4,7 +4,7 @@ import cats.*
 import cats.syntax.all.*
 import com.gu.pandomainauth.model.AuthenticatedUser
 import com.gu.pandomainauth.oauth.OAuthCodeToUser.TokenRequestParamsGenerator
-import com.gu.pandomainauth.oauth.{Error, JsonWebToken, OAuthCodeToUser, OAuthException, Token}
+import com.gu.pandomainauth.oauth.{Error, JsonWebToken, OAuthCodeToUser, OAuthException, OAuthHttpClient, Token}
 import play.api.libs.json.JsValue
 import play.api.libs.ws.*
 import upickle.default.*
