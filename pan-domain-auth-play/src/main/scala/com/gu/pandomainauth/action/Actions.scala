@@ -4,7 +4,7 @@ import com.gu.pandomainauth.*
 import com.gu.pandomainauth.webframeworks.WebFrameworkAdapter.*
 import com.gu.pandomainauth.internal.PlayFrameworkAdapter
 import com.gu.pandomainauth.model.*
-import com.gu.pandomainauth.oauth.{DiscoveryDocument, OAuthCallbackPlanner, OAuthCodeToUser, OAuthUrl}
+import com.gu.pandomainauth.oauth.{DiscoveryDocument, OAuthCallbackPlanner, OAuthCodeToUser, OAuthInteractions, OAuthUrl}
 import com.gu.pandomainauth.oauth.OAuthCodeToUser.TokenRequestParamsGenerator
 import com.gu.pandomainauth.service.*
 import com.gu.pandomainauth.webframeworks.WebFrameworkAdapter
@@ -54,16 +54,11 @@ trait AuthActions {
     validateUser = ???,
     cacheValidation = ???
   )
-  
-  val oAuthInteractions: OAuthInteractions[Future] = OAuthInteractions(
-    system,
-    panDomainSettings.settings.oAuthSettings,
-    new PlayImplOfOAuthHttpClient(wsClient),
-    URI.create(authCallbackUrl)
-  )
 
-  val pagePlanners: PagePlanners[Future] =
-    PagePlanners(CookieResponses(panDomainSettings), oAuthInteractions, system)
+  val pagePlanners: PagePlanners[Future] = PagePlanners(
+    panDomainSettings,
+    OAuthInteractions.AppSpecifics(new PlayImplOfOAuthHttpClient(wsClient), URI.create(authCallbackUrl))
+  )
 
   val topLevelPageThing: TopLevelPageThing[RequestHeader, Result, Future] =
     new TopLevelPageThing(pagePlanners, PlayFrameworkAdapter, showUnauthedMessage("logged out"))
