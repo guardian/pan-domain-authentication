@@ -3,6 +3,7 @@ package com.gu.pandomainauth
 import cats.*
 import cats.syntax.all.*
 import com.gu.pandomainauth.ApiResponse.DisallowApiAccess
+import com.gu.pandomainauth.OAuthInteractions.AppSpecifics
 import com.gu.pandomainauth.PageResponse.{NotAuthorized, Redirect}
 import com.gu.pandomainauth.model.*
 import com.gu.pandomainauth.oauth.OAuthCodeToUser.TokenRequestParamsGenerator
@@ -62,7 +63,7 @@ abstract class TopLevelAuthThing[Req: PageRequestAdapter, Resp, AuthResponseType
   def handleWithholdAccess(pandaResp: AuthResponseType with WithholdAccess): Resp
 }
 
-case class PagePlanners[F[+_]: Monad](
+case class PagePlanners[F[_]: Monad](
   auth: AuthPlanner[PageResponse],
   oAuthCallback: OAuthCallbackPlanner[F]
 ) {
@@ -77,25 +78,26 @@ case class OAuthInteractions[F[_]: Monad](
 )
 
 object OAuthInteractions {
+  case class AppSpecifics[F[_]: Monad](httpClient: OAuthHttpClient[F], authCallbackUrl: URI)
+
   def apply[F[_]: Monad](
     system: String,
     oAuthSettings: OAuthSettings,
-    httpClient: OAuthHttpClient[F],
-    authCallbackUrl: URI
+    appSpecifics: AppSpecifics[F]
   ): OAuthInteractions[F] = {
-    val ddCache = new DiscoveryDocument.Cache()
+    val ddCache = DiscoveryDocument.Cache
     
     new OAuthInteractions(
        new OAuthUrl(
         oAuthSettings.clientId,
-        authCallbackUrl,
+        appSpecifics.authCallbackUrl,
         organizationDomain = ???, // eg guardian.co.uk
         authorizationEndpoint = () => ddCache.get().authorizationEndpoint
       ),
       new OAuthCodeToUser(
-        TokenRequestParamsGenerator(oAuthSettings, authCallbackUrl),
+        TokenRequestParamsGenerator(oAuthSettings, appSpecifics.authCallbackUrl),
         system,
-        httpClient,
+        appSpecifics.httpClient,
         () => ddCache.get()
       )
     )
@@ -104,7 +106,7 @@ object OAuthInteractions {
 }
 
 object PagePlanners {
-  def apply[F[+_]: Monad](
+  def apply[F[_]: Monad](
     cookieResponses: CookieResponses,
     oAuth: OAuthInteractions[F],
     system: String
@@ -112,9 +114,18 @@ object PagePlanners {
     new AuthPlanner[PageResponse](new PageRequestHandlingStrategy[F](system, cookieResponses, oAuth.providerUrl)),
     new OAuthCallbackPlanner(system, cookieResponses, oAuth.codeToUser)
   )
+
+  def apply[F[_]: Monad](
+    settingsRefresher: PanDomainAuthSettingsRefresher,
+    appSpecifics: OAuthInteractions.AppSpecifics[F]
+  )(implicit authStatus: AuthStatusFromRequest): PagePlanners[F] = PagePlanners(
+    CookieResponses(settingsRefresher),
+    OAuthInteractions(settingsRefresher.system, settingsRefresher.settings.oAuthSettings, appSpecifics),
+    settingsRefresher.system
+  )
 }
 
-class TopLevelPageThing[Req: PageRequestAdapter, Resp, F[+_]: Monad](
+class TopLevelPageThing[Req: PageRequestAdapter, Resp, F[_]: Monad](
   pagePlanners: PagePlanners[F],
   responseAdapter: WebFrameworkAdapter.PageResponseAdapter[Resp],
   logoutResponse: Resp
@@ -149,8 +160,5 @@ class TopLevelApiThing[Req: PageRequestAdapter, Resp, F[_]: Monad](
 object TopLevelApiThing {
   def apply[Req: PageRequestAdapter, Resp, F[_]: Monad](responseAdapter: WebFrameworkAdapter.ApiResponseAdapter[Resp])(
     implicit authStatusFromRequest: AuthStatusFromRequest
-  ) = new TopLevelApiThing[Req, Resp, F](
-    new AuthPlanner[ApiResponse](ApiRequestHandlingStrategy),
-    responseAdapter
-  )
+  ) = new TopLevelApiThing[Req, Resp, F](new AuthPlanner[ApiResponse](ApiRequestHandlingStrategy), responseAdapter)
 }

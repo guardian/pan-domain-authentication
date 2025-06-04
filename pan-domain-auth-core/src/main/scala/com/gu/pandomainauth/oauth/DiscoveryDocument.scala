@@ -36,7 +36,7 @@ object DiscoveryDocument {
    * In truth, there's probably no harm in caching the Discovery Document for the duration of
    * the app server's lifetime, given that we at the Guardian frequently redeploy our services.
    */
-  class Cache() {
+  object Cache {
     private val client: HttpClient = HttpClient.newBuilder.version(HTTP_2).connectTimeout(ofSeconds(20)).build
 
     private val request: HttpRequest = HttpRequest.newBuilder(uri).GET().build()
@@ -48,6 +48,6 @@ object DiscoveryDocument {
 
     private val holder: AtomicReference[Try[DiscoveryDocument]] = new AtomicReference(fetchAndParse())
 
-    def get(): DiscoveryDocument = holder.updateAndGet(docTry => docTry.fold(_ => fetchAndParse(), Success(_))).get
+    def get(): DiscoveryDocument = holder.updateAndGet(_.fold(_ => fetchAndParse(), Success(_))).get
   }
 }

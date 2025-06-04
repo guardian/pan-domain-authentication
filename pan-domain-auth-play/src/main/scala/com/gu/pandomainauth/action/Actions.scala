@@ -54,16 +54,11 @@ trait AuthActions {
     validateUser = ???,
     cacheValidation = ???
   )
-  
-  val oAuthInteractions: OAuthInteractions[Future] = OAuthInteractions(
-    system,
-    panDomainSettings.settings.oAuthSettings,
-    new PlayImplOfOAuthHttpClient(wsClient),
-    URI.create(authCallbackUrl)
-  )
 
-  val pagePlanners: PagePlanners[Future] =
-    PagePlanners(CookieResponses(panDomainSettings), oAuthInteractions, system)
+  val pagePlanners: PagePlanners[Future] = PagePlanners(
+    panDomainSettings,
+    OAuthInteractions.AppSpecifics(new PlayImplOfOAuthHttpClient(wsClient), URI.create(authCallbackUrl))
+  )
 
   val topLevelPageThing: TopLevelPageThing[RequestHeader, Result, Future] =
     new TopLevelPageThing(pagePlanners, PlayFrameworkAdapter, showUnauthedMessage("logged out"))

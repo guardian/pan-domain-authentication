@@ -6,7 +6,6 @@ import com.gu.pandomainauth.service.CryptoConf.Verification
 
 import java.time.Duration
 
-
 class AuthStatusFromRequest(
   val cookieSettings: CookieSettings,
   val system: String,
@@ -16,7 +15,7 @@ class AuthStatusFromRequest(
   apiGracePeriod: Duration = DefaultApiGracePeriod
 ) {
   def authStatusFor(request: PageRequest): AuthenticationStatus = request.cookies.get(cookieSettings.cookieName).map { cookie =>
-    val forceExpiry: Boolean = ???
+    val forceExpiry = false // TODO - see https://github.com/guardian/pan-domain-authentication/pull/177
     PanDomain.authStatus(cookie, verification(), validateUser, system, cacheValidation, forceExpiry, apiGracePeriod)
   } getOrElse NotAuthenticated
 }
