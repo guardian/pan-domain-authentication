@@ -4,14 +4,12 @@ import cats.*
 import cats.syntax.all.*
 import com.gu.pandomainauth.PageRequestHandlingStrategy.{ANTI_FORGERY_KEY, LOGIN_ORIGIN_KEY}
 import com.gu.pandomainauth.model.{AuthenticatedUser, AuthenticationStatus}
-import com.gu.pandomainauth.{AuthStatusFromRequest, CookieResponses, OAuthCallbackResponse, PageRequest, PageResponse, Plan}
-
-import java.nio.charset.StandardCharsets.UTF_8
-import com.gu.pandomainauth.model.{Authenticated, GracePeriod}
+import com.gu.pandomainauth.*
 
 import java.net.{URI, URLDecoder}
+import java.nio.charset.StandardCharsets.UTF_8
 
-class OAuthCallbackPlanner[F[+_]: Monad](system: String, val cookieResponses: CookieResponses, oAuthValidator: OAuthCodeToUser[F])(implicit authStatusFromRequest: AuthStatusFromRequest) {
+class OAuthCallbackPlanner[F[_]: Monad](system: String, val cookieResponses: CookieResponses, oAuthValidator: OAuthCodeToUser[F])(implicit authStatusFromRequest: AuthStatusFromRequest) {
   val F: Monad[F] = Monad[F]
 
   def processOAuthCallback(request: PageRequest): F[Plan[OAuthCallbackResponse]] = {
@@ -27,20 +25,13 @@ class OAuthCallbackPlanner[F[+_]: Monad](system: String, val cookieResponses: Co
       ) getOrElse F.pure(Plan[OAuthCallbackResponse](???, ???)) // Future.successful(BadRequest("Missing cookies, bad anti-forgery, etc"))
   }
 
-  private def planFor(newlyClaimedAuth: AuthenticatedUser, priorAuth: AuthenticationStatus, returnUrl: URI) = {
-    val authedSystemsFromPriorAuth: Set[String] = (priorAuth match {
-      case Authenticated(authedUser) => Some(authedUser)
-      case GracePeriod(authedUser) => Some(authedUser)
-      case _ => None
-    }).filter(_.user.email == newlyClaimedAuth.user.email).toSet.flatMap[String](_.authenticatedIn)
+  private def planFor(newlyClaimedAuth: AuthenticatedUser, priorAuth: AuthenticationStatus, returnUrl: URI): Plan[OAuthCallbackResponse] = {
     val authedUserData = newlyClaimedAuth.copy(
-      authenticatingSystem = system,
-      authenticatedIn = authedSystemsFromPriorAuth + system,
       multiFactor = ??? // checkMultifactor(claimedAuth)
     )
 
     if (???) { // validateUser(authedUserData)
-      Plan(PageResponse.Redirect(returnUrl), cookieResponses.cookieResponseFor(authedUserData, wipeTemporaryCookiesUsedForOAuth = true))
+      Plan(PageResponse.Redirect(returnUrl), cookieResponses.cookieResponseFor(authedUserData.augmentWithSystemsFrom(priorAuth), wipeTemporaryCookiesUsedForOAuth = true))
     } else Plan(PageResponse.NotAuthorized(newlyClaimedAuth))
   }
 }

@@ -24,4 +24,13 @@ case class AuthenticatedUser(user: User, authenticatingSystem: String, authentic
   def requiringAdditional(system: String): Option[AuthenticatedUser] = Option.when(!authenticatedIn(system))(copy(
     authenticatedIn = authenticatedIn + system
   ))
+
+  def augmentWithSystemsFrom(priorAuth: AuthenticationStatus): AuthenticatedUser = {
+    val authedSystemsFromPriorAuth: Set[String] = (priorAuth match {
+      case auth: AcceptableAuthForApiRequests => Some(auth.authedUser)
+      case _ => None
+    }).filter(_.user.email == user.email).toSet.flatMap[String](_.authenticatedIn)
+
+    copy(authenticatedIn = authenticatedIn ++ authedSystemsFromPriorAuth)
+  }
 }
