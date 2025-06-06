@@ -1,14 +1,19 @@
 package com.gu.pandomainauth.action
 
-import com.gu.pandomainauth.model._
-import com.gu.pandomainauth.service._
-import com.gu.pandomainauth.{PanDomain, PanDomainAuthSettingsRefresher}
+import com.gu.pandomainauth.*
+import com.gu.pandomainauth.webframeworks.WebFrameworkAdapter.*
+import com.gu.pandomainauth.internal.PlayFrameworkAdapter
+import com.gu.pandomainauth.model.*
+import com.gu.pandomainauth.oauth.{DiscoveryDocument, OAuthCallbackPlanner, OAuthCodeToUser, OAuthInteractions, OAuthUrl}
+import com.gu.pandomainauth.oauth.OAuthCodeToUser.TokenRequestParamsGenerator
+import com.gu.pandomainauth.service.*
+import com.gu.pandomainauth.webframeworks.WebFrameworkAdapter
 import org.slf4j.LoggerFactory
 import play.api.libs.ws.WSClient
-import play.api.mvc.Results._
-import play.api.mvc._
+import play.api.mvc.*
+import play.api.mvc.Results.*
 
-import java.net.{URLDecoder, URLEncoder}
+import java.net.URI
 import scala.concurrent.{ExecutionContext, Future}
 
 class UserRequest[A](val user: User, request: Request[A]) extends WrappedRequest[A](request)
@@ -34,9 +39,26 @@ trait AuthActions {
   def controllerComponents: ControllerComponents
   val panDomainSettings: PanDomainAuthSettingsRefresher
 
+  implicit val pageRequestAdapter: WebFrameworkAdapter.PageRequestAdapter[RequestHeader] = (req: RequestHeader) => PageRequest(
+    URI.create(req.uri),
+    req.cookies.map(c => c.name -> c.value).toMap
+  )
+
   private lazy val system: String = panDomainSettings.system
   private lazy val domain: String = panDomainSettings.domain
+
   private def settings: PanDomainAuthSettings = panDomainSettings.settings
+
+  implicit val authStatusFromRequest: AuthStatusFromRequest =
+    AuthStatusFromRequest(panDomainSettings, validateUser, cacheValidation)
+
+  val pagePlanners: PagePlanners[Future] = PagePlanners(
+    panDomainSettings,
+    OAuthInteractions.AppSpecifics(new PlayImplOfOAuthHttpClient(wsClient), URI.create(authCallbackUrl))
+  )
+
+  val topLevelPageThing: TopLevelPageThing[RequestHeader, Result, Future] =
+    new TopLevelPageThing(pagePlanners, PlayFrameworkAdapter, showUnauthedMessage("logged out"))
 
   private implicit val ec: ExecutionContext = controllerComponents.executionContext
 
@@ -69,8 +91,6 @@ trait AuthActions {
     */
   def authCallbackUrl: String
 
-  lazy val OAuth = new OAuth(settings.oAuthSettings, system, authCallbackUrl)(ec, wsClient)
-
   /**
     * Application name used for initialising Google API clients for directory group checking
     */
@@ -80,54 +100,11 @@ trait AuthActions {
     new Google2FAGroupChecker(_, panDomainSettings.s3BucketLoader, applicationName)
   }
 
-  /**
-    * A cookie key that stores the target URL that was being accessed when redirected for authentication
-    */
-  val LOGIN_ORIGIN_KEY = "panda-loginOriginUrl"
-  /*
-   * Cookie key containing an anti-forgery token; helps to validate that the oauth callback arrived in response to the correct oauth request
-   */
-  val ANTI_FORGERY_KEY = "panda-antiForgeryToken"
-  /*
-   * Cookie that will make panda behave as if the cookie has expired.
-   * NOTE: This cookie is for debugging only! It should _not_ be set by any application code to expire the cookie!! Use the `processLogout` action instead!!
-   */
-  private val FORCE_EXPIRY_KEY = "panda-forceExpiry"
-
-  private def cookie(name: String, value: String): Cookie =
-    Cookie(
-      name,
-      value = URLEncoder.encode(value, "UTF-8"),
-      secure = true,
-      httpOnly = true,
-      // Chrome will pass back SameSite=Lax cookies, but Firefox requires
-      // SameSite=None, since the cookies are to be returned on a redirect
-      // from a 3rd party
-      sameSite = Some(Cookie.SameSite.None)
-    )
-  private lazy val discardCookies = Seq(
-    DiscardingCookie(LOGIN_ORIGIN_KEY, secure = true),
-    DiscardingCookie(ANTI_FORGERY_KEY, secure = true),
-    DiscardingCookie(FORCE_EXPIRY_KEY, secure = true)
-  )
-
-  /**
-    * starts the authentication process for a user. By default this just sends the user off to the OAuth provider for auth
-    * but if you want to show welcome page with a button on it then override.
-    */
-  def sendForAuth(implicit request: RequestHeader, email: Option[String] = None) = {
-    val antiForgeryToken = OAuth.generateAntiForgeryToken()
-    OAuth.redirectToOAuthProvider(antiForgeryToken, email)(ec) map { res =>
-      val originUrl = request.uri
-      res.withCookies(cookie(ANTI_FORGERY_KEY, antiForgeryToken), cookie(LOGIN_ORIGIN_KEY, originUrl))
-    }
-  }
-
   def checkMultifactor(authedUser: AuthenticatedUser) = multifactorChecker.exists(_.checkMultifactor(authedUser))
 
   /**
     * invoked when the user is not logged in a can't be authed - this may be when the user is not valid in yur system
-    * or when they have exoplicitly logged out.
+    * or when they have explicitly logged out.
     *
     * Override this to add a logged out screen and display maeesages for your app. The default implementation is
     * to ust return a 403 response
@@ -136,7 +113,7 @@ trait AuthActions {
     * @param request
     * @return
     */
-  def showUnauthedMessage(message: String)(implicit request: RequestHeader): Result = {
+  def showUnauthedMessage(message: String): Result = {
     logger.info(message)
     Forbidden
   }
@@ -147,85 +124,12 @@ trait AuthActions {
     * @param claimedAuth
     * @return
     */
-  def invalidUserMessage(claimedAuth: AuthenticatedUser) = s"user ${claimedAuth.user.email} not valid for $system"
+  def invalidUserMessage(user: com.gu.pandomainauth.model.User) = s"user ${user.email} not valid for $system"
 
-  private def decodeCookie(name: String)(implicit request: RequestHeader) =
-    request.cookies.get(name).map(cookie => URLDecoder.decode(cookie.value, "UTF-8"))
+  def processOAuthCallback()(implicit request: RequestHeader): Future[Result] =
+    topLevelPageThing.processOAuthCallback(request)
 
-  def processOAuthCallback()(implicit request: RequestHeader): Future[Result] = {
-    (for {
-      token <- decodeCookie(ANTI_FORGERY_KEY)
-      originalUrl <- decodeCookie(LOGIN_ORIGIN_KEY)
-    } yield {
-      OAuth.validatedUserIdentity(token)(request, ec, wsClient).map { claimedAuth =>
-        val existingAuthenticatedIn = readAuthenticatedUser(request).map(_.authenticatedIn)
-        val authedUserData =
-          claimedAuth.copy(
-            authenticatingSystem = system,
-            authenticatedIn = existingAuthenticatedIn.fold(Set(system))(_ + system),
-            multiFactor = checkMultifactor(claimedAuth)
-          )
-
-        if (validateUser(authedUserData)) {
-          val updatedCookie = generateCookie(authedUserData)
-          Redirect(originalUrl)
-            .withCookies(updatedCookie)
-            .discardingCookies(discardCookies:_*)
-        } else {
-          showUnauthedMessage(invalidUserMessage(authedUserData))
-        }
-      }
-    }) getOrElse {
-      Future.successful(BadRequest("Missing cookies"))
-    }
-  }
-
-  def processLogout(implicit request: RequestHeader) = {
-    flushCookie(showUnauthedMessage("logged out"))
-  }
-
-  def readAuthenticatedUser(request: RequestHeader): Option[AuthenticatedUser] = readCookie(request) flatMap { cookie =>
-    CookieUtils.parseCookieData(cookie.cookie.value, settings.signingAndVerification).toOption
-  }
-
-  def readCookie(request: RequestHeader): Option[PandomainCookie] = {
-    request.cookies.get(settings.cookieSettings.cookieName).map { cookie =>
-      val forceExpiry = request.cookies.get(FORCE_EXPIRY_KEY).exists(_.value != "0")
-      PandomainCookie(cookie, forceExpiry)
-    }
-  }
-
-  def generateCookie(authedUser: AuthenticatedUser): Cookie = Cookie(
-    name = settings.cookieSettings.cookieName,
-    value = CookieUtils.generateCookieData(authedUser, settings.signingAndVerification),
-    domain = Some(domain),
-    secure = true,
-    httpOnly = true
-  )
-
-  def includeSystemInCookie(authedUser: AuthenticatedUser)(result: Result): Result = {
-    val updatedAuth    = authedUser.copy(authenticatedIn = authedUser.authenticatedIn + system)
-    val updatedCookie = generateCookie(updatedAuth)
-    result.withCookies(updatedCookie)
-  }
-
-  def flushCookie(result: Result): Result = {
-    val clearCookie = DiscardingCookie(
-      name = settings.cookieSettings.cookieName,
-      domain = Some(domain),
-      secure = true
-    )
-    result.discardingCookies(clearCookie)
-  }
-
-  /**
-    * Extract the authentication status from the request.
-    */
-  def extractAuth(request: RequestHeader): AuthenticationStatus = {
-    readCookie(request).map { cookie =>
-      PanDomain.authStatus(cookie.cookie.value, settings.signingAndVerification, validateUser, system, cacheValidation, cookie.forceExpiry)
-    } getOrElse NotAuthenticated
-  }
+  def processLogout(implicit request: RequestHeader) = topLevelPageThing.processLogout()
 
   /**
     * Action that ensures the user is logged in and validated.
@@ -240,39 +144,8 @@ trait AuthActions {
     override def parser: BodyParser[AnyContent]               = AuthActions.this.controllerComponents.parsers.default
     override protected def executionContext: ExecutionContext = AuthActions.this.controllerComponents.executionContext
 
-    def authenticateRequest(request: RequestHeader)(produceResultGivenAuthedUser: User => Future[Result]): Future[Result] = {
-      extractAuth(request) match {
-        case NotAuthenticated =>
-          logger.debug(s"user not authed against $domain, authing")
-          sendForAuth(request)
-
-        case InvalidCookie(e) =>
-          logger.warn("error checking user's auth, clear cookie and re-auth", e)
-          // remove the invalid cookie data
-          sendForAuth(request).map(flushCookie)
-
-        case Expired(authedUser) =>
-          logger.debug(s"user ${authedUser.user.email} login expired, sending to re-auth")
-          sendForAuth(request, Some(authedUser.user.email))
-
-        case GracePeriod(authedUser) =>
-          logger.debug(s"user ${authedUser.user.email} login expired, in grace period, sending to re-auth")
-          sendForAuth(request, Some(authedUser.user.email))
-
-        case NotAuthorized(authedUser) =>
-          logger.debug(s"user not authorized, show error")
-          Future(showUnauthedMessage(invalidUserMessage(authedUser))(request))
-
-        case Authenticated(authedUser) =>
-          val response = produceResultGivenAuthedUser(authedUser.user)
-          if (authedUser.authenticatedIn(system)) {
-            response
-          } else {
-            logger.debug(s"user ${authedUser.user.email} from other system valid: adding validity in $system.")
-            response.map(includeSystemInCookie(authedUser))
-          }
-      }
-    }
+    def authenticateRequest(request: RequestHeader)(produceResultGivenAuthedUser: User => Future[Result]): Future[Result] =
+      topLevelPageThing.authenticateRequest(request)(produceResultGivenAuthedUser)
   }
 
   /**
@@ -288,14 +161,7 @@ trait AuthActions {
     * If the user is authed or has an expiry extension, a 200 is sent
     *
     */
-  object APIAuthAction extends AbstractApiAuthAction with PlainErrorResponses
-
-  trait PlainErrorResponses {
-    val notAuthenticatedResult = Unauthorized
-    val invalidCookieResult    = Unauthorized
-    val expiredResult          = new Status(419)
-    val notAuthorizedResult    = Forbidden
-  }
+  object APIAuthAction extends AbstractApiAuthAction
 
   /**
     * Abstraction for API auth actions allowing to mix in custom results for each of the different error scenarios.
@@ -305,48 +171,13 @@ trait AuthActions {
     override def parser: BodyParser[AnyContent]               = AuthActions.this.controllerComponents.parsers.default
     override protected def executionContext: ExecutionContext = AuthActions.this.controllerComponents.executionContext
 
-    val notAuthenticatedResult: Result
-    val invalidCookieResult: Result
-    val expiredResult: Result
-    val notAuthorizedResult: Result
+    val topLevelApiThing: TopLevelApiThing[RequestHeader, Result, Future] = 
+      new TopLevelApiThing[RequestHeader, Result, Future](
+        new AuthPlanner[ApiResponse](ApiRequestHandlingStrategy),
+        PlayFrameworkAdapter
+      )
 
-    def authenticateRequest(request: RequestHeader)(produceResultGivenAuthedUser: User => Future[Result]): Future[Result] = {
-      extractAuth(request) match {
-        case NotAuthenticated =>
-          logger.debug(s"user not authed against $domain, return 401")
-          Future(notAuthenticatedResult)
-
-        case InvalidCookie(e) =>
-          logger.warn("error checking user's auth, clear cookie and return 401", e)
-          // remove the invalid cookie data
-          Future(invalidCookieResult).map(flushCookie)
-
-        case Expired(authedUser) =>
-          logger.debug(s"user ${authedUser.user.email} login expired, return 419")
-          Future(expiredResult)
-
-        case GracePeriod(authedUser) =>
-          logger.debug(s"user ${authedUser.user.email} login expired but is in grace period.")
-          val response = produceResultGivenAuthedUser(authedUser.user)
-          responseWithSystemCookie(response, authedUser)
-
-        case NotAuthorized(authedUser) =>
-          logger.debug(s"user not authorized, return 403")
-          logger.debug(invalidUserMessage(authedUser))
-          Future(notAuthorizedResult)
-
-        case Authenticated(authedUser) =>
-          val response = produceResultGivenAuthedUser(authedUser.user)
-          responseWithSystemCookie(response, authedUser)
-      }
-    }
-
-    def responseWithSystemCookie(response: Future[Result], authedUser: AuthenticatedUser): Future[Result] =
-      if (authedUser.authenticatedIn(system)) {
-        response
-      } else {
-        logger.debug(s"user ${authedUser.user.email} from other system valid: adding validity in $system.")
-        response.map(includeSystemInCookie(authedUser))
-      }
+    def authenticateRequest(request: RequestHeader)(produceResultGivenAuthedUser: User => Future[Result]): Future[Result] =
+      topLevelApiThing.authenticateRequest(request)(produceResultGivenAuthedUser)
   }
 }
