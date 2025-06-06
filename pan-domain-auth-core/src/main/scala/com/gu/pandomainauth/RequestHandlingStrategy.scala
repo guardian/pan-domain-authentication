@@ -105,13 +105,12 @@ object PageRequestHandlingStrategy {
 }
 
 class PageRequestHandlingStrategy[F[_]: Monad](
-  system: String,
   cookieResponses: CookieResponses,
   oAuthUrl: OAuthUrl
 )(implicit
   authStatusFromRequest: AuthStatusFromRequest
 ) extends AuthStatusHandler[PageResponse] {
-  require(authStatusFromRequest.system == system)
+  require(authStatusFromRequest.systemAuthorisation.system == cookieResponses.system)
   require(authStatusFromRequest.cookieSettings == cookieResponses.cookieSettings)
   
   import PageResponse.*

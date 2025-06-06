@@ -21,9 +21,10 @@ case class AuthenticatedUser(user: User, authenticatingSystem: String, authentic
 
   val cookieAge: CookieAge = CookieAge(expires)
 
-  def requiringAdditional(system: String): Option[AuthenticatedUser] = Option.when(!authenticatedIn(system))(copy(
-    authenticatedIn = authenticatedIn + system
-  ))
+  def requiringAdditional(system: String): Option[AuthenticatedUser] = 
+    Option.when(!authenticatedIn(system))(withAuthorisationIn(system))
+  
+  def withAuthorisationIn(system: String): AuthenticatedUser = copy(authenticatedIn = authenticatedIn + system)
 
   def augmentWithSystemsFrom(priorAuth: AuthenticationStatus): AuthenticatedUser = {
     val authedSystemsFromPriorAuth: Set[String] = (priorAuth match {

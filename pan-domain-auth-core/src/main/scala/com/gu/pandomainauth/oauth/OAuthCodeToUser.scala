@@ -83,7 +83,7 @@ object OAuthCodeToUser {
       userInfo.picture
     ),
     authenticatingSystem = system,
-    authenticatedIn = Set(system),
+    authenticatedIn = Set.empty, // At this stage, the user has not yet been authorised for this system
     expires = jwtClaimsExpiry,
     multiFactor = false
   )

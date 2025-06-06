@@ -9,7 +9,7 @@ import com.gu.pandomainauth.service.CryptoConf.Signing
 class CookieResponses(
   val cookieSettings: CookieSettings,
   signing: () => Signing,
-  system: String,
+  val system: String,
   domain: String
 ) {
   def updateCookieToAddSystemIfNecessary(authedUser: AuthenticatedUser): ResponseModification =
