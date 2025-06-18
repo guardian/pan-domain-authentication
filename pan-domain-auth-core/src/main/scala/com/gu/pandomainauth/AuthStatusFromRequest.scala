@@ -1,7 +1,7 @@
 package com.gu.pandomainauth
 
 import com.gu.pandomainauth.PanDomain.DefaultApiGracePeriod
-import com.gu.pandomainauth.model.{AuthenticatedUser, AuthenticationStatus, CookieSettings, NotAuthenticated}
+import com.gu.pandomainauth.model.{AuthenticatedUser, AuthenticationStatus, CookieSettings, InvalidCookie, NotAuthenticated}
 import com.gu.pandomainauth.service.CryptoConf.Verification
 
 import java.time.Duration
@@ -12,14 +12,15 @@ import java.time.Duration
  * we need to apply cookie modification or not? Probably best to _not_ modify 'authenticatedIn' here... which is a shame.
  */
 class AuthStatusFromRequest(
-  val cookieSettings: CookieSettings,
-  verification: () => Verification,
+  val cookieReader: CookieReader,
   val systemAuthorisation: SystemAuthorisation,
   apiGracePeriod: Duration = DefaultApiGracePeriod
 ) {
-  def authStatusFor(request: PageRequest): AuthenticationStatus = request.cookies.get(cookieSettings.cookieName).map { cookie =>
+  def authStatusFor(request: PageRequest): AuthenticationStatus = cookieReader.extractExistingAuthFrom(request).map { cookieResult =>
     val forceExpiry = false // TODO - see https://github.com/guardian/pan-domain-authentication/pull/177
-    PanDomain.authStatus(cookie, verification(), systemAuthorisation, forceExpiry, apiGracePeriod)
+    cookieResult.fold(InvalidCookie(_), { authedUser =>
+      PanDomain.checkStatus(authedUser, systemAuthorisation, apiGracePeriod, forceExpiry)
+    })
   } getOrElse NotAuthenticated
 }
 
@@ -28,8 +29,7 @@ object AuthStatusFromRequest {
     settingsRefresher: PanDomainAuthSettingsRefresher,
     systemAuthorisation: SystemAuthorisation
   ): AuthStatusFromRequest = new AuthStatusFromRequest(
-    settingsRefresher.settings.cookieSettings,
-    () => settingsRefresher.settings.signingAndVerification,
+    CookieReader(settingsRefresher),
     systemAuthorisation
   )
 }

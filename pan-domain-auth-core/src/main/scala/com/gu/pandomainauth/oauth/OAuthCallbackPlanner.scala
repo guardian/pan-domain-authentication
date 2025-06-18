@@ -10,12 +10,12 @@ import java.net.{URI, URLDecoder}
 import java.nio.charset.StandardCharsets.UTF_8
 
 class OAuthCallbackPlanner[F[_]: Monad](
-  systemAuthorisation: SystemAuthorisation,
   val cookieResponses: CookieResponses,
   oAuthCodeToUser: OAuthCodeToUser[F]
 )(implicit authStatusFromRequest: AuthStatusFromRequest) {
   val F: Monad[F] = Monad[F]
-  
+
+  private val systemAuthorisation: SystemAuthorisation = authStatusFromRequest.systemAuthorisation
   require(systemAuthorisation.system == cookieResponses.system)
 
   def processOAuthCallback(request: PageRequest): F[Plan[OAuthCallbackResponse]] = {
@@ -27,14 +27,16 @@ class OAuthCallbackPlanner[F[_]: Monad](
       antiForgeryTokenFromQueryParams <- request.queryParams.get("state") if antiForgeryTokenFromQueryParams == expectedAntiForgeryToken
       returnUrl <- decodeCookie(LOGIN_ORIGIN_KEY)
       code <- request.queryParams.get("code")
-    } yield oAuthCodeToUser.validate(code).map(newAuth => planFor(newAuth, request.authenticationStatus(), URI.create(returnUrl)))
+    } yield oAuthCodeToUser.validate(code).map(newAuth => {
+      planFor(newAuth, priorAuth = request.authenticationStatus(), URI.create(returnUrl))
+    })
       ) getOrElse F.pure(Plan[OAuthCallbackResponse](???, ???)) // Future.successful(BadRequest("Missing cookies, bad anti-forgery, etc"))
   }
 
   private def planFor(newlyClaimedAuth: AuthenticatedUser, priorAuth: AuthenticationStatus, returnUrl: URI): Plan[OAuthCallbackResponse] = {
     if (systemAuthorisation.isAuthorised(newlyClaimedAuth, disableCache = true)) {
       val authorisedUser = newlyClaimedAuth.copy(
-        authenticatedIn = Set(system)
+        authenticatedIn = Set(systemAuthorisation.system),
         multiFactor = ??? // checkMultifactor(claimedAuth)
       ).augmentWithSystemsFrom(priorAuth)
       Plan(PageResponse.Redirect(returnUrl), cookieResponses.cookieResponseFor(authorisedUser, wipeTemporaryCookiesUsedForOAuth = true))

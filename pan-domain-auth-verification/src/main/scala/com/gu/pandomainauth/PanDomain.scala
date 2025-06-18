@@ -42,7 +42,7 @@ object PanDomain {
     })
   }
 
-  private def checkStatus(authedUser: AuthenticatedUser, systemAuthorisation: SystemAuthorisation,
+  def checkStatus(authedUser: AuthenticatedUser, systemAuthorisation: SystemAuthorisation,
                           apiGracePeriod: Duration,
                           forceExpiry: Boolean): AuthenticationStatus = {
     val cookieAge = authedUser.cookieAge

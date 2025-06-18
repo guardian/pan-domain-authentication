@@ -52,8 +52,8 @@ object PagePlanners {
     oAuth: OAuthInteractions[F],
     system: String
   )(implicit authStatus: AuthStatusFromRequest): PagePlanners[F] = PagePlanners(
-    new AuthPlanner[PageResponse](new PageRequestHandlingStrategy[F](system, cookieResponses, oAuth.providerUrl)),
-    new OAuthCallbackPlanner(system, cookieResponses, oAuth.codeToUser)
+    new AuthPlanner[PageResponse](new PageRequestHandlingStrategy[F](cookieResponses, oAuth.providerUrl)),
+    new OAuthCallbackPlanner(cookieResponses, oAuth.codeToUser)
   )
 
   def apply[F[_]: Monad](

@@ -50,7 +50,7 @@ trait AuthActions {
   private def settings: PanDomainAuthSettings = panDomainSettings.settings
 
   implicit val authStatusFromRequest: AuthStatusFromRequest =
-    AuthStatusFromRequest(panDomainSettings, validateUser, cacheValidation)
+    AuthStatusFromRequest(panDomainSettings, SystemAuthorisation(system, validateUser, cacheValidation))
 
   val pagePlanners: PagePlanners[Future] = PagePlanners(
     panDomainSettings,

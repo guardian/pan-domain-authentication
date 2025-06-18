@@ -111,7 +111,7 @@ class PageRequestHandlingStrategy[F[_]: Monad](
   authStatusFromRequest: AuthStatusFromRequest
 ) extends AuthStatusHandler[PageResponse] {
   require(authStatusFromRequest.systemAuthorisation.system == cookieResponses.system)
-  require(authStatusFromRequest.cookieSettings == cookieResponses.cookieSettings)
+  require(authStatusFromRequest.cookieReader.cookieSettings == cookieResponses.cookieSettings)
   
   import PageResponse.*
   val F: Monad[F] = Monad[F]
