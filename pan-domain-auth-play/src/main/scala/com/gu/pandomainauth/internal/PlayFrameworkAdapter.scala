@@ -16,10 +16,10 @@ object PlayFrameworkAdapter extends Results
       _.withHeaders(mods.responseHeaders.toSeq: _*)
     ) ++ mods.cookieChanges.map[Result => Result]{ cookieChanges =>
         _.withCookies(cookieChanges.setSessionCookies.toSeq.map {
-            case (name, value) => Cookie(
-              name,
+            case (cookieNameAndDomain, value) => Cookie(
+              cookieNameAndDomain.name,
               value = URLEncoder.encode(value, "UTF-8"),
-              domain = Some(cookieChanges.domain),
+              domain = cookieNameAndDomain.domain,
               secure = true,
               httpOnly = true,
               // Chrome will pass back SameSite=Lax cookies, but Firefox requires
@@ -28,9 +28,9 @@ object PlayFrameworkAdapter extends Results
               sameSite = Some(Cookie.SameSite.None)
             )
           }: _*)
-          .discardingCookies(cookieChanges.wipeCookies.toSeq.map(name => DiscardingCookie(
-            name,
-            domain = Some(cookieChanges.domain),
+          .discardingCookies(cookieChanges.wipeCookies.toSeq.map(cookieNameAndDomain => DiscardingCookie(
+            cookieNameAndDomain.name,
+            domain = Some(cookieNameAndDomain.domain),
             secure = true
           )): _*)
       }

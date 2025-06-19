@@ -3,6 +3,8 @@ package com.gu.pandomainauth
 import cats.*
 import cats.syntax.all.*
 import com.gu.pandomainauth.ApiResponse.{DisallowApiAccess, HttpStatusCode}
+import com.gu.pandomainauth.CookieAction.PersistAuth
+import com.gu.pandomainauth.CookieChanges.NameAndDomain
 import com.gu.pandomainauth.PageRequestHandlingStrategy.{ANTI_FORGERY_KEY, LOGIN_ORIGIN_KEY, TemporaryCookiesUsedForOAuth}
 import com.gu.pandomainauth.ResponseModification.NoResponseModification
 import com.gu.pandomainauth.model.*
@@ -16,19 +18,42 @@ import java.nio.charset.StandardCharsets.UTF_8
 import java.security.SecureRandom
 import scala.concurrent.{ExecutionContext, Future}
 
+
+
 case class CookieChanges(
-  domain: String,
-  setSessionCookies: Map[String, String] = Map.empty,
-  wipeCookies: Set[String] = Set.empty
+  setSessionCookies: Map[NameAndDomain, String] = Map.empty,
+  wipeCookies: Set[NameAndDomain] = Set.empty
 )
+
+object CookieChanges {
+  /**
+   * @param domain if populated, the domain the cookie should be dropped on (eg gutools.co.uk). If empty, leave the
+   *               cookie domain unspecified when creating the cookie - browsers interpret this as meaning that
+   *               the cookie domain should be the exact domain of the site storing the cookie (eg composer.gutools.co.uk)
+   *               ...this is appropriate for temporary OAuth-callback-related cookies.
+   */
+  case class NameAndDomain(name: String, domain: Option[String])
+}
+
+sealed trait CookieAction
+
+object CookieAction {
+  case object Logout extends CookieAction
+  case class PersistAuth(authenticatedUser: AuthenticatedUser, wipeTemporaryCookiesUsedForOAuth: Boolean = false) extends CookieAction
+  case class PrepareForOAuth(antiForgeryToken: String, wipeAuthCookie: Boolean = false) extends CookieAction
+}
+
 
 case class ResponseModification(
   responseHeaders: Map[String, String] = Map.empty,
-  cookieChanges: Option[CookieChanges] = None
+  cookieChanges: Option[CookieAction] = None
 )
 
 object ResponseModification {
   val NoResponseModification: ResponseModification = ResponseModification()
+
+  def apply[T](cookieAction: CookieAction): ResponseModification =
+    ResponseModification(cookieChanges = Some(cookieAction))
 }
 
 /**
@@ -41,6 +66,10 @@ object ResponseModification {
  */
 case class Plan[T](typ: T, responseModification: ResponseModification = NoResponseModification)
 
+object Plan {
+  def apply[T](typ: T, cookieAction: CookieAction): Plan[T] = Plan(typ, ResponseModification(cookieAction))
+}
+
 trait AuthedEndpointResponse
 sealed trait PageResponse extends AuthedEndpointResponse
 sealed trait WithholdAccess
@@ -51,6 +80,7 @@ case class AllowAccess(user: User) extends PageResponse with ApiResponse
 object PageResponse {
   case class NotAuthorized(user: AuthenticatedUser) extends PageResponse with WithholdAccess with OAuthCallbackResponse
   case class Redirect(uri: URI) extends PageResponse with WithholdAccess with OAuthCallbackResponse
+  case object BadRequest extends OAuthCallbackResponse
 }
 
 sealed trait ApiResponse extends AuthedEndpointResponse
@@ -71,6 +101,16 @@ object ApiResponse {
   }
 }
 
+case class AuthPersistenceStatus(
+  effectiveAuthStatus: AuthenticationStatus,
+  systemsAuthorisationsCurrentlyPersistedWithUser: Set[String]
+) {
+  val hasUnpersistedSystemAuthorisations: Boolean = effectiveAuthStatus match {
+    case acceptable: AcceptableAuthForApiRequests => acceptable.authedUser.isAuthorisedInMoreThan(systemsAuthorisationsCurrentlyPersistedWithUser)
+    case _ => false
+  }
+}
+
 /**
  * Authentication status needs to be handled differently depending on whether this is a full-page request,
  * or an API request:
@@ -83,25 +123,26 @@ object ApiResponse {
  * @tparam PandaResponseType
  */
 trait AuthStatusHandler[PandaResponseType] {
-  def planForAuthStatus(authStatus: AuthenticationStatus): Plan[PandaResponseType]
+  def planForAuthStatus(authPersistenceStatus: AuthPersistenceStatus): Plan[PandaResponseType]
 }
 
 object PageRequestHandlingStrategy {
   /**
    * A cookie key that stores the target URL that was being accessed when redirected for authentication
    */
-  val LOGIN_ORIGIN_KEY = "panda-loginOriginUrl"
+  val LOGIN_ORIGIN_KEY: CookieChanges.NameAndDomain = CookieChanges.NameAndDomain("panda-loginOriginUrl", None)
   /*
    * Cookie key containing an anti-forgery token; helps to validate that the oauth callback arrived in response to the correct oauth request
+   * Should only the main auth cookie be on the shared domain, while temp OAuth cookies be on the app-specific domain, to avoid clashes?
    */
-  val ANTI_FORGERY_KEY = "panda-antiForgeryToken"
+  val ANTI_FORGERY_KEY: CookieChanges.NameAndDomain = CookieChanges.NameAndDomain("panda-antiForgeryToken", None)
   /*
    * Cookie that will make panda behave as if the cookie has expired.
    * NOTE: This cookie is for debugging only! It should _not_ be set by any application code to expire the cookie!! Use the `processLogout` action instead!!
    */
-  val FORCE_EXPIRY_KEY = "panda-forceExpiry"
+  val FORCE_EXPIRY_KEY: CookieChanges.NameAndDomain = CookieChanges.NameAndDomain("panda-forceExpiry", None)
 
-  val TemporaryCookiesUsedForOAuth: Set[String] = Set(LOGIN_ORIGIN_KEY, ANTI_FORGERY_KEY, FORCE_EXPIRY_KEY)
+  val TemporaryCookiesUsedForOAuth: Set[CookieChanges.NameAndDomain] = Set(LOGIN_ORIGIN_KEY, ANTI_FORGERY_KEY, FORCE_EXPIRY_KEY)
 }
 
 class PageRequestHandlingStrategy[F[_]: Monad](
@@ -120,18 +161,22 @@ class PageRequestHandlingStrategy[F[_]: Monad](
 
   private def redirectForAuth(loginHintEmail: Option[String] = None, wipeAuthCookie: Boolean = false): Plan[PageResponse] = {
     val antiForgeryToken: String = new BigInteger(130, random).toString(32)
-    Plan(PageResponse.Redirect(oAuthUrl.uriOfOAuthProvider(antiForgeryToken, loginHintEmail)),
-      cookieResponses.responseForRedirectForAuth(antiForgeryToken, wipeAuthCookie)
+    Plan(
+      PageResponse.Redirect(oAuthUrl.uriOfOAuthProvider(antiForgeryToken, loginHintEmail)),
+      CookieAction.PrepareForOAuth(antiForgeryToken, wipeAuthCookie)
     )
   }
 
-  def planForAuthStatus(authStatus: AuthenticationStatus): Plan[PageResponse] = authStatus match {
-    case NotAuthenticated => redirectForAuth()
-    case InvalidCookie(_) => redirectForAuth(wipeAuthCookie = true)
-    case stale: StaleUserAuthentication => redirectForAuth(loginHintEmail = Some(stale.authedUser.user.email))
-    case com.gu.pandomainauth.model.NotAuthorized(authedUser) => Plan(NotAuthorized(authedUser))
-    case Authenticated(authedUser) => Plan(AllowAccess(authedUser.user), cookieResponses.updateCookieToAddSystemIfNecessary(authedUser))
-  }
+  override def planForAuthStatus(authPersistenceStatus: AuthPersistenceStatus): Plan[PageResponse] =
+    authPersistenceStatus.effectiveAuthStatus match {
+      case NotAuthenticated => redirectForAuth()
+      case InvalidCookie(_) => redirectForAuth(wipeAuthCookie = true)
+      case stale: StaleUserAuthentication => redirectForAuth(loginHintEmail = Some(stale.authedUser.user.email))
+      case com.gu.pandomainauth.model.NotAuthorized(authedUser) => Plan(NotAuthorized(authedUser))
+      case Authenticated(authedUser) => Plan(AllowAccess(authedUser.user), ResponseModification(
+        cookieChanges = Option.when(authPersistenceStatus.hasUnpersistedSystemAuthorisations)(PersistAuth(authedUser))
+      ))
+    }
 }
 
 object ApiRequestHandlingStrategy extends AuthStatusHandler[ApiResponse] {
@@ -141,7 +186,7 @@ object ApiRequestHandlingStrategy extends AuthStatusHandler[ApiResponse] {
     "X-Panda-Should-Refresh-Credentials" -> bool.toString
   ))).toMap
 
-  def planForAuthStatus(authStatus: AuthenticationStatus): Plan[ApiResponse] = authStatus match {
+  def planForAuthStatus(authPersistenceStatus: AuthPersistenceStatus): Plan[ApiResponse] = authPersistenceStatus.effectiveAuthStatus match {
     case NotAuthenticated | InvalidCookie(_) | Expired(_) => Plan(NoAuthentication)
     case com.gu.pandomainauth.model.NotAuthorized(_) => Plan(NotAuthorized)
     case acceptable: AcceptableAuthForApiRequests => Plan(AllowAccess(acceptable.authedUser.user), suggestCredentialRefresh(acceptable.shouldBeRefreshed))

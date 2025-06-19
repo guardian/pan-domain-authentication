@@ -16,12 +16,17 @@ class AuthStatusFromRequest(
   val systemAuthorisation: SystemAuthorisation,
   apiGracePeriod: Duration = DefaultApiGracePeriod
 ) {
-  def authStatusFor(request: PageRequest): AuthenticationStatus = cookieReader.extractExistingAuthFrom(request).map { cookieResult =>
-    val forceExpiry = false // TODO - see https://github.com/guardian/pan-domain-authentication/pull/177
-    cookieResult.fold(InvalidCookie(_), { authedUser =>
-      PanDomain.checkStatus(authedUser, systemAuthorisation, apiGracePeriod, forceExpiry)
-    })
-  } getOrElse NotAuthenticated
+  def authStatusFor(request: PageRequest): AuthPersistenceStatus =
+    cookieReader.extractExistingAuthFrom(request).toRight(NotAuthenticated).flatMap(_.left.map(InvalidCookie(_))).fold(
+      errorAuthStatus => AuthPersistenceStatus(errorAuthStatus, systemsAuthorisationsCurrentlyPersistedWithUser = Set.empty),
+      persistedAuthedUser =>
+        val forceExpiry = false // TODO - see https://github.com/guardian/pan-domain-authentication/pull/177
+        AuthPersistenceStatus(
+          effectiveAuthStatus =
+            PanDomain.checkStatus(persistedAuthedUser, systemAuthorisation, apiGracePeriod, forceExpiry),
+          persistedAuthedUser.authenticatedIn
+        )
+    )
 }
 
 object AuthStatusFromRequest {

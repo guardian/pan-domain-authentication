@@ -85,7 +85,7 @@ class TopLevelPageThing[Req: PageRequestAdapter, Resp, F[_]: Monad](
   })
 
   def processLogout(): Resp =
-    modifyResponseWith(pagePlanners.cookieResponses.processLogout)(logoutResponse)
+    modifyResponseWith(ResponseModification(cookieChanges = Some(CookieAction.Logout)))(logoutResponse)
 }
 
 class TopLevelApiThing[Req: PageRequestAdapter, Resp, F[_]: Monad](

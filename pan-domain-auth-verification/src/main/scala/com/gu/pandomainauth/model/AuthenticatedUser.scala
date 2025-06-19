@@ -26,7 +26,7 @@ case class AuthenticatedUser(user: User, authenticatingSystem: String, authentic
   
   def withAuthorisationIn(system: String): AuthenticatedUser = copy(authenticatedIn = authenticatedIn + system)
 
-  def augmentWithSystemsFrom(priorAuth: AuthenticationStatus): AuthenticatedUser = {
+  def augmentWith(priorAuth: AuthenticationStatus): AuthenticatedUser = {
     val authedSystemsFromPriorAuth: Set[String] = (priorAuth match {
       case auth: AcceptableAuthForApiRequests => Some(auth.authedUser)
       case _ => None
@@ -34,4 +34,6 @@ case class AuthenticatedUser(user: User, authenticatingSystem: String, authentic
 
     copy(authenticatedIn = authenticatedIn ++ authedSystemsFromPriorAuth)
   }
+
+  def isAuthorisedInMoreThan(systems: Set[String]): Boolean = authenticatedIn.exists(!systems.contains(_))
 }
