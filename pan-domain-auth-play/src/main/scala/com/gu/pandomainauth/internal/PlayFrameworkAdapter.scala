@@ -1,5 +1,6 @@
 package com.gu.pandomainauth.internal
 
+import cats.Endo
 import com.gu.pandomainauth.model.{AuthenticatedUser, User}
 import com.gu.pandomainauth.webframeworks.WebFrameworkAdapter
 import com.gu.pandomainauth.{ApiResponse, ResponseModification}
@@ -12,9 +13,9 @@ object PlayFrameworkAdapter extends Results
   with WebFrameworkAdapter.ApiResponseAdapter[Result] {
 
   override val responseModifier: WebFrameworkAdapter.ResponseModifier[Result] = (mods: ResponseModification) => { initialResult =>
-    val modifiers: Seq[Result => Result] = Seq[Result => Result](
+    val modifiers = Seq[Endo[Result]](
       _.withHeaders(mods.responseHeaders.toSeq: _*)
-    ) ++ mods.cookieChanges.map[Result => Result]{ cookieChanges =>
+    ) ++ mods.cookieAction.map[Endo[Result]]{ cookieChanges =>
         _.withCookies(cookieChanges.setSessionCookies.toSeq.map {
             case (cookieNameAndDomain, value) => Cookie(
               cookieNameAndDomain.name,

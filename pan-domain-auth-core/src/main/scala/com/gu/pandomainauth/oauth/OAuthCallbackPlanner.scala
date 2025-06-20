@@ -19,7 +19,7 @@ class OAuthCallbackPlanner[F[_]: Monad](
 
   private val systemAuthorisation: SystemAuthorisation = authStatusFromRequest.systemAuthorisation
   require(systemAuthorisation.system == cookieResponses.system)
-  
+
   def processOAuthCallback(request: PageRequest): F[Plan[OAuthCallbackResponse]] =
     CallbackPayload.from(request).fold(F.pure(Plan[OAuthCallbackResponse](PageResponse.BadRequest))) { payload =>
       oAuthCodeToUser.validate(payload.code).map { newAuthedUser =>
@@ -39,13 +39,13 @@ class OAuthCallbackPlanner[F[_]: Monad](
 
 object OAuthCallbackPlanner {
   case class CallbackPayload(code: String, returnUrl: URI)
-  
+
   object CallbackPayload {
     private def antiForgeryCheckIsPassedBy(request: PageRequest): Boolean = (for {
       expectedAntiForgeryToken <- request.getUrlDecodedCookie(ANTI_FORGERY_KEY)
-      antiForgeryTokenFromQueryParams <- request.queryParams.get("state")
-    } yield antiForgeryTokenFromQueryParams == expectedAntiForgeryToken).getOrElse(false)
-    
+      providedToken <- request.queryParams.get("state")
+    } yield providedToken == expectedAntiForgeryToken).getOrElse(false)
+
     def from(pageRequest: PageRequest): Option[CallbackPayload] = for {
       returnUrl <- pageRequest.getUrlDecodedCookie(LOGIN_ORIGIN_KEY) if antiForgeryCheckIsPassedBy(pageRequest)
       code <- pageRequest.queryParams.get("code")

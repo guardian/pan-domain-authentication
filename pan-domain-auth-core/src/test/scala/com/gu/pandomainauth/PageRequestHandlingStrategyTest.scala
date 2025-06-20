@@ -16,7 +16,7 @@ class PageRequestHandlingStrategyTest  extends AnyFreeSpec with Matchers with Op
       val prhs: PagePlanners[Id] = ???
 
       val pageRequest: PageRequest = PageRequest(dummyUri, Map(prhs.cookieResponses.cookieSettings.cookieName -> ""))
-      val cookieChanges = prhs.auth.planFor(pageRequest).responseModification.cookieChanges.value
+      val cookieChanges = prhs.auth.planFor(pageRequest).responseModification.cookieAction.value
       val newCookie = cookieChanges.setSessionCookies(prhs.cookieResponses.cookieSettings.cookieName)
       
       

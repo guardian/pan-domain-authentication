@@ -46,14 +46,14 @@ object CookieAction {
 
 case class ResponseModification(
   responseHeaders: Map[String, String] = Map.empty,
-  cookieChanges: Option[CookieAction] = None
+  cookieAction: Option[CookieAction] = None
 )
 
 object ResponseModification {
   val NoResponseModification: ResponseModification = ResponseModification()
 
   def apply[T](cookieAction: CookieAction): ResponseModification =
-    ResponseModification(cookieChanges = Some(cookieAction))
+    ResponseModification(cookieAction = Some(cookieAction))
 }
 
 /**
@@ -174,7 +174,7 @@ class PageRequestHandlingStrategy[F[_]: Monad](
       case stale: StaleUserAuthentication => redirectForAuth(loginHintEmail = Some(stale.authedUser.user.email))
       case com.gu.pandomainauth.model.NotAuthorized(authedUser) => Plan(NotAuthorized(authedUser))
       case Authenticated(authedUser) => Plan(AllowAccess(authedUser.user), ResponseModification(
-        cookieChanges = Option.when(authPersistenceStatus.hasUnpersistedSystemAuthorisations)(PersistAuth(authedUser))
+        cookieAction = Option.when(authPersistenceStatus.hasUnpersistedSystemAuthorisations)(PersistAuth(authedUser))
       ))
     }
 }
