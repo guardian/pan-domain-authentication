@@ -11,14 +11,12 @@ import com.gu.pandomainauth.oauth.OAuthCallbackPlanner.CallbackPayload
 import java.net.{URI, URLDecoder}
 import java.nio.charset.StandardCharsets.UTF_8
 
-class OAuthCallbackPlanner[F[_]: Monad](
-  val cookieResponses: CookieResponses,
-  oAuthCodeToUser: OAuthCodeToUser[F]
-)(implicit authStatusFromRequest: AuthStatusFromRequest) {
+class OAuthCallbackPlanner[F[_]: Monad](oAuthCodeToUser: OAuthCodeToUser[F])(
+  implicit authStatusFromRequest: AuthStatusFromRequest
+) {
   val F: Monad[F] = Monad[F]
 
   private val systemAuthorisation: SystemAuthorisation = authStatusFromRequest.systemAuthorisation
-  require(systemAuthorisation.system == cookieResponses.system)
 
   def processOAuthCallback(request: PageRequest): F[Plan[OAuthCallbackResponse]] =
     CallbackPayload.from(request).fold(F.pure(Plan[OAuthCallbackResponse](PageResponse.BadRequest))) { payload =>

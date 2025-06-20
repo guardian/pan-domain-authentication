@@ -3,7 +3,6 @@ package com.gu.pandomainauth
 import com.gu.pandomainauth.CookieAction.{Logout, PersistAuth, PrepareForOAuth}
 import com.gu.pandomainauth.CookieChanges.NameAndDomain
 import com.gu.pandomainauth.PageRequestHandlingStrategy.{ANTI_FORGERY_KEY, TemporaryCookiesUsedForOAuth}
-import com.gu.pandomainauth.ResponseModification.NoResponseModification
 import com.gu.pandomainauth.model.{AuthenticatedUser, CookieSettings}
 import com.gu.pandomainauth.service.CookieUtils.generateCookieData
 import com.gu.pandomainauth.service.CryptoConf.Signing

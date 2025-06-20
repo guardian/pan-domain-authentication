@@ -2,7 +2,7 @@ package com.gu.pandomainauth.webframeworks
 
 import com.gu.pandomainauth.ApiResponse.HttpStatusCode
 import com.gu.pandomainauth.model.AuthenticatedUser
-import com.gu.pandomainauth.{PageRequest, ResponseModification}
+import com.gu.pandomainauth.{CookieChanges, PageRequest, ResponseModification}
 
 import java.net.URI
 
@@ -17,7 +17,7 @@ object WebFrameworkAdapter {
   }
 
   trait ResponseModifier[Resp] {
-    def apply(modifications: ResponseModification): Resp => Resp
+    def apply(modifications: ResponseModification[CookieChanges]): Resp => Resp
   }
   
   trait ResponseAdapter[Resp] {
