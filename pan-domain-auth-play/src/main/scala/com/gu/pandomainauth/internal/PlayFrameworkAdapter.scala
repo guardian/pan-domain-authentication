@@ -1,9 +1,9 @@
 package com.gu.pandomainauth.internal
 
 import cats.Endo
-import com.gu.pandomainauth.model.{AuthenticatedUser, User}
+import com.gu.pandomainauth.model.AuthenticatedUser
 import com.gu.pandomainauth.webframeworks.WebFrameworkAdapter
-import com.gu.pandomainauth.{ApiResponse, ResponseModification}
+import com.gu.pandomainauth.{ApiResponse, CookieChanges, ResponseModification}
 import play.api.mvc.{Cookie, DiscardingCookie, Result, Results}
 
 import java.net.{URI, URLEncoder}
@@ -12,10 +12,10 @@ object PlayFrameworkAdapter extends Results
   with WebFrameworkAdapter.PageResponseAdapter[Result]
   with WebFrameworkAdapter.ApiResponseAdapter[Result] {
 
-  override val responseModifier: WebFrameworkAdapter.ResponseModifier[Result] = (mods: ResponseModification) => { initialResult =>
+  override val responseModifier: WebFrameworkAdapter.ResponseModifier[Result] = (mods: ResponseModification[CookieChanges]) => { initialResult =>
     val modifiers = Seq[Endo[Result]](
       _.withHeaders(mods.responseHeaders.toSeq: _*)
-    ) ++ mods.cookieAction.map[Endo[Result]]{ cookieChanges =>
+    ) ++ mods.cookies.map[Endo[Result]]{ cookieChanges =>
         _.withCookies(cookieChanges.setSessionCookies.toSeq.map {
             case (cookieNameAndDomain, value) => Cookie(
               cookieNameAndDomain.name,
@@ -31,7 +31,7 @@ object PlayFrameworkAdapter extends Results
           }: _*)
           .discardingCookies(cookieChanges.wipeCookies.toSeq.map(cookieNameAndDomain => DiscardingCookie(
             cookieNameAndDomain.name,
-            domain = Some(cookieNameAndDomain.domain),
+            domain = cookieNameAndDomain.domain,
             secure = true
           )): _*)
       }

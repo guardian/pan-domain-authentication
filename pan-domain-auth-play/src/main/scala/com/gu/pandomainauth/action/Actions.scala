@@ -52,13 +52,15 @@ trait AuthActions {
   implicit val authStatusFromRequest: AuthStatusFromRequest =
     AuthStatusFromRequest(panDomainSettings, SystemAuthorisation(system, validateUser, cacheValidation))
 
+  val cookieResponses: CookieResponses = CookieResponses(panDomainSettings)
+  
   val pagePlanners: PagePlanners[Future] = PagePlanners(
     panDomainSettings,
     OAuthInteractions.AppSpecifics(new PlayImplOfOAuthHttpClient(wsClient), URI.create(authCallbackUrl))
   )
 
   val topLevelPageThing: TopLevelPageThing[RequestHeader, Result, Future] =
-    new TopLevelPageThing(pagePlanners, PlayFrameworkAdapter, showUnauthedMessage("logged out"))
+    new TopLevelPageThing(pagePlanners, PlayFrameworkAdapter, cookieResponses, showUnauthedMessage("logged out"))
 
   private implicit val ec: ExecutionContext = controllerComponents.executionContext
 
@@ -172,10 +174,7 @@ trait AuthActions {
     override protected def executionContext: ExecutionContext = AuthActions.this.controllerComponents.executionContext
 
     val topLevelApiThing: TopLevelApiThing[RequestHeader, Result, Future] = 
-      new TopLevelApiThing[RequestHeader, Result, Future](
-        new AuthPlanner[ApiResponse](ApiRequestHandlingStrategy),
-        PlayFrameworkAdapter
-      )
+      TopLevelApiThing(PlayFrameworkAdapter, cookieResponses)
 
     def authenticateRequest(request: RequestHeader)(produceResultGivenAuthedUser: User => Future[Result]): Future[Result] =
       topLevelApiThing.authenticateRequest(request)(produceResultGivenAuthedUser)

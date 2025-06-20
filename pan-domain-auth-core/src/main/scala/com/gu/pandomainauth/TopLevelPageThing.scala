@@ -18,12 +18,15 @@ class AuthPlanner[AuthResponseType <: AuthedEndpointResponse](authStatusHandler:
 
 abstract class TopLevelAuthThing[Req: PageRequestAdapter, Resp, AuthResponseType <: AuthedEndpointResponse, F[_]: Monad](
   authPlanner: AuthPlanner[AuthResponseType],
-  responseAdapter: WebFrameworkAdapter.ResponseAdapter[Resp]
+  responseAdapter: WebFrameworkAdapter.ResponseAdapter[Resp],
+  cookieResponses: CookieResponses
 ) {
   val F: Monad[F] = Monad[F]
 
-  def modifyResponseWith(responseModification: ResponseModification): Resp => Resp =
-    responseAdapter.responseModifier.apply(responseModification)
+  def modifyResponseWith(responseModification: ResponseModification[CookieAction]): Resp => Resp = {
+    val reifiedResponseMod: ResponseModification[CookieChanges] = responseModification.mapCookies(cookieResponses.handle)
+    responseAdapter.responseModifier.apply(reifiedResponseMod)
+  }
 
   def authenticateRequest(request: Req)(produceResultGivenAuthedUser: User => F[Resp]): F[Resp] = {
     val plan = authPlanner.planFor(request.asPandaRequest)
@@ -40,37 +43,29 @@ abstract class TopLevelAuthThing[Req: PageRequestAdapter, Resp, AuthResponseType
 case class PagePlanners[F[_]: Monad](
   auth: AuthPlanner[PageResponse],
   oAuthCallback: OAuthCallbackPlanner[F]
-) {
-  // check that cookieResponses is the same on both auth & oAuthCallback ?
-
-  val cookieResponses: CookieResponses = oAuthCallback.cookieResponses
-}
+)
 
 object PagePlanners {
   def apply[F[_]: Monad](
-    cookieResponses: CookieResponses,
-    oAuth: OAuthInteractions[F],
-    system: String
+    oAuth: OAuthInteractions[F]
   )(implicit authStatus: AuthStatusFromRequest): PagePlanners[F] = PagePlanners(
-    new AuthPlanner[PageResponse](new PageRequestHandlingStrategy[F](cookieResponses, oAuth.providerUrl)),
-    new OAuthCallbackPlanner(cookieResponses, oAuth.codeToUser)
+    new AuthPlanner[PageResponse](new PageRequestHandlingStrategy[F](oAuth.providerUrl)),
+    new OAuthCallbackPlanner(oAuth.codeToUser)
   )
 
   def apply[F[_]: Monad](
     settingsRefresher: PanDomainAuthSettingsRefresher,
     appSpecifics: OAuthInteractions.AppSpecifics[F]
-  )(implicit authStatus: AuthStatusFromRequest): PagePlanners[F] = PagePlanners(
-    CookieResponses(settingsRefresher),
-    OAuthInteractions(settingsRefresher.system, settingsRefresher.settings.oAuthSettings, appSpecifics),
-    settingsRefresher.system
-  )
+  )(implicit authStatus: AuthStatusFromRequest): PagePlanners[F] =
+    PagePlanners(OAuthInteractions(settingsRefresher.system, settingsRefresher.settings.oAuthSettings, appSpecifics))
 }
 
 class TopLevelPageThing[Req: PageRequestAdapter, Resp, F[_]: Monad](
   pagePlanners: PagePlanners[F],
   responseAdapter: WebFrameworkAdapter.PageResponseAdapter[Resp],
+  cookieResponses: CookieResponses,
   logoutResponse: Resp
-) extends TopLevelAuthThing[Req, Resp, PageResponse, F](pagePlanners.auth, responseAdapter) {
+) extends TopLevelAuthThing[Req, Resp, PageResponse, F](pagePlanners.auth, responseAdapter, cookieResponses) {
 
   override def handleWithholdAccess(pandaResp: PageResponse with WithholdAccess): Resp = pandaResp match {
     case NotAuthorized(user) => responseAdapter.handleNotAuthorised(user)
@@ -90,8 +85,9 @@ class TopLevelPageThing[Req: PageRequestAdapter, Resp, F[_]: Monad](
 
 class TopLevelApiThing[Req: PageRequestAdapter, Resp, F[_]: Monad](
   authPlanner: AuthPlanner[ApiResponse],
-  responseAdapter: WebFrameworkAdapter.ApiResponseAdapter[Resp]
-) extends TopLevelAuthThing[Req, Resp, ApiResponse, F](authPlanner, responseAdapter) {
+  responseAdapter: WebFrameworkAdapter.ApiResponseAdapter[Resp],
+  cookieResponses: CookieResponses
+) extends TopLevelAuthThing[Req, Resp, ApiResponse, F](authPlanner, responseAdapter, cookieResponses) {
 
   override def handleWithholdAccess(pandaResp: ApiResponse with WithholdAccess): Resp = pandaResp match {
     case disallow: DisallowApiAccess => responseAdapter.handleDisallow(disallow.statusCode)
@@ -99,7 +95,10 @@ class TopLevelApiThing[Req: PageRequestAdapter, Resp, F[_]: Monad](
 }
 
 object TopLevelApiThing {
-  def apply[Req: PageRequestAdapter, Resp, F[_]: Monad](responseAdapter: WebFrameworkAdapter.ApiResponseAdapter[Resp])(
+  def apply[Req: PageRequestAdapter, Resp, F[_]: Monad](
+    responseAdapter: WebFrameworkAdapter.ApiResponseAdapter[Resp],
+    cookieResponses: CookieResponses
+  )(
     implicit authStatusFromRequest: AuthStatusFromRequest
-  ) = new TopLevelApiThing[Req, Resp, F](new AuthPlanner[ApiResponse](ApiRequestHandlingStrategy), responseAdapter)
+  ) = new TopLevelApiThing[Req, Resp, F](new AuthPlanner[ApiResponse](ApiRequestHandlingStrategy), responseAdapter, cookieResponses)
 }

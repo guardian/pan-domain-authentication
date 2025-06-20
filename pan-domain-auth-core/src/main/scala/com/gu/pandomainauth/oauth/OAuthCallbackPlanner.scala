@@ -2,23 +2,20 @@ package com.gu.pandomainauth.oauth
 
 import cats.*
 import cats.syntax.all.*
-import com.gu.pandomainauth.PageRequestHandlingStrategy.{ANTI_FORGERY_KEY, LOGIN_ORIGIN_KEY}
-import com.gu.pandomainauth.model.{AuthenticatedUser, AuthenticationStatus}
 import com.gu.pandomainauth.*
 import com.gu.pandomainauth.CookieAction.PersistAuth
+import com.gu.pandomainauth.PageRequestHandlingStrategy.{ANTI_FORGERY_KEY, LOGIN_ORIGIN_KEY}
+import com.gu.pandomainauth.model.AuthenticatedUser
 import com.gu.pandomainauth.oauth.OAuthCallbackPlanner.CallbackPayload
 
-import java.net.{URI, URLDecoder}
-import java.nio.charset.StandardCharsets.UTF_8
+import java.net.URI
 
-class OAuthCallbackPlanner[F[_]: Monad](
-  val cookieResponses: CookieResponses,
-  oAuthCodeToUser: OAuthCodeToUser[F]
-)(implicit authStatusFromRequest: AuthStatusFromRequest) {
+class OAuthCallbackPlanner[F[_]: Monad](oAuthCodeToUser: OAuthCodeToUser[F])(
+  implicit authStatusFromRequest: AuthStatusFromRequest
+) {
   val F: Monad[F] = Monad[F]
 
   private val systemAuthorisation: SystemAuthorisation = authStatusFromRequest.systemAuthorisation
-  require(systemAuthorisation.system == cookieResponses.system)
 
   def processOAuthCallback(request: PageRequest): F[Plan[OAuthCallbackResponse]] =
     CallbackPayload.from(request).fold(F.pure(Plan[OAuthCallbackResponse](PageResponse.BadRequest))) { payload =>
