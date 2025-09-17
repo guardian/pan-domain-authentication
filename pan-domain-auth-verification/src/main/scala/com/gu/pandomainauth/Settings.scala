@@ -1,6 +1,6 @@
 package com.gu.pandomainauth
 
-import com.amazonaws.util.IOUtils
+import software.amazon.awssdk.utils.IoUtils
 import com.gu.pandomainauth.service.CryptoConf
 import com.gu.pandomainauth.service.CryptoConf.Verification
 import org.slf4j.{Logger, LoggerFactory}
@@ -68,7 +68,7 @@ object Settings {
     def loadAndParseSettingsMap(): SettingsResult[Map[String, String]] = fetchSettings().flatMap(extractSettings)
 
     private def fetchSettings(): SettingsResult[String] = try {
-      Right(IOUtils.toString(s3BucketLoader.inputStreamFetching(settingsFileKey)))
+      Right(IoUtils.toUtf8String(s3BucketLoader.inputStreamFetching(settingsFileKey)))
     } catch { case NonFatal(e) => Left(SettingsDownloadFailure(e)) }
   }
 
