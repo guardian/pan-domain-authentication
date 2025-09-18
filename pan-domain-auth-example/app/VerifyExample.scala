@@ -1,24 +1,25 @@
-import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
-import com.amazonaws.regions.Regions
-import com.amazonaws.services.s3.AmazonS3ClientBuilder
-import com.gu.pandomainauth.S3BucketLoader.forAwsSdkV1
+import software.amazon.awssdk.regions.Region
+import com.gu.pandomainauth.S3BucketLoader.forAwsSdkV2
 import com.gu.pandomainauth.model.{Authenticated, AuthenticatedUser, GracePeriod}
 import com.gu.pandomainauth.service.CryptoConf
 import com.gu.pandomainauth.{PanDomain, PublicSettings, Settings}
 
 import java.time.Duration
+import software.amazon.awssdk.services.s3.S3Client
 
 object VerifyExample {
   // Change this to point to the S3 bucket and key for the settings file
   val settingsFileKey = "local.dev-gutools.co.uk.settings.public"
   val bucketName = "pan-domain-auth-settings"
 
-  val region = Regions.EU_WEST_1
+  val region = Region.EU_WEST_1
   // Customise as appropriate depending on how you manage your AWS credentials
-  val credentials = DefaultAWSCredentialsProviderChain.getInstance()
-  val s3Client = AmazonS3ClientBuilder.standard().withRegion(region).withCredentials(credentials).build()
+  val s3Client = S3Client
+      .builder()
+      .region(region)
+      .build()
 
-  val loader = new Settings.Loader(forAwsSdkV1(s3Client, bucketName), settingsFileKey)
+  val loader = new Settings.Loader(forAwsSdkV2(s3Client, bucketName), settingsFileKey)
   val publicSettings = PublicSettings(loader)
 
   // Call the start method when your application starts up to ensure the settings are kept up to date

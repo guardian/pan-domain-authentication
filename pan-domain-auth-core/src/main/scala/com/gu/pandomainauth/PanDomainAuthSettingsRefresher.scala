@@ -1,6 +1,6 @@
 package com.gu.pandomainauth
 
-import com.amazonaws.services.s3.AmazonS3
+import software.amazon.awssdk.services.s3.S3Client
 import com.gu.pandomainauth.model.PanDomainAuthSettings
 
 import java.util.concurrent.Executors.newScheduledThreadPool
@@ -28,9 +28,9 @@ class PanDomainAuthSettingsRefresher(
     system: String,
     bucketName: String,
     settingsFileKey: String,
-    s3Client: AmazonS3,
+    s3Client: S3Client,
     scheduler: ScheduledExecutorService = newScheduledThreadPool(1)
-  ) = this(domain, system, S3BucketLoader.forAwsSdkV1(s3Client, bucketName), settingsFileKey, scheduler)
+  ) = this(domain, system, S3BucketLoader.forAwsSdkV2(s3Client, bucketName), settingsFileKey, scheduler)
 
   private val settingsRefresher = new Settings.Refresher[PanDomainAuthSettings](
     new Settings.Loader(s3BucketLoader, settingsFileKey),

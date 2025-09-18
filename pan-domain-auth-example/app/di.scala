@@ -1,9 +1,7 @@
-import com.amazonaws.auth.profile.ProfileCredentialsProvider
-import com.amazonaws.auth.{AWSCredentialsProviderChain, DefaultAWSCredentialsProviderChain}
-import com.amazonaws.regions.Regions
-import com.amazonaws.services.s3.AmazonS3ClientBuilder
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
+import software.amazon.awssdk.regions.Region
 import com.gu.pandomainauth.PanDomainAuthSettingsRefresher
-import com.gu.pandomainauth.S3BucketLoader.forAwsSdkV1
+import com.gu.pandomainauth.S3BucketLoader.forAwsSdkV2
 import controllers.AdminController
 import play.api.ApplicationLoader.Context
 import play.api.libs.ws.ahc.AhcWSComponents
@@ -11,6 +9,9 @@ import play.api.routing.Router
 import play.api.{Application, ApplicationLoader, BuiltInComponentsFromContext}
 import play.filters.HttpFiltersComponents
 import router.Routes
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProviderChain
+import software.amazon.awssdk.services.s3.S3Client
+import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider
 
 class AppLoader extends ApplicationLoader {
   def load(context: Context): Application = {
@@ -25,20 +26,24 @@ class AppComponents(context: Context) extends BuiltInComponentsFromContext(conte
   // Change this to point to the S3 bucket containing the settings file
   val bucketName = "pan-domain-auth-settings"
 
-  val region = Regions.EU_WEST_1
+  val region = Region.EU_WEST_1
 
   // Customise as appropriate depending on how you manage your AWS credentials
-  val credentials = new AWSCredentialsProviderChain(
-    new ProfileCredentialsProvider("workflow"),
-    DefaultAWSCredentialsProviderChain.getInstance()
-  )
+  val credentials: AwsCredentialsProviderChain =
+    AwsCredentialsProviderChain
+      .builder()
+      .credentialsProviders(
+        ProfileCredentialsProvider.create("workflow"),
+        DefaultCredentialsProvider.builder().build()
+      )
+      .build()
 
-  val s3Client = AmazonS3ClientBuilder.standard().withRegion(region).withCredentials(credentials).build()
+  val s3Client = S3Client.builder().region(region).credentialsProvider(credentials).build()
 
   val panDomainSettings = PanDomainAuthSettingsRefresher(
     domain = "local.dev-gutools.co.uk",
     system = "example",
-    s3BucketLoader = forAwsSdkV1(s3Client, bucketName)
+    s3BucketLoader = forAwsSdkV2(s3Client, bucketName)
   )
 
   val controller = new AdminController(controllerComponents, configuration, wsClient, panDomainSettings)

@@ -1,6 +1,6 @@
 package com.gu.pandomainauth
 
-import com.amazonaws.services.s3.AmazonS3
+import software.amazon.awssdk.services.s3.S3Client
 import com.gu.pandomainauth.Settings.{Loader, SettingsResult}
 import com.gu.pandomainauth.service.CryptoConf
 import com.gu.pandomainauth.service.CryptoConf.Verification
@@ -17,9 +17,9 @@ import java.util.concurrent.{Executors, ScheduledExecutorService}
  */
 class PublicSettings(loader: Settings.Loader, scheduler: ScheduledExecutorService) {
 
-  def this(settingsFileKey: String, bucketName: String, s3Client: AmazonS3,
+  def this(settingsFileKey: String, bucketName: String, s3Client: S3Client,
     scheduler: ScheduledExecutorService = Executors.newScheduledThreadPool(1)) = this(
-    new Settings.Loader(S3BucketLoader.forAwsSdkV1(s3Client, bucketName), settingsFileKey), scheduler
+    new Settings.Loader(S3BucketLoader.forAwsSdkV2(s3Client, bucketName), settingsFileKey), scheduler
   )
 
   private val settingsRefresher = new Settings.Refresher[Verification](

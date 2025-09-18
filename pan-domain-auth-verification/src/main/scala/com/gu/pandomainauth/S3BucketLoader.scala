@@ -1,8 +1,9 @@
 package com.gu.pandomainauth
 
-import com.amazonaws.services.s3.AmazonS3
+import software.amazon.awssdk.services.s3.S3Client
 
 import java.io.InputStream
+import software.amazon.awssdk.services.s3.model.GetObjectRequest
 
 /**
  * This trait provides a way to download a file from an S3 bucket, in a way that's agnostic of which
@@ -20,6 +21,8 @@ object S3BucketLoader {
    * A convenience method to create an S3BucketLoader using AWS SDK v1, the version used by most of our existing code.
    * However, codebases that want to use AWS SDK v2 are able to provide their own implementation of S3BucketLoader.
    */
-  def forAwsSdkV1(s3Client: AmazonS3, bucketName: String): S3BucketLoader =
-    s3Client.getObject(bucketName, _).getObjectContent
+  def forAwsSdkV2(s3Client: S3Client, bucketName: String): S3BucketLoader =
+    (key: String) => 
+          s3Client.getObject(
+            GetObjectRequest.builder().bucket(bucketName).key(key).build())
 }
