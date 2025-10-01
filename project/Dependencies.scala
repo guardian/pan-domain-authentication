@@ -17,8 +17,8 @@ object Dependencies {
   }
 
   object PlayVersion {
-    val V29 = PlayVersion(2, 9, "com.typesafe.play", "2.9.6")
-    val V30 = PlayVersion(3, 0, "org.playframework", "3.0.6")
+    val V29 = PlayVersion(2, 9, "com.typesafe.play", "2.9.9")
+    val V30 = PlayVersion(3, 0, "org.playframework", "3.0.9")
   }
 
   val hmacHeaders = "com.gu" %% "hmac-headers" % "2.0.1"
@@ -41,6 +41,7 @@ object Dependencies {
 
   val jacksonVersion = "2.20.0"
 
+  // A transient dependency added to evict vulnerable Jackson versions
   val jacksonDependencies = Seq(
     "com.fasterxml.jackson.core" % "jackson-core" % jacksonVersion,
     "com.fasterxml.jackson.core" % "jackson-databind" % jacksonVersion,
