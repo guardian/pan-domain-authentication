@@ -17,27 +17,27 @@ object Dependencies {
   }
 
   object PlayVersion {
-    val V29 = PlayVersion(2, 9, "com.typesafe.play", "2.9.9")
+    val V29 = PlayVersion(2, 9, "com.typesafe.play", "3.0.9")
     val V30 = PlayVersion(3, 0, "org.playframework", "3.0.9")
   }
 
   val hmacHeaders = "com.gu" %% "hmac-headers" % "2.0.1"
 
   val googleDirectoryApiDependencies = Seq(
-    "com.google.apis" % "google-api-services-admin-directory" % "directory_v1-rev20240903-2.0.0",
-    "com.google.auth" % "google-auth-library-credentials" % "1.16.1",
-    "com.google.auth" % "google-auth-library-oauth2-http" % "1.16.1",
+    "com.google.apis" % "google-api-services-admin-directory" % "directory_v1-rev20250916-2.0.0",
+    "com.google.auth" % "google-auth-library-credentials" % "1.39.1",
+    "com.google.auth" % "google-auth-library-oauth2-http" % "1.39.1",
   )
 
   val cryptoDependencies = Seq(
-    "org.bouncycastle" % "bcprov-jdk18on" % "1.78.1",
-    "commons-codec" % "commons-codec" % "1.17.1",
-    "com.google.guava" % "guava" % "33.4.0-jre"
+    "org.bouncycastle" % "bcprov-jdk18on" % "1.82",
+    "commons-codec" % "commons-codec" % "1.17.2",
+    "com.google.guava" % "guava" % "33.4.8-jre"
   )
 
   val testDependencies = Seq("org.scalatest" %% "scalatest" % "3.2.19" % Test)
 
-  val loggingDependencies = Seq("org.slf4j" % "slf4j-api" % "1.7.36")
+  val loggingDependencies = Seq("org.slf4j" % "slf4j-api" % "2.0.17")
 
   val jacksonVersion = "2.20.0"
 
