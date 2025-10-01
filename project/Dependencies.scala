@@ -17,8 +17,8 @@ object Dependencies {
   }
 
   object PlayVersion {
-    val V29 = PlayVersion(2, 9, "com.typesafe.play", "2.9.6")
-    val V30 = PlayVersion(3, 0, "org.playframework", "3.0.6")
+    val V29 = PlayVersion(2, 9, "com.typesafe.play", "2.9.9")
+    val V30 = PlayVersion(3, 0, "org.playframework", "3.0.9")
   }
 
   val hmacHeaders = "com.gu" %% "hmac-headers" % "2.0.1"
@@ -38,5 +38,18 @@ object Dependencies {
   val testDependencies = Seq("org.scalatest" %% "scalatest" % "3.2.19" % Test)
 
   val loggingDependencies = Seq("org.slf4j" % "slf4j-api" % "1.7.36")
+
+  val jacksonVersion = "2.20.0"
+
+  // A transient dependency added to evict vulnerable Jackson versions
+  val jacksonDependencies = Seq(
+    "com.fasterxml.jackson.core" % "jackson-core" % jacksonVersion,
+    "com.fasterxml.jackson.core" % "jackson-databind" % jacksonVersion,
+    "com.fasterxml.jackson.dataformat" % "jackson-dataformat-cbor" % jacksonVersion,
+    "com.fasterxml.jackson.datatype" % "jackson-datatype-jdk8" % jacksonVersion,
+    "com.fasterxml.jackson.datatype" % "jackson-datatype-jsr310" % jacksonVersion,
+    "com.fasterxml.jackson.module" % "jackson-module-parameter-names" % jacksonVersion,
+    "com.fasterxml.jackson.module" %% "jackson-module-scala" % jacksonVersion
+  )
 
 }
