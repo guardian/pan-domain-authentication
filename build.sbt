@@ -32,7 +32,7 @@ def directSubfolderProject(path: String): Project = Project(path, file(path)).se
 lazy val panDomainAuthVerification = directSubfolderProject("pan-domain-auth-verification")
   .settings(
     artifactProductionSettings,
-    libraryDependencies ++= cryptoDependencies ++ awsDependencies ++ loggingDependencies
+    libraryDependencies ++= cryptoDependencies ++ awsDependencies ++ loggingDependencies ++ jacksonDependencies
   )
 
 lazy val panDomainAuthCore = directSubfolderProject("pan-domain-auth-core")
