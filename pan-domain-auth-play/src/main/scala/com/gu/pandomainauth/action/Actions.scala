@@ -80,14 +80,16 @@ trait AuthActions {
     new Google2FAGroupChecker(_, panDomainSettings.s3BucketLoader, applicationName)
   }
 
-  /**
-    * A cookie key that stores the target URL that was being accessed when redirected for authentication
-    */
-  val LOGIN_ORIGIN_KEY = "panda-loginOriginUrl"
+  /*
+   * A cookie key that stores the target URL that was being accessed when redirected for authentication.
+   * Takes a session ID to allow multiple tabs to reauth concurrently without conflict.
+   */
+  def loginOriginKey(sessionId: String) = s"panda-loginOriginUrl-$sessionId"
   /*
    * Cookie key containing an anti-forgery token; helps to validate that the oauth callback arrived in response to the correct oauth request
+   * Takes a session ID to allow multiple tabs to reauth concurrently without conflict.
    */
-  val ANTI_FORGERY_KEY = "panda-antiForgeryToken"
+  def antiForgeryTokenKey(sessionId: String) = s"panda-antiForgeryToken-$sessionId"
   /*
    * Cookie that will make panda behave as if the cookie has expired.
    * NOTE: This cookie is for debugging only! It should _not_ be set by any application code to expire the cookie!! Use the `processLogout` action instead!!
@@ -98,6 +100,7 @@ trait AuthActions {
     Cookie(
       name,
       value = URLEncoder.encode(value, "UTF-8"),
+      maxAge = Some(300), // 5 mins - plenty of time for auth to complete
       secure = true,
       httpOnly = true,
       // Chrome will pass back SameSite=Lax cookies, but Firefox requires
@@ -105,9 +108,9 @@ trait AuthActions {
       // from a 3rd party
       sameSite = Some(Cookie.SameSite.None)
     )
-  private lazy val discardCookies = Seq(
-    DiscardingCookie(LOGIN_ORIGIN_KEY, secure = true),
-    DiscardingCookie(ANTI_FORGERY_KEY, secure = true),
+  private def discardCookies(sessionId: String) = Seq(
+    DiscardingCookie(loginOriginKey(sessionId), secure = true),
+    DiscardingCookie(antiForgeryTokenKey(sessionId), secure = true),
     DiscardingCookie(FORCE_EXPIRY_KEY, secure = true)
   )
 
@@ -116,10 +119,14 @@ trait AuthActions {
     * but if you want to show welcome page with a button on it then override.
     */
   def sendForAuth(implicit request: RequestHeader, email: Option[String] = None) = {
+    val sessionId = OAuth.generateSessionId()
     val antiForgeryToken = OAuth.generateAntiForgeryToken()
-    OAuth.redirectToOAuthProvider(antiForgeryToken, email)(ec) map { res =>
+    OAuth.redirectToOAuthProvider(sessionId, antiForgeryToken, email)(ec) map { res =>
       val originUrl = request.uri
-      res.withCookies(cookie(ANTI_FORGERY_KEY, antiForgeryToken), cookie(LOGIN_ORIGIN_KEY, originUrl))
+      res.withCookies(
+        cookie(antiForgeryTokenKey(sessionId), antiForgeryToken),
+        cookie(loginOriginKey(sessionId), originUrl)
+      ).discardingHeader(FORCE_EXPIRY_KEY)
     }
   }
 
@@ -150,14 +157,24 @@ trait AuthActions {
   def invalidUserMessage(claimedAuth: AuthenticatedUser) = s"user ${claimedAuth.user.email} not valid for $system"
 
   private def decodeCookie(name: String)(implicit request: RequestHeader) =
-    request.cookies.get(name).map(cookie => URLDecoder.decode(cookie.value, "UTF-8"))
+    request.cookies.get(name).map(cookie => URLDecoder.decode(cookie.value, "UTF-8")).toRight(
+      left = BadRequest(s"missing cookie $name")
+    )
+
+  private def fetchSessionIdFromState()(implicit request: RequestHeader) =
+    request.getQueryString("state") match {
+      case Some(s"$sessionId+$_") => Right(sessionId)
+      case Some(_) => Left(BadRequest("State parameter returned missing a session ID"))
+      case None => Left(BadRequest("No state parameter passed in callback"))
+    }
 
   def processOAuthCallback()(implicit request: RequestHeader): Future[Result] = {
     (for {
-      token <- decodeCookie(ANTI_FORGERY_KEY)
-      originalUrl <- decodeCookie(LOGIN_ORIGIN_KEY)
+      sessionId <- fetchSessionIdFromState()
+      token <- decodeCookie(antiForgeryTokenKey(sessionId))
+      originalUrl <- decodeCookie(loginOriginKey(sessionId))
     } yield {
-      OAuth.validatedUserIdentity(token)(request, ec, wsClient).map { claimedAuth =>
+      OAuth.validatedUserIdentity(sessionId, token)(request, ec, wsClient).map { claimedAuth =>
         val existingAuthenticatedIn = readAuthenticatedUser(request).map(_.authenticatedIn)
         val authedUserData =
           claimedAuth.copy(
@@ -170,13 +187,14 @@ trait AuthActions {
           val updatedCookie = generateCookie(authedUserData)
           Redirect(originalUrl)
             .withCookies(updatedCookie)
-            .discardingCookies(discardCookies:_*)
+            .discardingCookies(discardCookies(sessionId): _*)
         } else {
           showUnauthedMessage(invalidUserMessage(authedUserData))
         }
       }
-    }) getOrElse {
-      Future.successful(BadRequest("Missing cookies"))
+    }) match {
+      case Left(failure) => Future.successful(failure)
+      case Right(eventualSuccess) => eventualSuccess
     }
   }
 
