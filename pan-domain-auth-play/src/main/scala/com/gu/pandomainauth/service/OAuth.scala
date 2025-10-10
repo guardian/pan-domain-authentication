@@ -35,7 +35,7 @@ class OAuth(config: OAuthSettings, system: String, redirectUrl: String)(implicit
 
   val random = new SecureRandom()
 
-  def generateSessionId(): String = Integer.toString(random.nextInt().abs, 36)
+  def generateSessionId(): String = Integer.toString(random.nextInt(Integer.MAX_VALUE), 36)
   def generateAntiForgeryToken(): String = new BigInteger(130, random).toString(36)
 
   def oAuthResponse[T](r: WSResponse)(block: JsValue => T): T = {
