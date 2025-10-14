@@ -35,7 +35,8 @@ class OAuth(config: OAuthSettings, system: String, redirectUrl: String)(implicit
 
   val random = new SecureRandom()
 
-  def generateAntiForgeryToken() = new BigInteger(130, random).toString(32)
+  def generateSessionId(): String = Integer.toString(random.nextInt(Integer.MAX_VALUE), 36)
+  def generateAntiForgeryToken(): String = new BigInteger(130, random).toString(36)
 
   def oAuthResponse[T](r: WSResponse)(block: JsValue => T): T = {
     r.status match {
@@ -51,22 +52,22 @@ class OAuth(config: OAuthSettings, system: String, redirectUrl: String)(implicit
     }
   }
 
-  def redirectToOAuthProvider(antiForgeryToken: String, email: Option[String] = None)
+  def redirectToOAuthProvider(sessionId: String, antiForgeryToken: String, email: Option[String] = None)
                       (implicit context: ExecutionContext): Future[Result] = {
     val queryString: Map[String, Seq[String]] = Map(
       "client_id" -> Seq(config.clientId),
       "response_type" -> Seq("code"),
       "scope" -> Seq("openid email profile"),
       "redirect_uri" -> Seq(redirectUrl),
-      "state" -> Seq(antiForgeryToken)
+      "state" -> Seq(s"$sessionId+$antiForgeryToken")
     ) ++ email.map("login_hint" -> Seq(_)) ++ config.organizationDomain.map("hd" -> Seq(_))
 
     discoveryDocument.map(dd => Redirect(s"${dd.authorization_endpoint}", queryString))
   }
 
-  def validatedUserIdentity(expectedAntiForgeryToken: String)
+  def validatedUserIdentity(sessionId: String, expectedAntiForgeryToken: String)
                            (implicit request: RequestHeader, context: ExecutionContext, ws: WSClient): Future[AuthenticatedUser] = {
-    if (!request.queryString.getOrElse("state", Nil).contains(expectedAntiForgeryToken)) {
+    if (!request.getQueryString("state").contains(s"$sessionId+$expectedAntiForgeryToken")) {
       throw new IllegalArgumentException("The anti forgery token did not match")
     } else {
       discoveryDocument.flatMap { dd =>
