@@ -37,7 +37,7 @@ object Dependencies {
 
   val testDependencies = Seq("org.scalatest" %% "scalatest" % "3.2.19" % Test)
 
-  val loggingDependencies = Seq("org.slf4j" % "slf4j-api" % "1.7.36")
+  val loggingDependencies = Seq("org.slf4j" % "slf4j-api" % "2.0.17")
 
   val jacksonVersion = "2.20.0"
 
