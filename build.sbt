@@ -7,7 +7,7 @@ import play.sbt.PlayImport.PlayKeys.*
 import sbtversionpolicy.withsbtrelease.ReleaseVersion
 
 ThisBuild / scalaVersion := "3.3.5"
-val crossCompileScalaVersions = crossScalaVersions := Seq(scalaVersion.value, "2.13.16")
+val crossCompileScalaVersions = crossScalaVersions := Seq(scalaVersion.value, "2.13.17")
 
 val commonSettings = Seq(
   Test / fork := false,
