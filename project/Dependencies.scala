@@ -24,7 +24,7 @@ object Dependencies {
   val hmacHeaders = "com.gu" %% "hmac-headers" % "2.0.1"
 
   val googleDirectoryApiDependencies = Seq(
-    "com.google.apis" % "google-api-services-admin-directory" % "directory_v1-rev20240903-2.0.0",
+    "com.google.apis" % "google-api-services-admin-directory" % "directory_v1-rev20251107-2.0.0",
     "com.google.auth" % "google-auth-library-credentials" % "1.16.1",
     "com.google.auth" % "google-auth-library-oauth2-http" % "1.16.1",
   )
