@@ -6,10 +6,10 @@ import cats.syntax.all._
 import com.gu.pandomainauth.internal.planning.{AllowAccess, AuthPlanner, WithholdAccess}
 import com.gu.pandomainauth.model.User
 import com.gu.pandomainauth.webframeworks.WebFrameworkAdapter
-import com.gu.pandomainauth.webframeworks.WebFrameworkAdapter.{PageRequestAdapter, RichRequest}
+import com.gu.pandomainauth.webframeworks.WebFrameworkAdapter.{RequestAdapter, RichRequest}
 
 abstract class TopLevelAuthThing[
-  Req: PageRequestAdapter,
+  Req: RequestAdapter,
   RespType, RespMod,
   Resp,
   F[_] : Monad

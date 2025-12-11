@@ -30,7 +30,7 @@ object PagePlanners {
     PagePlanners(OAuthInteractions(settingsRefresher.system, settingsRefresher.settings.oAuthSettings, appSpecifics))
 }
 
-class TopLevelPageThing[Req: PageRequestAdapter, Resp, F[_]: Monad](
+class TopLevelPageThing[Req: RequestAdapter, Resp, F[_]: Monad](
   pagePlanners: PagePlanners[F],
   responseAdapter: WebFrameworkAdapter.PageResponseAdapter[Resp],
   cookieResponses: CookieResponses,
