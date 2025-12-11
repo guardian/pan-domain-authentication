@@ -40,7 +40,7 @@ trait AuthActions {
   def controllerComponents: ControllerComponents
   val panDomainSettings: PanDomainAuthSettingsRefresher
 
-  implicit val pageRequestAdapter: WebFrameworkAdapter.PageRequestAdapter[RequestHeader] = (req: RequestHeader) => PageRequest(
+  implicit val pageRequestAdapter: WebFrameworkAdapter.RequestAdapter[RequestHeader] = (req: RequestHeader) => PageRequest(
     URI.create(req.uri),
     req.cookies.map(c => c.name -> c.value).toMap
   )
@@ -55,14 +55,6 @@ trait AuthActions {
 
   val cookieResponses: CookieResponses = CookieResponses(panDomainSettings)
   
-  val pagePlanners: PagePlanners[Future] = PagePlanners(
-    panDomainSettings,
-    OAuthInteractions.AppSpecifics(new PlayImplOfOAuthHttpClient(wsClient), URI.create(authCallbackUrl))
-  )
-
-  val topLevelPageThing: TopLevelPageThing[RequestHeader, Result, Future] =
-    new TopLevelPageThing(pagePlanners, PlayFrameworkAdapter, cookieResponses, showUnauthedMessage("logged out"))
-
   private implicit val ec: ExecutionContext = controllerComponents.executionContext
 
   /**
@@ -130,9 +122,9 @@ trait AuthActions {
   def invalidUserMessage(user: com.gu.pandomainauth.model.User) = s"user ${user.email} not valid for $system"
 
   def processOAuthCallback()(implicit request: RequestHeader): Future[Result] =
-    topLevelPageThing.processOAuthCallback(request)
+    pageEndpointAuth.processOAuthCallback(request)
 
-  def processLogout(implicit request: RequestHeader) = topLevelPageThing.processLogout()
+  def processLogout(implicit request: RequestHeader) = pageEndpointAuth.processLogout()
 
   /**
     * Action that ensures the user is logged in and validated.
@@ -146,9 +138,19 @@ trait AuthActions {
 
     override def parser: BodyParser[AnyContent]               = AuthActions.this.controllerComponents.parsers.default
     override protected def executionContext: ExecutionContext = AuthActions.this.controllerComponents.executionContext
+    
+    val pageEndpointAuth: EndpointAuth.Page[RequestHeader, Result, Future] = new TopLevelPageThing(
+      PagePlanners(
+        panDomainSettings,
+        OAuthInteractions.AppSpecifics(new PlayImplOfOAuthHttpClient(wsClient), URI.create(authCallbackUrl))
+      ),
+      PlayFrameworkAdapter,
+      cookieResponses,
+      showUnauthedMessage("logged out")
+    )
 
     def authenticateRequest(request: RequestHeader)(produceResultGivenAuthedUser: User => Future[Result]): Future[Result] =
-      topLevelPageThing.authenticateRequest(request)(produceResultGivenAuthedUser)
+      pageEndpointAuth.authenticateRequest(request)(produceResultGivenAuthedUser)
   }
 
   /**

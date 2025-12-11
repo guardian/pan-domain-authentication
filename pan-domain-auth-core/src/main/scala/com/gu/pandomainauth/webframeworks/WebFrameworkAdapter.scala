@@ -8,12 +8,12 @@ import java.net.URI
 
 object WebFrameworkAdapter {
 
-  trait PageRequestAdapter[Req] {
+  trait RequestAdapter[Req] {
     def convert(req: Req): PageRequest
   }
 
-  implicit class RichRequest[Req: PageRequestAdapter](req: Req) {
-    def asPandaRequest: PageRequest = implicitly[PageRequestAdapter[Req]].convert(req)
+  implicit class RichRequest[Req: RequestAdapter](req: Req) {
+    def asPandaRequest: PageRequest = implicitly[RequestAdapter[Req]].convert(req)
   }
 
   trait ResponseModifier[Resp] {

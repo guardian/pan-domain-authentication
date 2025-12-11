@@ -3,9 +3,9 @@ package com.gu.pandomainauth
 import cats.Monad
 import com.gu.pandomainauth.internal.planning.{ApiEndpoint, AuthPlanner, AuthStatusFromRequest, PageEndpoint, WithholdAccess}
 import com.gu.pandomainauth.webframeworks.WebFrameworkAdapter
-import com.gu.pandomainauth.webframeworks.WebFrameworkAdapter.PageRequestAdapter
+import com.gu.pandomainauth.webframeworks.WebFrameworkAdapter.RequestAdapter
 
-class TopLevelApiThing[Req: PageRequestAdapter, Resp, F[_] : Monad](
+class TopLevelApiThing[Req: RequestAdapter, Resp, F[_] : Monad](
   authPlanner: AuthPlanner[ApiEndpoint.RespType, ApiEndpoint.RespMod],
   responseAdapter: WebFrameworkAdapter.ApiResponseAdapter[Resp],
   cookieResponses: CookieResponses
@@ -17,7 +17,7 @@ class TopLevelApiThing[Req: PageRequestAdapter, Resp, F[_] : Monad](
 }
 
 object TopLevelApiThing {
-  def apply[Req: PageRequestAdapter, Resp, F[_] : Monad](
+  def apply[Req: RequestAdapter, Resp, F[_] : Monad](
     responseAdapter: WebFrameworkAdapter.ApiResponseAdapter[Resp],
     cookieResponses: CookieResponses
   )(
