@@ -9,7 +9,11 @@ class TopLevelApiThing[Req: RequestAdapter, Resp, F[_] : Monad](
   authPlanner: AuthPlanner[ApiEndpoint.RespType, ApiEndpoint.RespMod],
   responseAdapter: WebFrameworkAdapter.ApiResponseAdapter[Resp],
   cookieResponses: CookieResponses
-) extends TopLevelAuthThing[Req, ApiEndpoint.RespType, ApiEndpoint.RespMod, Resp, F](cookieResponses, authPlanner, responseAdapter) {
+) extends TopLevelAuthThing[Req, ApiEndpoint.RespType, ApiEndpoint.RespMod, Resp, F](
+  ApiEndpoint.respModReifier,
+  authPlanner,
+  responseAdapter
+) with EndpointAuth.Api[Req, Resp, F] {
 
   override def handleWithholdAccess(pandaResp: ApiEndpoint.RespType with WithholdAccess): Resp = pandaResp match {
     case disallow: ApiEndpoint.DisallowApiAccess => responseAdapter.handleDisallow(disallow.statusCode)
