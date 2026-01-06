@@ -18,7 +18,7 @@ object Dependencies {
 
   object PlayVersion {
     val V29 = PlayVersion(2, 9, "com.typesafe.play", "2.9.10")
-    val V30 = PlayVersion(3, 0, "org.playframework", "3.0.9")
+    val V30 = PlayVersion(3, 0, "org.playframework", "3.0.10")
   }
 
   val hmacHeaders = "com.gu" %% "hmac-headers" % "2.0.1"
