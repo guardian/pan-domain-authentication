@@ -176,7 +176,7 @@ trait AuthActions {
     override protected def executionContext: ExecutionContext = AuthActions.this.controllerComponents.executionContext
 
     val endpointAuth: EndpointAuth[RequestHeader, Result, Future] = 
-      TopLevelApiThing(PlayFrameworkAdapter, cookieResponses)
+      TopLevelApiThing(PlayFrameworkAdapter)
 
     def authenticateRequest(request: RequestHeader)(produceResultGivenAuthedUser: User => Future[Result]): Future[Result] =
       endpointAuth.authenticateRequest(request)(produceResultGivenAuthedUser)
