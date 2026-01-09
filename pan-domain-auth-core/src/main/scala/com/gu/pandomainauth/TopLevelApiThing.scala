@@ -8,7 +8,6 @@ import com.gu.pandomainauth.webframeworks.WebFrameworkAdapter.RequestAdapter
 class TopLevelApiThing[Req: RequestAdapter, Resp, F[_] : Monad](
   authPlanner: AuthPlanner[ApiEndpoint.RespType, ApiEndpoint.RespMod],
   responseAdapter: WebFrameworkAdapter.ApiResponseAdapter[Resp],
-  cookieResponses: CookieResponses
 ) extends TopLevelAuthThing[Req, ApiEndpoint.RespType, ApiEndpoint.RespMod, Resp, F](
   ApiEndpoint.respModReifier,
   authPlanner,
@@ -22,9 +21,8 @@ class TopLevelApiThing[Req: RequestAdapter, Resp, F[_] : Monad](
 
 object TopLevelApiThing {
   def apply[Req: RequestAdapter, Resp, F[_] : Monad](
-    responseAdapter: WebFrameworkAdapter.ApiResponseAdapter[Resp],
-    cookieResponses: CookieResponses
+    responseAdapter: WebFrameworkAdapter.ApiResponseAdapter[Resp]
   )(
     implicit authStatusFromRequest: AuthStatusFromRequest
-  ) = new TopLevelApiThing[Req, Resp, F](new AuthPlanner[ApiEndpoint.RespType, ApiEndpoint.RespMod](ApiEndpointAuthStatusHandler), responseAdapter, cookieResponses)
+  ) = new TopLevelApiThing[Req, Resp, F](new AuthPlanner[ApiEndpoint.RespType, ApiEndpoint.RespMod](ApiEndpointAuthStatusHandler), responseAdapter)
 }

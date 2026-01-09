@@ -51,8 +51,6 @@ trait AuthActions {
 
   implicit val authStatusFromRequest: AuthStatusFromRequest =
     AuthStatusFromRequest(panDomainSettings, SystemAuthorisation(system, validateUser, cacheValidation))
-
-  val cookieResponses: CookieResponses = CookieResponses(panDomainSettings)
   
   private implicit val ec: ExecutionContext = controllerComponents.executionContext
 
@@ -102,7 +100,7 @@ trait AuthActions {
       OAuthInteractions.AppSpecifics(new PlayImplOfOAuthHttpClient(wsClient), URI.create(authCallbackUrl))
     ),
     PlayFrameworkAdapter,
-    cookieResponses,
+    CookieResponses(panDomainSettings),
     showUnauthedMessage("logged out")
   )
   
@@ -176,7 +174,7 @@ trait AuthActions {
     override protected def executionContext: ExecutionContext = AuthActions.this.controllerComponents.executionContext
 
     val endpointAuth: EndpointAuth[RequestHeader, Result, Future] = 
-      TopLevelApiThing(PlayFrameworkAdapter, cookieResponses)
+      TopLevelApiThing(PlayFrameworkAdapter)
 
     def authenticateRequest(request: RequestHeader)(produceResultGivenAuthedUser: User => Future[Result]): Future[Result] =
       endpointAuth.authenticateRequest(request)(produceResultGivenAuthedUser)
