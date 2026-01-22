@@ -18,7 +18,7 @@ class CookieResponses(
   private val authCookie = CookieChanges.NameAndDomain(cookieSettings.cookieName, Some(domain))
   
   def pageEndpoint(respMod: PageEndpoint.RespMod): ResponseModification = ResponseModification(respMod match {
-    case prepareForOAuth: PrepareForOAuth => CookieChanges(
+    case prepareForOAuth: PrepareForOAuth => CookieChanges( // TODO this needs to handle LOGIN_ORIGIN_KEY as well.
       setSessionCookies = Map(ANTI_FORGERY_KEY -> prepareForOAuth.antiForgeryToken),
       wipeCookies = if (prepareForOAuth.wipeAuthCookie) Set(authCookie) else Set.empty
     )
