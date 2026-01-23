@@ -27,7 +27,11 @@ object PageEndpoint extends EndpointType {
   type RM = RespMod
 
   case object Logout extends RespMod
-  case class PrepareForOAuth(antiForgeryToken: String, wipeAuthCookie: Boolean = false) extends RespMod
+  case class PrepareForOAuth(
+    returnUrl: URI,
+    antiForgeryToken: String, 
+    wipeAuthCookie: Boolean = false
+  ) extends RespMod
 }
 
 trait PageOrOAuthCallbackWithholdAccess extends PageEndpoint.RespType with OAuthCallbackEndpoint.RespType with WithholdAccess

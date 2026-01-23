@@ -17,12 +17,14 @@ class PageEndpointAuthStatusHandlerTest extends AnyFreeSpec with Matchers with O
     AuthenticatedUser(User("John", "Smith", "", None), "composer", authenticatedIn, Instant.now().plusSeconds(1), true)
   )
 
+  val examplePageRequestUrl: URI = URI.create("https://example.tool.co.uk/admin")
+
   val authStatusHandler = new PageEndpointAuthStatusHandler((antiForgeryToken, _) =>
     URI.create(s"example.com/?aft=$antiForgeryToken"))
 
   "authorisation" - {
     "persist new auth cookie containing additional authorised system if it's not in the cookie already" in {
-      val plan = authStatusHandler.planForAuthStatus(AuthPersistenceStatus(
+      val plan = authStatusHandler.planForAuthStatus(examplePageRequestUrl, AuthPersistenceStatus(
         authenticatedStatus(authenticatedIn = Set("workflow", "composer")),
         systemsAuthorisationsCurrentlyPersistedWithUser = Set("composer")
       ))
@@ -33,11 +35,12 @@ class PageEndpointAuthStatusHandlerTest extends AnyFreeSpec with Matchers with O
     }
 
     "redirect for OAuth if the user is not authenticated" in {
-      val plan = authStatusHandler.planForAuthStatus(AuthPersistenceStatus(NotAuthenticated, Set.empty))
+      val plan = authStatusHandler.planForAuthStatus(examplePageRequestUrl, AuthPersistenceStatus(NotAuthenticated, Set.empty))
 
       inside(plan) {
-        case Plan(planning.Redirect(redirectUri), Some(PrepareForOAuth(persistedAntiForgeryToken, _))) =>
-          redirectUri.getQuery should include (persistedAntiForgeryToken)
+        case Plan(planning.Redirect(redirectUri), Some(prepareForOAuth: PrepareForOAuth)) =>
+          prepareForOAuth.returnUrl shouldBe examplePageRequestUrl
+          redirectUri.getQuery should include (prepareForOAuth.antiForgeryToken)
       }
     }
   }

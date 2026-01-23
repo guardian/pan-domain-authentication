@@ -1,5 +1,7 @@
 package com.gu.pandomainauth.internal.planning
 
+import java.net.URI
+
 /**
  * 
  * Translates [[AuthPersistenceStatus]] into a [[Plan]].
@@ -16,5 +18,5 @@ package com.gu.pandomainauth.internal.planning
  *
  */
 trait AuthStatusHandler[RespType, RespMod] {
-  def planForAuthStatus(authPersistenceStatus: AuthPersistenceStatus): Plan[RespType, RespMod]
+  def planForAuthStatus(requestUrl: URI, authPersistenceStatus: AuthPersistenceStatus): Plan[RespType, RespMod]
 }

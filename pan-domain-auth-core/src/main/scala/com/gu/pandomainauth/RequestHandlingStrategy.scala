@@ -7,6 +7,7 @@ import com.gu.pandomainauth.model.*
 import com.gu.pandomainauth.oauth.OAuthUrl
 
 import java.math.BigInteger
+import java.net.URI
 import java.security.SecureRandom
 
 
@@ -34,19 +35,19 @@ class PageEndpointAuthStatusHandler(oAuthUrl: OAuthUrl)
   
   private val random = new SecureRandom()
 
-  private def redirectForAuth(loginHintEmail: Option[String] = None, wipeAuthCookie: Boolean = false): Plan[PageEndpoint.RespType, PageEndpoint.RespMod] = {
+  private def redirectForAuth(requestUri: URI, loginHintEmail: Option[String] = None, wipeAuthCookie: Boolean = false): Plan[PageEndpoint.RespType, PageEndpoint.RespMod] = {
     val antiForgeryToken: String = new BigInteger(130, random).toString(32)
     Plan(
       Redirect(oAuthUrl.uriOfOAuthProvider(antiForgeryToken, loginHintEmail)),
-      Some(PageEndpoint.PrepareForOAuth(antiForgeryToken, wipeAuthCookie))
+      Some(PageEndpoint.PrepareForOAuth(requestUri, antiForgeryToken, wipeAuthCookie))
     )
   }
 
-  override def planForAuthStatus(authPersistenceStatus: AuthPersistenceStatus): Plan[PageEndpoint.RespType, PageEndpoint.RespMod] =
+  override def planForAuthStatus(requestUrl: URI, authPersistenceStatus: AuthPersistenceStatus): Plan[PageEndpoint.RespType, PageEndpoint.RespMod] =
     authPersistenceStatus.effectiveAuthStatus match {
-      case NotAuthenticated => redirectForAuth()
-      case InvalidCookie(_) => redirectForAuth(wipeAuthCookie = true)
-      case stale: StaleUserAuthentication => redirectForAuth(loginHintEmail = Some(stale.authedUser.user.email))
+      case NotAuthenticated => redirectForAuth(requestUrl)
+      case InvalidCookie(_) => redirectForAuth(requestUrl, wipeAuthCookie = true)
+      case stale: StaleUserAuthentication => redirectForAuth(requestUrl, loginHintEmail = Some(stale.authedUser.user.email))
       case com.gu.pandomainauth.model.NotAuthorized(authedUser) => Plan(com.gu.pandomainauth.internal.planning.NotAuthorized(authedUser))
       case Authenticated(authedUser) => Plan(AllowAccess(authedUser.user),
         Option.when(authPersistenceStatus.hasUnpersistedSystemAuthorisations)(PersistAuth(authedUser))
@@ -56,7 +57,7 @@ class PageEndpointAuthStatusHandler(oAuthUrl: OAuthUrl)
 
 object ApiEndpointAuthStatusHandler extends AuthStatusHandler[ApiEndpoint.RespType, ApiEndpoint.RespMod] {
   
-  def planForAuthStatus(authPersistenceStatus: AuthPersistenceStatus): Plan[ApiEndpoint.RespType, ApiEndpoint.RespMod] = authPersistenceStatus.effectiveAuthStatus match {
+  def planForAuthStatus(requestUrl: URI, authPersistenceStatus: AuthPersistenceStatus): Plan[ApiEndpoint.RespType, ApiEndpoint.RespMod] = authPersistenceStatus.effectiveAuthStatus match {
     case NotAuthenticated | InvalidCookie(_) | Expired(_) => Plan(NoAuthentication)
     case com.gu.pandomainauth.model.NotAuthorized(_) => Plan(ApiEndpoint.NotAuthorized)
     case acceptable: AcceptableAuthForApiRequests =>

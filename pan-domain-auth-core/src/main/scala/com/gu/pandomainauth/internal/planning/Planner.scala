@@ -18,5 +18,5 @@ class AuthPlanner[RespType, RespMod](authStatusHandler: AuthStatusHandler[RespTy
   authStatusFromRequest: AuthStatusFromRequest
 ) extends Planner[RespType, RespMod] {
   def planFor(request: PageRequest): Plan[RespType, RespMod] =
-    authStatusHandler.planForAuthStatus(request.authenticationStatus())
+    authStatusHandler.planForAuthStatus(request.requestUrl, request.authenticationStatus())
 }

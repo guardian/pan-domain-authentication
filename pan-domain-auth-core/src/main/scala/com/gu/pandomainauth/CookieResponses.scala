@@ -1,7 +1,7 @@
 package com.gu.pandomainauth
 
 import com.gu.pandomainauth.internal.planning.PageEndpoint.*
-import com.gu.pandomainauth.PageEndpointAuthStatusHandler.{ANTI_FORGERY_KEY, TemporaryCookiesUsedForOAuth}
+import com.gu.pandomainauth.PageEndpointAuthStatusHandler.{ANTI_FORGERY_KEY, LOGIN_ORIGIN_KEY, TemporaryCookiesUsedForOAuth}
 import com.gu.pandomainauth.ResponseModification.CookieChanges
 import com.gu.pandomainauth.internal.planning.{OAuthCallbackEndpoint, PageEndpoint, PersistAuth}
 import com.gu.pandomainauth.model.CookieSettings
@@ -19,7 +19,10 @@ class CookieResponses(
   
   def pageEndpoint(respMod: PageEndpoint.RespMod): ResponseModification = ResponseModification(respMod match {
     case prepareForOAuth: PrepareForOAuth => CookieChanges( // TODO this needs to handle LOGIN_ORIGIN_KEY as well.
-      setSessionCookies = Map(ANTI_FORGERY_KEY -> prepareForOAuth.antiForgeryToken),
+      setSessionCookies = Map(
+        ANTI_FORGERY_KEY -> prepareForOAuth.antiForgeryToken,
+        LOGIN_ORIGIN_KEY -> prepareForOAuth.returnUrl.toString
+      ),
       wipeCookies = if (prepareForOAuth.wipeAuthCookie) Set(authCookie) else Set.empty
     )
     case persistAuth: PersistAuth => responseModificationFor(persistAuth)

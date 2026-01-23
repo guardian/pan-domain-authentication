@@ -6,7 +6,7 @@ import com.gu.pandomainauth.ResponseModification.CookieChanges.NameAndDomain
 
 /**
  * This class is a simple, concrete, framework-adapter-facing representation of changes that should be made to
- * the HTTP response. The fields are intentionally as simple to facilitate the [[WebFramework]] adapter translating
+ * the HTTP response. The fields are intentionally simple to facilitate the [[WebFramework]] adapter translating
  * them into its own response type.
  *
  * Contrast with the RespMod of the [[Plan]] class - where RespMod embodies higher-level concepts 
