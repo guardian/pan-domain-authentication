@@ -73,7 +73,7 @@ who cannot perform OAuth authentication, by using HMAC-SHA-256.
 ## Requirements
 
 If you are adding a new application to an existing deployment of pan-domain-authentication then you can skip to
-[Integrating With Your App](#integrating-with-your-app)
+[Integrating with your Scala app](#integrating-with-your-scala-app)
 
 * At least one webapp running on subdomains of a single domain (e.g. app1.example.com and app2.example.com)
 
