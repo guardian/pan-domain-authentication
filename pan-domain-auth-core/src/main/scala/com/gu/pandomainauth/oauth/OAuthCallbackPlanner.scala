@@ -7,14 +7,13 @@ import com.gu.pandomainauth.PageEndpointAuthStatusHandler.{ANTI_FORGERY_KEY, LOG
 import com.gu.pandomainauth.internal.planning.{AuthPersistenceStatus, AuthStatusFromRequest, NotAuthorized, OAuthCallbackEndpoint, PersistAuth, Plan, Planner, Redirect}
 import com.gu.pandomainauth.model.AuthenticatedUser
 import com.gu.pandomainauth.oauth.OAuthCallbackPlanner.CallbackPayload
+import com.gu.pandomainauth.service.TwoFactorAuthChecker
 
 import java.net.URI
 
-class OAuthCallbackPlanner[F[_]: Monad](oAuthCodeToUser: OAuthCodeToUser[F])(
+class OAuthCallbackPlanner[F[_]: Monad](oAuthCodeToUser: OAuthCodeToUser[F], twoFactorAuthChecker: Option[TwoFactorAuthChecker[F]])(
   implicit authStatusFromRequest: AuthStatusFromRequest
-) 
-//  extends Planner[OAuthCallbackEndpoint.RespType, OAuthCallbackEndpoint.RespMod] 
-  {
+) {
   val F: Monad[F] = Monad[F]
 
   private val systemAuthorisation: SystemAuthorisation = authStatusFromRequest.systemAuthorisation
@@ -24,19 +23,20 @@ class OAuthCallbackPlanner[F[_]: Monad](oAuthCodeToUser: OAuthCodeToUser[F])(
    */
   def planFor(request: PageRequest): F[Plan[OAuthCallbackEndpoint.RespType, OAuthCallbackEndpoint.RespMod]] =
     CallbackPayload.from(request).fold(F.pure(Plan[OAuthCallbackEndpoint.RespType, OAuthCallbackEndpoint.RespMod](OAuthCallbackEndpoint.BadRequest))) { payload =>
-      oAuthCodeToUser.validate(payload.code).map { newAuthedUser =>
+      oAuthCodeToUser.validate(payload.code).flatMap(augmentWithMultiFactor).map { newAuthedUser =>
         planFor(newAuthedUser, priorAuth = request.authenticationStatus(), payload.returnUrl)
       }
     }
 
-  private def planFor(newlyClaimedAuth: AuthenticatedUser, priorAuth: AuthPersistenceStatus, returnUrl: URI): Plan[OAuthCallbackEndpoint.RespType, OAuthCallbackEndpoint.RespMod] = {
-    if (systemAuthorisation.isAuthorised(newlyClaimedAuth, disableCache = true)) {
-      val authorisedUser = newlyClaimedAuth.copy(
-        multiFactor = false // TODO checkMultifactor(claimedAuth)
-      ).augmentWith(priorAuth.effectiveAuthStatus)
-      Plan(Redirect(returnUrl), Some(PersistAuth(authorisedUser, wipeTemporaryCookiesUsedForOAuth = true)))
-    } else Plan(NotAuthorized(newlyClaimedAuth))
-  }
+  private def augmentWithMultiFactor(newlyClaimedAuth: AuthenticatedUser): F[AuthenticatedUser] =
+    twoFactorAuthChecker.traverse(_.check(newlyClaimedAuth.user.email)).map { multiFactorOpt =>
+      newlyClaimedAuth.copy(multiFactor = multiFactorOpt.getOrElse(false))
+    }
+
+  private def planFor(newlyClaimedAuth: AuthenticatedUser, priorAuth: AuthPersistenceStatus, returnUrl: URI): Plan[OAuthCallbackEndpoint.RespType, OAuthCallbackEndpoint.RespMod] =
+    if (systemAuthorisation.isAuthorised(newlyClaimedAuth, disableCache = true))
+      Plan(Redirect(returnUrl), Some(PersistAuth(newlyClaimedAuth.augmentWith(priorAuth.effectiveAuthStatus), wipeTemporaryCookiesUsedForOAuth = true)))
+    else Plan(NotAuthorized(newlyClaimedAuth))
 }
 
 object OAuthCallbackPlanner {
