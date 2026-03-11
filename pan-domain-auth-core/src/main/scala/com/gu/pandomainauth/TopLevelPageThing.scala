@@ -5,6 +5,7 @@ import cats.syntax.all.*
 import com.gu.pandomainauth.internal.planning.OAuthCallbackEndpoint.BadRequest
 import com.gu.pandomainauth.internal.planning.{AuthPlanner, AuthStatusFromRequest, OAuthCallbackEndpoint, PageEndpoint, PageResponse, Redirect, WithholdAccess}
 import com.gu.pandomainauth.oauth.*
+import com.gu.pandomainauth.service.TwoFactorAuthChecker
 import com.gu.pandomainauth.webframeworks.WebFrameworkAdapter
 import com.gu.pandomainauth.webframeworks.WebFrameworkAdapter.*
 
@@ -16,17 +17,21 @@ case class PagePlanners[F[_] : Monad](
 
 object PagePlanners {
   def apply[F[_] : Monad](
-                           oAuth: OAuthInteractions[F]
+                           oAuth: OAuthInteractions[F], twoFactorAuthChecker: Option[TwoFactorAuthChecker[F]]
                          )(implicit authStatus: AuthStatusFromRequest): PagePlanners[F] = PagePlanners(
     new AuthPlanner(new PageEndpointAuthStatusHandler(oAuth.providerUrl)),
-    new OAuthCallbackPlanner(oAuth.codeToUser)
+    new OAuthCallbackPlanner(oAuth.codeToUser, twoFactorAuthChecker)
   )
 
   def apply[F[_] : Monad](
                            settingsRefresher: PanDomainAuthSettingsRefresher,
-                           appSpecifics: OAuthInteractions.AppSpecifics[F]
+                           appSpecifics: OAuthInteractions.AppSpecifics[F],
+                           twoFactorAuthChecker: Option[TwoFactorAuthChecker[F]]
                          )(implicit authStatus: AuthStatusFromRequest): PagePlanners[F] =
-    PagePlanners(OAuthInteractions(settingsRefresher.system, settingsRefresher.settings.oAuthSettings, appSpecifics))
+    PagePlanners(
+      OAuthInteractions(settingsRefresher.system, settingsRefresher.settings.oAuthSettings, appSpecifics),
+      twoFactorAuthChecker
+    )
 }
 
 class TopLevelPageThing[Req: RequestAdapter, Resp, F[_] : Monad](
