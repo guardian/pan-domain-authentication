@@ -88,16 +88,13 @@ trait AuthActions {
     */
   lazy val applicationName: String = s"pan-domain-authentication-$system"
 
-  lazy val multifactorChecker: Option[Google2FAGroupChecker] = settings.google2FAGroupSettings.map {
-    new Google2FAGroupChecker(_, panDomainSettings.s3BucketLoader, applicationName)
-  }
-
-  def checkMultifactor(authedUser: AuthenticatedUser) = multifactorChecker.exists(_.checkMultifactor(authedUser))
-
   val pageEndpointAuth: EndpointAuth.Page[RequestHeader, Result, Future] = new TopLevelPageThing(
     PagePlanners(
       panDomainSettings,
-      OAuthInteractions.AppSpecifics(new PlayImplOfOAuthHttpClient(wsClient), URI.create(authCallbackUrl))
+      OAuthInteractions.AppSpecifics(new PlayImplOfOAuthHttpClient(wsClient), URI.create(authCallbackUrl)),
+      settings.google2FAGroupSettings.map { google2FAGroupSettings =>
+        TwoFactorAuthChecker.wrapBlocking(new Google2FAGroupChecker(google2FAGroupSettings, panDomainSettings.s3BucketLoader, applicationName))
+      }
     ),
     PlayFrameworkAdapter,
     CookieResponses(panDomainSettings),
