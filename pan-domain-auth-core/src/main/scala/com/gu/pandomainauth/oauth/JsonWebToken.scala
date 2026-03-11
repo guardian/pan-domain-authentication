@@ -3,8 +3,19 @@ package com.gu.pandomainauth.oauth
 import org.apache.commons.codec.binary.Base64
 import upickle.default.*
 
-case class JwtClaims(iss: String, sub: String, azp: Option[String], email: Option[String], at_hash: String,
-                     email_verified: Option[Boolean], aud: String, hd: Option[String], iat: Long, exp: Long)
+case class JwtClaims(
+  iss: String,
+  sub: String,
+  azp: Option[String],
+  email: Option[String],
+  at_hash: Option[String], // https://github.com/guardian/pan-domain-authentication/pull/247
+  email_verified: Option[Boolean],
+  aud: String,
+  hd: Option[String],
+  iat: Long,
+  exp: Long
+)
+
 object JwtClaims {
   implicit val claimsRW: ReadWriter[JwtClaims] = macroRW[JwtClaims]
 }
