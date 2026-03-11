@@ -7,6 +7,7 @@ import upickle.default.*
 
 import java.net.URI
 import java.time.Instant
+import scala.util.Try
 
 /**
  * Performs steps 4 & 5 of the OpenID Connect Server flow:
