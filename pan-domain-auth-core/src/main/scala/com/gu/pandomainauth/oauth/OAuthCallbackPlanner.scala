@@ -4,8 +4,7 @@ import cats.*
 import cats.syntax.all.*
 import com.gu.pandomainauth.*
 import com.gu.pandomainauth.PageEndpointAuthStatusHandler.{ANTI_FORGERY_KEY, LOGIN_ORIGIN_KEY}
-import com.gu.pandomainauth.internal.planning.{AuthPersistenceStatus, AuthStatusFromRequest, NotAuthorized, OAuthCallbackEndpoint, PersistAuth, Plan, Planner, Redirect}
-import com.gu.pandomainauth.model.AuthenticatedUser
+import com.gu.pandomainauth.internal.planning.{AuthStatusFromRequest, OAuthCallbackEndpoint, Plan}
 import com.gu.pandomainauth.oauth.OAuthCallbackPlanner.CallbackPayload
 import com.gu.pandomainauth.service.TwoFactorAuthChecker
 
@@ -16,27 +15,18 @@ class OAuthCallbackPlanner[F[_]: Monad](oAuthCodeToUser: OAuthCodeToUser[F], two
 ) {
   val F: Monad[F] = Monad[F]
 
-  private val systemAuthorisation: SystemAuthorisation = authStatusFromRequest.systemAuthorisation
+  private val newlyAuthenticatedUserHandler =
+    new NewlyOAuthedUserHandler[F](authStatusFromRequest.systemAuthorisation, twoFactorAuthChecker)
 
   /**
    * processOAuthCallback
    */
   def planFor(request: PageRequest): F[Plan[OAuthCallbackEndpoint.RespType, OAuthCallbackEndpoint.RespMod]] =
     CallbackPayload.from(request).fold(F.pure(Plan[OAuthCallbackEndpoint.RespType, OAuthCallbackEndpoint.RespMod](OAuthCallbackEndpoint.BadRequest))) { payload =>
-      oAuthCodeToUser.validate(payload.code).flatMap(augmentWithMultiFactor).map { newAuthedUser =>
-        planFor(newAuthedUser, priorAuth = request.authenticationStatus(), payload.returnUrl)
+      oAuthCodeToUser.validate(payload.code).flatMap { barelyAuthedUser =>
+        newlyAuthenticatedUserHandler.planFor(barelyAuthedUser, priorAuth = request.authenticationStatus(), payload.returnUrl)
       }
     }
-
-  private def augmentWithMultiFactor(newlyClaimedAuth: AuthenticatedUser): F[AuthenticatedUser] =
-    twoFactorAuthChecker.traverse(_.check(newlyClaimedAuth.user.email)).map { multiFactorOpt =>
-      newlyClaimedAuth.copy(multiFactor = multiFactorOpt.getOrElse(false))
-    }
-
-  private def planFor(newlyClaimedAuth: AuthenticatedUser, priorAuth: AuthPersistenceStatus, returnUrl: URI): Plan[OAuthCallbackEndpoint.RespType, OAuthCallbackEndpoint.RespMod] =
-    if (systemAuthorisation.isAuthorised(newlyClaimedAuth, disableCache = true))
-      Plan(Redirect(returnUrl), Some(PersistAuth(newlyClaimedAuth.augmentWith(priorAuth.effectiveAuthStatus), wipeTemporaryCookiesUsedForOAuth = true)))
-    else Plan(NotAuthorized(newlyClaimedAuth))
 }
 
 object OAuthCallbackPlanner {
