@@ -43,7 +43,7 @@ class TopLevelPageThing[Req: RequestAdapter, Resp, F[_] : Monad](
   with EndpointAuth.Page[Req, Resp, F] {
 
   override def handleWithholdAccess(pandaResp: PageEndpoint.RespType with WithholdAccess): Resp = pandaResp match {
-    case com.gu.pandomainauth.internal.planning.NotAuthorized(user) => responseAdapter.handleNotAuthorised(user)
+    case com.gu.pandomainauth.internal.planning.NotAuthorized(user) => responseAdapter.handleNotAuthorised(user.user)
     case Redirect(uri) => responseAdapter.handleRedirect(uri)
   }
 
@@ -51,9 +51,9 @@ class TopLevelPageThing[Req: RequestAdapter, Resp, F[_] : Monad](
     plan <- pagePlanners.oAuthCallback.planFor(request.asPandaRequest)
   } yield {
     val resp = plan.respType match {
-      case com.gu.pandomainauth.internal.planning.NotAuthorized(authenticatedUser) => responseAdapter.handleNotAuthorised(authenticatedUser)
+      case com.gu.pandomainauth.internal.planning.NotAuthorized(authenticatedUser) => responseAdapter.handleNotAuthorised(authenticatedUser.user)
       case Redirect(uri) => responseAdapter.handleRedirect(uri)
-      case BadRequest => ??? // TODO
+      case br: BadRequest => ??? // TODO
     }
     
     plan.respMod.fold(resp)(respMod => modify(cookieResponses.oAuthCallbackEndpoint(respMod))(resp))

@@ -69,7 +69,7 @@ trait AuthActions {
     * By default the validity of the user is checked every request. If your validateUser implementation is expensive or has side effects you
     * can override this to true and validity will only be checked the first time the user visits your app after their login is established.
     *
-    * Note the the cache is invalidated after the user's session is re-established with the OAuth provider.
+    * Note the cache is invalidated after the user's session is re-established with the OAuth provider.
     *
     * @return true if you want to only check the validity of the user once for the lifetime of the user's auth session
     */
@@ -96,7 +96,7 @@ trait AuthActions {
         TwoFactorAuthChecker.wrapBlocking(new Google2FAGroupChecker(google2FAGroupSettings, panDomainSettings.s3BucketLoader, applicationName))
       }
     ),
-    PlayFrameworkAdapter,
+    PlayFrameworkAdapter.PageResponses(notAuthorised = user => showUnauthedMessage(invalidUserMessage(user))),
     CookieResponses(panDomainSettings),
     showUnauthedMessage("logged out")
   )
@@ -171,7 +171,7 @@ trait AuthActions {
     override protected def executionContext: ExecutionContext = AuthActions.this.controllerComponents.executionContext
 
     val endpointAuth: EndpointAuth[RequestHeader, Result, Future] = 
-      TopLevelApiThing(PlayFrameworkAdapter)
+      TopLevelApiThing(PlayFrameworkAdapter.ApiResponses)
 
     def authenticateRequest(request: RequestHeader)(produceResultGivenAuthedUser: User => Future[Result]): Future[Result] =
       endpointAuth.authenticateRequest(request)(produceResultGivenAuthedUser)

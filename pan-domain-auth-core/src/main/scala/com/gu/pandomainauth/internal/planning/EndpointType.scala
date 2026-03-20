@@ -3,6 +3,7 @@ package com.gu.pandomainauth.internal.planning
 import com.gu.pandomainauth.*
 import com.gu.pandomainauth.internal.*
 import com.gu.pandomainauth.model.{AuthenticatedUser, User}
+import com.gu.pandomainauth.oauth.OAuthCallbackPlanner.PayloadFailure
 
 import java.net.URI
 
@@ -49,7 +50,7 @@ object OAuthCallbackEndpoint extends EndpointType {
   type RT = RespType
   type RM = RespMod
   
-  case object BadRequest extends OAuthCallbackEndpoint.RespType with WithholdAccess
+  case class BadRequest(payloadFailure: PayloadFailure) extends OAuthCallbackEndpoint.RespType with WithholdAccess
 }
 
 object ApiEndpoint extends EndpointType {
