@@ -50,7 +50,10 @@ object OAuthCallbackEndpoint extends EndpointType {
   type RT = RespType
   type RM = RespMod
   
-  case class BadRequest(payloadFailure: PayloadFailure) extends OAuthCallbackEndpoint.RespType with WithholdAccess
+  /**
+   * Denotes a bad OAuth-callback request
+   */
+  case class BadOAuthCallback(payloadFailure: PayloadFailure) extends OAuthCallbackEndpoint.RespType with WithholdAccess
 }
 
 object ApiEndpoint extends EndpointType {
