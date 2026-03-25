@@ -1,7 +1,9 @@
 package com.gu.pandomainauth.webframeworks
 
+import cats.Endo
 import com.gu.pandomainauth.internal.planning.ApiEndpoint.HttpStatusCode
-import com.gu.pandomainauth.model.{AuthenticatedUser, User}
+import com.gu.pandomainauth.model.User
+import com.gu.pandomainauth.oauth.OAuthCallbackPlanner.PayloadFailure
 import com.gu.pandomainauth.{PageRequest, ResponseModification}
 
 import java.net.URI
@@ -23,21 +25,18 @@ object WebFrameworkAdapter {
   }
 
   trait ResponseModifier[Resp] {
-    def apply(modifications: ResponseModification): Resp => Resp
-  }
-  
-  trait ResponseAdapter[Resp] {
-    val responseModifier: ResponseModifier[Resp]
+    def apply(modifications: ResponseModification): Endo[Resp]
   }
 
+  trait PageResponseAdapter[Resp] {
+    def handleRedirect(redirect: URI): Resp
 
-  trait PageResponseAdapter[Resp] extends ResponseAdapter[Resp] {
     def handleNotAuthorised(user: User): Resp //  'User' is better than 'AuthenticatedUser' here
 
-    def handleRedirect(redirect: URI): Resp
+    def handleBadOAuthCallback(payloadFailure: PayloadFailure): Resp
   }
 
-  trait ApiResponseAdapter[Resp] extends ResponseAdapter[Resp] {
+  trait ApiResponseAdapter[Resp] {
     def handleDisallow(httpStatusCode: HttpStatusCode): Resp
   }
 }

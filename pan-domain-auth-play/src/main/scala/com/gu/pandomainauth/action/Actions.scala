@@ -4,7 +4,7 @@ import com.gu.pandomainauth.*
 import com.gu.pandomainauth.internal.PlayFrameworkAdapter
 import com.gu.pandomainauth.internal.planning.AuthStatusFromRequest
 import com.gu.pandomainauth.model.*
-import com.gu.pandomainauth.oauth.OAuthInteractions
+import com.gu.pandomainauth.oauth.{OAuthCallbackPlanner, OAuthInteractions}
 import com.gu.pandomainauth.service.*
 import com.gu.pandomainauth.webframeworks.WebFrameworkAdapter
 import com.gu.pandomainauth.webframeworks.WebFrameworkAdapter.*
@@ -96,7 +96,13 @@ trait AuthActions {
         TwoFactorAuthChecker.wrapBlocking(new Google2FAGroupChecker(google2FAGroupSettings, panDomainSettings.s3BucketLoader, applicationName))
       }
     ),
-    PlayFrameworkAdapter.PageResponses(notAuthorised = user => showUnauthedMessage(invalidUserMessage(user))),
+    PlayFrameworkAdapter.responseModifier,
+    new PlayFrameworkAdapter.PageResponses {
+      override def handleNotAuthorised(user: User): Result = showUnauthedMessage(invalidUserMessage(user))
+
+      override def handleBadOAuthCallback(payloadFailure: OAuthCallbackPlanner.PayloadFailure): Result = 
+        BadRequest(s"Bad OAuth callback: $payloadFailure")
+    },
     CookieResponses(panDomainSettings),
     showUnauthedMessage("logged out")
   )
@@ -171,7 +177,7 @@ trait AuthActions {
     override protected def executionContext: ExecutionContext = AuthActions.this.controllerComponents.executionContext
 
     val endpointAuth: EndpointAuth[RequestHeader, Result, Future] = 
-      TopLevelApiThing(PlayFrameworkAdapter.ApiResponses)
+      TopLevelApiThing(PlayFrameworkAdapter.responseModifier, PlayFrameworkAdapter.ApiResponses)
 
     def authenticateRequest(request: RequestHeader)(produceResultGivenAuthedUser: User => Future[Result]): Future[Result] =
       endpointAuth.authenticateRequest(request)(produceResultGivenAuthedUser)

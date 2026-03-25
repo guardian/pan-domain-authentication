@@ -37,16 +37,10 @@ object PlayFrameworkAdapter {
   }
   
   object ApiResponses extends WebFrameworkAdapter.ApiResponseAdapter[Result] {
-    override val responseModifier: WebFrameworkAdapter.ResponseModifier[Result] = PlayFrameworkAdapter.responseModifier
-    
     override def handleDisallow(statusCode: HttpStatusCode): Result = Results.Status(statusCode.code)
   }
   
-  case class PageResponses(notAuthorised: User => Result) extends WebFrameworkAdapter.PageResponseAdapter[Result] with Results {
-    override val responseModifier: WebFrameworkAdapter.ResponseModifier[Result] = PlayFrameworkAdapter.responseModifier
-    
-    override def handleNotAuthorised(user: User): Result = notAuthorised(user)
-
+  trait PageResponses extends WebFrameworkAdapter.PageResponseAdapter[Result] with Results {
     override def handleRedirect(redirect: URI): Result = Redirect(redirect.toString)
   }
 }
