@@ -17,7 +17,7 @@ object PlayFrameworkAdapter {
       _.withCookies(cookieChanges.setSessionCookies.toSeq.map {
           case (cookieNameAndDomain, value) => Cookie(
             cookieNameAndDomain.name,
-            value = URLEncoder.encode(value, "UTF-8"),
+            value = value,
             domain = cookieNameAndDomain.domain,
             secure = true,
             httpOnly = true,
