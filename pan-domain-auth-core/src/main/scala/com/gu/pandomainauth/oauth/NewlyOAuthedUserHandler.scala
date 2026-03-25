@@ -18,13 +18,12 @@ class NewlyOAuthedUserHandler[F[_] : Monad](systemAuthorisation: SystemAuthorisa
 
   def planFor(newlyClaimedAuth: AuthenticatedUser, priorAuth: AuthPersistenceStatus, returnUrl: URI): F[Plan[OAuthCallbackEndpoint.RespType, OAuthCallbackEndpoint.RespMod]] = for {
     userWithMultifactorStatus <- augmentWithMultiFactor(newlyClaimedAuth)
-  } yield {
-    if (systemAuthorisation.isAuthorised(newlyClaimedAuth, disableCache = true))
-      Plan(Redirect(returnUrl), Some(PersistAuth(
-        userWithMultifactorStatus
-          .withAuthorisationIn(systemAuthorisation.system)
-          .augmentWith(priorAuth.effectiveAuthStatus),
-        wipeTemporaryCookiesUsedForOAuth = true)))
-    else Plan(NotAuthorized(newlyClaimedAuth))
-  }
+  } yield planForUserWithMultifactorStatus(userWithMultifactorStatus, priorAuth, returnUrl)
+
+  private def planForUserWithMultifactorStatus(user: AuthenticatedUser, priorAuth: AuthPersistenceStatus, returnUrl: URI) =
+    if (systemAuthorisation.isAuthorised(user, disableCache = true)) Plan(
+      Redirect(returnUrl),
+      Some(PersistAuth(user.withAuthorisationIn(systemAuthorisation.system).augmentWith(priorAuth.effectiveAuthStatus),
+      wipeTemporaryCookiesUsedForOAuth = true))
+    ) else Plan(NotAuthorized(user))
 }

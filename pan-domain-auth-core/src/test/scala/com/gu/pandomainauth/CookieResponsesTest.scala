@@ -1,19 +1,19 @@
 package com.gu.pandomainauth
 
+import com.gu.pandomainauth.internal.planning.PageEndpoint.PrepareForOAuth
 import org.scalatest.EitherValues
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
 import java.net.URI
 
-class PageRequestTest extends AnyFreeSpec with Matchers with EitherValues {
+class CookieResponsesTest extends AnyFreeSpec with Matchers with EitherValues {
 
-  "Query string parsing provides *url-decoded* values for query string params" - {
-    "from a small example" in {
-      val pageRequest =
-        PageRequest(URI.create("https://example.com/?foo=comma%2Cslash%2Fpercent%25"), Map.empty)
+  "Return url" - {
+    "should be URL-encoded before it's stored to a cookie" in {
+      val responses: CookieResponses = ???
 
-      pageRequest.queryParams("foo") shouldBe "comma,slash/percent%"
+      responses.pageEndpoint(PrepareForOAuth(URI.create("/content/69c26ad58f08a301f86bb7cd/versions", "my-anti-forgery-token")))
     }
 
     "from a real OAuth callback request" in {
