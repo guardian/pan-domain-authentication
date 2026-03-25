@@ -12,4 +12,4 @@ package com.gu.pandomainauth.internal.planning
  *                 There must exist a way to translate the RespMod into the simple concrete
  *                 fields of a [[ResponseModification]] (ie cookie values and response headers).
  */
-case class Plan[RespType, RespMod](respType: RespType, respMod: Option[RespMod] = None)
+case class Plan[+RespType, +RespMod](respType: RespType, respMod: Option[RespMod] = None)
