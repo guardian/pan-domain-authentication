@@ -25,5 +25,3 @@ class PageRequestTest extends AnyFreeSpec with Matchers with EitherValues {
     }
   }
 }
-
-
