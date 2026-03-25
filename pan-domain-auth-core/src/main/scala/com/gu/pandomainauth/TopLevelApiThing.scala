@@ -7,11 +7,12 @@ import com.gu.pandomainauth.webframeworks.WebFrameworkAdapter.RequestAdapter
 
 class TopLevelApiThing[Req: RequestAdapter, Resp, F[_] : Monad](
   authPlanner: AuthPlanner[ApiEndpoint.RespType, ApiEndpoint.RespMod],
+  responseModifier: WebFrameworkAdapter.ResponseModifier[Resp],
   responseAdapter: WebFrameworkAdapter.ApiResponseAdapter[Resp],
 ) extends TopLevelAuthThing[Req, ApiEndpoint.RespType, ApiEndpoint.RespMod, Resp, F](
   ApiEndpoint.respModReifier,
-  authPlanner,
-  responseAdapter
+  responseModifier,
+  authPlanner
 ) with EndpointAuth[Req, Resp, F] {
 
   override def handleWithholdAccess(pandaResp: ApiEndpoint.RespType with WithholdAccess): Resp = pandaResp match {
@@ -21,8 +22,9 @@ class TopLevelApiThing[Req: RequestAdapter, Resp, F[_] : Monad](
 
 object TopLevelApiThing {
   def apply[Req: RequestAdapter, Resp, F[_] : Monad](
+    responseModifier: WebFrameworkAdapter.ResponseModifier[Resp],
     responseAdapter: WebFrameworkAdapter.ApiResponseAdapter[Resp]
   )(
     implicit authStatusFromRequest: AuthStatusFromRequest
-  ) = new TopLevelApiThing[Req, Resp, F](new AuthPlanner[ApiEndpoint.RespType, ApiEndpoint.RespMod](ApiEndpointAuthStatusHandler), responseAdapter)
+  ) = new TopLevelApiThing[Req, Resp, F](new AuthPlanner[ApiEndpoint.RespType, ApiEndpoint.RespMod](ApiEndpointAuthStatusHandler), responseModifier, responseAdapter)
 }

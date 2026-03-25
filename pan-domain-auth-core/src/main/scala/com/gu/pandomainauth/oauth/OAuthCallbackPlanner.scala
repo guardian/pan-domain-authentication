@@ -23,7 +23,7 @@ class OAuthCallbackPlanner[F[_]: Monad](oAuthCodeToUser: OAuthCodeToUser[F], two
    * processOAuthCallback
    */
   def planFor(request: PageRequest): F[Plan[OAuthCallbackEndpoint.RespType, OAuthCallbackEndpoint.RespMod]] =
-    CallbackPayload.from(request).fold(pf => F.pure(Plan[OAuthCallbackEndpoint.RespType, OAuthCallbackEndpoint.RespMod](OAuthCallbackEndpoint.BadRequest(pf))), payload =>
+    CallbackPayload.from(request).fold(pf => F.pure(Plan[OAuthCallbackEndpoint.RespType, OAuthCallbackEndpoint.RespMod](OAuthCallbackEndpoint.BadOAuthCallback(pf))), payload =>
       oAuthCodeToUser.validate(payload.code).flatMap { barelyAuthedUser =>
         newlyAuthenticatedUserHandler.planFor(barelyAuthedUser, priorAuth = request.authenticationStatus(), payload.returnUrl)
       }

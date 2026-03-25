@@ -15,15 +15,12 @@ abstract class TopLevelAuthThing[
   F[_] : Monad
 ](
   respModReifier: RespMod => ResponseModification,
-  authPlanner: AuthPlanner[RespType, RespMod],
-  responseAdapter: WebFrameworkAdapter.ResponseAdapter[Resp],
+  responseModifier: WebFrameworkAdapter.ResponseModifier[Resp],
+  authPlanner: AuthPlanner[RespType, RespMod]
 ) {
   val F: Monad[F] = Monad[F]
 
-  protected def modify(responseModification: ResponseModification): Endo[Resp] =
-    responseAdapter.responseModifier(responseModification)
-  
-  def modifyResponseWith(responseMod: RespMod): Endo[Resp] = modify(respModReifier(responseMod))
+  def modifyResponseWith(responseMod: RespMod): Endo[Resp] = responseModifier(respModReifier(responseMod))
 
   def authenticateRequest(request: Req)(produceResultGivenAuthedUser: User => F[Resp]): F[Resp] = {
     val plan = authPlanner.planFor(request.asPandaRequest)
