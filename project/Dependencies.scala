@@ -2,7 +2,7 @@ import sbt._
 
 object Dependencies {
 
-  val awsDependencies = Seq("software.amazon.awssdk" % "s3" % "2.46.7")
+  val awsDependencies = Seq("software.amazon.awssdk" % "s3" % "2.46.10")
 
   case class PlayVersion(
     majorVersion: Int,
