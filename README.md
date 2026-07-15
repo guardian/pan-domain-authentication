@@ -200,7 +200,7 @@ Configuration settings are read from an S3 bucket. Follow the steps below if you
 
 Add the core library as an SBT dependency to your project, taking care to use the latest version.
 If you are building your application using the Play framework, use the Play integration.
-Play versions 2.9 and 3.0 are supported only on Scala 2.13.
+Play versions 2.9 and 3.0 are supported only on Scala 2.13 and above.
 Play version 2.8 is supported on Scala 2.12 and 2.13.
 Play version 2.7 is supported up until v1.3.0.
 Play version 2.6 is supported up until v0.9.2.
