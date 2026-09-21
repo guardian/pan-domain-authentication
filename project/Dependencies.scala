@@ -2,7 +2,7 @@ import sbt._
 
 object Dependencies {
 
-  val awsDependencies = Seq("software.amazon.awssdk" % "s3" % "2.49.5")
+  val awsDependencies = Seq("software.amazon.awssdk" % "s3" % "2.55.1")
 
   case class PlayVersion(
     majorVersion: Int,
@@ -30,7 +30,7 @@ object Dependencies {
   )
 
   val cryptoDependencies = Seq(
-    "org.bouncycastle" % "bcprov-jdk18on" % "1.84",
+    "org.bouncycastle" % "bcprov-jdk18on" % "1.86",
     "commons-codec" % "commons-codec" % "1.17.2",
     "com.google.guava" % "guava" % "33.4.8-jre"
   )
