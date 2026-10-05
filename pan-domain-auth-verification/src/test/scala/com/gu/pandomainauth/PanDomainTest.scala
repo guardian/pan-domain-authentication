@@ -97,6 +97,14 @@ class PanDomainTest extends AnyFreeSpec with Matchers with Inside {
 
     "returns `Expired` if cookie has not expired, but forceExpiry is set" in {
       val validCookieData = CookieUtils.generateCookieData(authUser, signingWith(testPrivateKey.key))
+      authStatus(validCookieData) shouldBe a [Authenticated]
+      authStatus(validCookieData, forceExpiry = true) shouldBe a [Expired]
+    }
+
+    "returns `Expired` if cookie is in the grace period, but forceExpiry is set" in {
+      val userInGracePeriod = authUser.copy(expires = now() minus PanDomain.DefaultApiGracePeriod.dividedBy(2))
+      val validCookieData = CookieUtils.generateCookieData(userInGracePeriod, signingWith(testPrivateKey.key))
+      authStatus(validCookieData) shouldBe a [GracePeriod]
       authStatus(validCookieData, forceExpiry = true) shouldBe a [Expired]
     }
 
