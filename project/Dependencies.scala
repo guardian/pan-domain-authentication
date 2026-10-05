@@ -31,7 +31,7 @@ object Dependencies {
 
   val cryptoDependencies = Seq(
     "org.bouncycastle" % "bcprov-jdk18on" % "1.86",
-    "commons-codec" % "commons-codec" % "1.17.2",
+    "commons-codec" % "commons-codec" % "1.22.1",
     "com.google.guava" % "guava" % "33.4.8-jre"
   )
 
