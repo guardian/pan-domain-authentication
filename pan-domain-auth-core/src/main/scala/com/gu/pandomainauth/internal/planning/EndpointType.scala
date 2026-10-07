@@ -13,19 +13,13 @@ sealed trait PageResponse extends AuthedEndpointResponse
 sealed trait WithholdAccess
 sealed trait OAuthCallbackResponse extends PageResponse
 
-sealed trait EndpointType {
-  type RT <: AuthedEndpointResponse
-  type RM
-}
+sealed trait EndpointType
 
 case class AllowAccess(user: User) extends PageEndpoint.RespType with ApiEndpoint.RespType
 
 object PageEndpoint extends EndpointType {
   sealed trait RespType extends AuthedEndpointResponse
   sealed trait RespMod
-  
-  type RT = RespType
-  type RM = RespMod
 
   case object Logout extends RespMod
   case class PrepareForOAuth(
@@ -47,9 +41,6 @@ object OAuthCallbackEndpoint extends EndpointType {
   sealed trait RespType extends AuthedEndpointResponse
   sealed trait RespMod
 
-  type RT = RespType
-  type RM = RespMod
-  
   /**
    * Denotes a bad OAuth-callback request
    */
@@ -59,9 +50,6 @@ object OAuthCallbackEndpoint extends EndpointType {
 object ApiEndpoint extends EndpointType {
   sealed trait RespType extends AuthedEndpointResponse
   sealed trait RespMod
-
-  type RT = RespType
-  type RM = RespMod
 
   case class HttpStatusCode(code: Int, message: String)
   trait DisallowApiAccess extends RespType with WithholdAccess {
