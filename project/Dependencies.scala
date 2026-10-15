@@ -39,7 +39,7 @@ object Dependencies {
 
   val loggingDependencies = Seq("org.slf4j" % "slf4j-api" % "1.7.36")
 
-  val jacksonVersion = "2.21.6"
+  val jacksonVersion = "2.21.7"
 
   // A transient dependency added to evict vulnerable Jackson versions
   val jacksonDependencies = Seq(
@@ -50,6 +50,11 @@ object Dependencies {
     "com.fasterxml.jackson.datatype" % "jackson-datatype-jsr310" % jacksonVersion,
     "com.fasterxml.jackson.module" % "jackson-module-parameter-names" % jacksonVersion,
     "com.fasterxml.jackson.module" %% "jackson-module-scala" % jacksonVersion
+  )
+
+  val otherDependencies = Seq(
+    // A transient dependency added to evict vulnerable versions
+    "at.yawk.lz4" % "lz4-java" % "1.11.4"
   )
 
 }

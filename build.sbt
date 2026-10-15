@@ -47,7 +47,7 @@ def playSupportFor(playVersion: PlayVersion) = directSubfolderProject(s"pan-doma
   .settings(
     artifactProductionSettings,
     sourceDirectory := (ThisBuild / baseDirectory).value / "pan-domain-auth-play" / "src",
-    libraryDependencies ++= playVersion.playLibs
+    libraryDependencies ++= playVersion.playLibs ++ otherDependencies
   )
 
 def hmacProject(nameSuffix: String, subFolderPath: String) =
