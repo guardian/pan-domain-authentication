@@ -1,11 +1,9 @@
 package com.gu.pandahmac
-import com.gu.hmac.{HMACHeaders, ValidateHMACHeader}
 import com.gu.pandomainauth.action.{AuthActions, UserRequest}
 import com.gu.pandomainauth.model.User
-import org.slf4j.LoggerFactory
 import play.api.libs.ws.WSClient
-import play.api.mvc.Results._
-import play.api.mvc._
+import play.api.mvc.*
+import play.api.mvc.Results.*
 
 import java.net.URI
 import scala.concurrent.{ExecutionContext, Future}
