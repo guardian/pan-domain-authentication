@@ -10,7 +10,7 @@ import play.api.mvc.{Cookie, Results}
 
 class PlayFrameworkAdapterTest extends AnyFlatSpec with Matchers {
 
-  "PlayFrameworkAdapter" should "foo" in {
+  "PlayFrameworkAdapter" should "generate correct cookies" in {
     def cookiesFor(cookieChanges: CookieChanges) = PlayFrameworkAdapter.responseModifier(
       ResponseModification(cookies = Some(cookieChanges))
     )(Results.Ok).newCookies
@@ -18,13 +18,13 @@ class PlayFrameworkAdapterTest extends AnyFlatSpec with Matchers {
     val returnUrl = "%2Fcontent%2F69c467708f0861c75ee0b1ff%2Fversions"
     cookiesFor(CookieChanges(setSessionCookies = Map(
       LOGIN_ORIGIN_KEY -> returnUrl
-    ))) shouldBe Seq(Cookie(LOGIN_ORIGIN_KEY.name, returnUrl, secure = true, httpOnly = true, Some(Cookie.SameSite.None)))
+    ))) shouldBe Seq(Cookie(LOGIN_ORIGIN_KEY.name, returnUrl, secure = true, httpOnly = true, sameSite = Some(Cookie.SameSite.None)))
 
-    val foo = "funky"
+    val stubPandaCookieValue = "funky"
     cookiesFor(CookieChanges(setSessionCookies = Map(
-      NameAndDomain("gutoolsAuth-assym", Some("code.dev-gutools.co.uk")) -> foo
+      NameAndDomain("gutoolsAuth-assym", Some("code.dev-gutools.co.uk")) -> stubPandaCookieValue
     ))) shouldBe Seq(
-      Cookie("gutoolsAuth-assym", foo, domain = Some("code.dev-gutools.co.uk"), secure = true, httpOnly = true, Some(Cookie.SameSite.None))
+      Cookie("gutoolsAuth-assym", stubPandaCookieValue, domain = Some("code.dev-gutools.co.uk"), secure = true, httpOnly = true, sameSite = Some(Cookie.SameSite.None))
     )
   }
 }
