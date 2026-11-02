@@ -54,7 +54,7 @@ object Dependencies {
 
   val otherDependencies = Seq(
     // A transient dependency added to evict vulnerable versions
-    "at.yawk.lz4" % "lz4-java" % "1.11.4"
+    "at.yawk.lz4" % "lz4-java" % "1.12.1"
   )
 
 }
