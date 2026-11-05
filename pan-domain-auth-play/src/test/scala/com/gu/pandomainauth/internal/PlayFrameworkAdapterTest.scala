@@ -1,7 +1,7 @@
 package com.gu.pandomainauth.internal
 
 import com.gu.pandomainauth.PageEndpointAuthStatusHandler.LOGIN_ORIGIN_KEY
-import com.gu.pandomainauth.ResponseModification
+import com.gu.pandomainauth.{ResponseModification, SampleCookieChanges}
 import com.gu.pandomainauth.ResponseModification.CookieChanges
 import com.gu.pandomainauth.ResponseModification.CookieChanges.NameAndDomain
 import org.scalatest.flatspec.AnyFlatSpec
@@ -15,6 +15,9 @@ class PlayFrameworkAdapterTest extends AnyFlatSpec with Matchers {
       ResponseModification(cookies = Some(cookieChanges))
     )(Results.Ok).newCookies
 
+
+    SampleCookieChanges.sampleLoginOrigin
+    SampleCookieChanges.sampleLoginOrigin.setSessionCookies(LOGIN_ORIGIN_KEY)
     val returnUrl = "%2Fcontent%2F69c467708f0861c75ee0b1ff%2Fversions"
     cookiesFor(CookieChanges(setSessionCookies = Map(
       LOGIN_ORIGIN_KEY -> returnUrl

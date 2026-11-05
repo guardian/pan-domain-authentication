@@ -46,7 +46,7 @@ lazy val panDomainAuthCore = directSubfolderProject("pan-domain-auth-core")
   )
 
 def playSupportFor(playVersion: PlayVersion) = directSubfolderProject(s"pan-domain-auth-${playVersion.suffix}")
-  .dependsOn(panDomainAuthCore)
+  .dependsOn(panDomainAuthCore % "compile->compile;test->test")
   .settings(
     artifactProductionSettings,
     sourceDirectory := (ThisBuild / baseDirectory).value / "pan-domain-auth-play" / "src",
