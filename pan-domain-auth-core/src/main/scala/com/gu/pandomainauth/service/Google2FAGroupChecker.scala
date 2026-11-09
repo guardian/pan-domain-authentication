@@ -1,5 +1,6 @@
 package com.gu.pandomainauth.service
 
+import cats.Id
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import com.google.api.client.json.gson.GsonFactory
@@ -12,7 +13,8 @@ import com.gu.pandomainauth.S3BucketLoader
 import com.gu.pandomainauth.model.{AuthenticatedUser, Google2FAGroupSettings}
 import org.slf4j.LoggerFactory
 
-import scala.jdk.CollectionConverters._
+import scala.concurrent.{Future, blocking}
+import scala.jdk.CollectionConverters.*
 
 class GroupChecker(config: Google2FAGroupSettings, s3BucketLoader: S3BucketLoader, appName: String) {
   private val logger = LoggerFactory.getLogger(this.getClass)
@@ -84,9 +86,14 @@ class GoogleGroupChecker(config: Google2FAGroupSettings, s3BucketLoader: S3Bucke
 
 }
 
-class Google2FAGroupChecker(config: Google2FAGroupSettings, s3BucketLoader: S3BucketLoader, appName: String) extends GroupChecker(config, s3BucketLoader, appName) {
+class Google2FAGroupChecker(config: Google2FAGroupSettings, s3BucketLoader: S3BucketLoader, appName: String)
+  extends GroupChecker(config, s3BucketLoader, appName) with TwoFactorAuthChecker[Id] {
 
   def checkMultifactor(authenticatedUser: AuthenticatedUser): Boolean =
-    hasGroup(authenticatedUser.user.email, config.multifactorGroupId)
+    checkMultifactor(authenticatedUser.user.email)
 
+  private def checkMultifactor(userEmail: String): Boolean =
+    hasGroup(userEmail, config.multifactorGroupId)
+
+  override def check(userEmail: String): Boolean = checkMultifactor(userEmail)
 }
