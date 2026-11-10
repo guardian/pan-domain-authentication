@@ -133,6 +133,7 @@ googleServiceAccountId=serviceAccount@developer.gserviceaccount.com
 googleServiceAccountCert=name_of_cert_in_bucket.p12
 google2faUser=an.admin@example.com
 multifactorGroupId=group@2fa_admin_user
+engineersGroupId=engineers@example.com
 ```
   
 There is a corresponding (publically available) file called example.com.settings.public. 
@@ -152,7 +153,7 @@ publicKey=example_key
   * Known services with support: 
     * Google
 
-* **googleServiceAccountId, googleServiceAccountCert, google2faUser and multifactorGroupId** - these are optional parameters for using a group based 2 factor auth verification
+* **googleServiceAccountId, googleServiceAccountCert, google2faUser and multifactorGroupId** (plus optional **engineersGroupId**, see below) - these are optional parameters for using a group based 2 factor auth verification
 
 * **privateKey** - this is the private key used to sign the cookie
 
@@ -223,8 +224,8 @@ libraryDependencies += "com.gu" %% "pan-domain-auth-play_3-0" % "<<LATEST_VERSIO
 Example code for the Play Framework is provided [here](./pan-domain-auth-example). In particular:
 
 - [di.scala](./pan-domain-auth-example/di.scala) shows how to construct the settings refresher
-- [ExampleAuthActions](./pan-domain-auth-example/controllers/ExampleAuthActions.scala) shows how to implement user validation
-- [AdminController](./pan-domain-auth-example/controllers/AdminController.scala) shows how to built authenticated request handlers
+- [ExampleAuthActions](./pan-domain-auth-example/app/controllers/ExampleAuthActions.scala) shows how to implement user validation
+- [AdminController](./pan-domain-auth-example/app/controllers/AdminController.scala) shows how to built authenticated request handlers
 
 Ensure you pick the correct request handler for your needs:
 
@@ -292,6 +293,17 @@ properties:
 * **googleServiceAccountCert** - the name within the bucket of the certificate used to validate the service account
 * **google2faUser** - the admin user to connect to the directory api as, this is not the service account user but a user in your org who is authorised to access group information
 * **multifactorGroupId** - the name of the group that indicates and enforces that 2fa is turned on
+
+The same credentials can also be used to check whether a user is in the Guardian engineers group. This allows us to
+drive particular UI in downstream tooling, e.g. to show a "you are in PROD" warning only to engineers.
+
+To configure this, add an optional `engineersGroupId` property (the group's email address) alongside the properties above.
+
+**In each app, wherever you need the check:** use `googleGroupChecker`. It is a lazy val on `AuthActions`, created once
+per app. See `showProdWarning` in the [AdminController](./pan-domain-auth-example/app/controllers/AdminController.scala) example.
+
+`isMemberOf(email, groupId)` is available for arbitrary groups. Group membership credentials are cached for 15 minutes. Note that membership 
+changes can take up to the cache TTL to show up.
 
 ### To verify machines
 
