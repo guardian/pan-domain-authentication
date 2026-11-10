@@ -93,6 +93,12 @@ class GoogleGroupChecker(config: Google2FAGroupSettings, s3BucketLoader: S3Bucke
   private val logger = LoggerFactory.getLogger(this.getClass)
   private val failureCacheTtl = 1.minute
 
+  def isEngineer(userEmail: String): Either[MembershipCheckError, Boolean] =
+    config.engineersGroupId match {
+      case Some(groupId) => isMemberOf(userEmail, groupId)
+      case None => Right(false)
+    }
+
   /**
    * We use a cache because each lookup is a Directory API call and this may run on every request, while membership
    * rarely changes. A long TTL on success is fine, at the cost of changes taking longer to show up.
