@@ -26,7 +26,8 @@ case class Google2FAGroupSettings(
   serviceAccountId: String,
   serviceAccountCert: String,
   adminUserEmail: String,
-  multifactorGroupId: String
+  multifactorGroupId: String,
+  engineersGroupId: Option[String] = None
 )
 
 object PanDomainAuthSettings{
@@ -48,8 +49,9 @@ object PanDomainAuthSettings{
       serviceAccountId   <- settingMap.get("googleServiceAccountId");
       serviceAccountCert <- settingMap.get("googleServiceAccountCert");
       adminUser          <- settingMap.get("google2faUser");
-      group              <- settingMap.get("multifactorGroupId")
-    ) yield Google2FAGroupSettings(serviceAccountId, serviceAccountCert, adminUser, group)
+      group              <- settingMap.get("multifactorGroupId");
+      engineersGroup     = settingMap.get("engineersGroupId")
+    ) yield Google2FAGroupSettings(serviceAccountId, serviceAccountCert, adminUser, group, engineersGroup)
 
     for {
       cryptoConf <- CryptoConf.SettingsReader(settingMap).signingAndVerificationConf

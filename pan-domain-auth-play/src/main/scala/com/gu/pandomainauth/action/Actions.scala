@@ -80,6 +80,10 @@ trait AuthActions {
     new Google2FAGroupChecker(_, panDomainSettings.s3BucketLoader, applicationName)
   }
 
+  lazy val googleGroupChecker: Option[GoogleGroupChecker] = settings.google2FAGroupSettings.map {
+    new GoogleGroupChecker(_, panDomainSettings.s3BucketLoader, applicationName)
+  }
+
   /*
    * A cookie key that stores the target URL that was being accessed when redirected for authentication.
    * Takes a session ID to allow multiple tabs to reauth concurrently without conflict.

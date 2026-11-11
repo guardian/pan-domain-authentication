@@ -12,7 +12,13 @@ import com.gu.pandomainauth.S3BucketLoader
 import com.gu.pandomainauth.model.{AuthenticatedUser, Google2FAGroupSettings}
 import org.slf4j.LoggerFactory
 
+import java.util.concurrent.ConcurrentHashMap
+import scala.concurrent.duration._
 import scala.jdk.CollectionConverters._
+import scala.util.{Failure, Success, Try}
+
+/** The membership of a user in a group could not be determined (as opposed to the user not being in the group). */
+case class MembershipCheckError(message: String, cause: Throwable)
 
 class GroupChecker(config: Google2FAGroupSettings, s3BucketLoader: S3BucketLoader, appName: String) {
   private val logger = LoggerFactory.getLogger(this.getClass)
@@ -81,6 +87,52 @@ class GoogleGroupChecker(config: Google2FAGroupSettings, s3BucketLoader: S3Bucke
     if (groupIds.isEmpty) Left("No groups specified.")
     else Right(groupIds.foldLeft(true){(acc, groupId) => acc & hasGroup(query, groupId)})
   }
+
+  private case class CachedResult(result: Either[MembershipCheckError, Boolean], expiresAt: Long)
+  private val membershipCache = new ConcurrentHashMap[(String, String), CachedResult]()
+  private val logger = LoggerFactory.getLogger(this.getClass)
+  private val failureCacheTtl = 1.minute
+
+  def isEngineer(userEmail: String): Either[MembershipCheckError, Boolean] =
+    config.engineersGroupId match {
+      case Some(groupId) => isMemberOf(userEmail, groupId)
+      case None => Right(false)
+    }
+
+  /**
+   * We use a cache because each lookup is a Directory API call and this may run on every request, while membership
+   * rarely changes. A long TTL on success is fine, at the cost of changes taking longer to show up.
+   *
+   * Failures are cached much more briefly: long enough not to hammer Google during an outage, short enough to
+   * recover quickly from a blip.
+   */
+  def isMemberOf(userEmail: String, groupId: String, cacheTtl: FiniteDuration = 15.minutes): Either[MembershipCheckError, Boolean] = {
+    val key = (userEmail, groupId)
+    val now = System.currentTimeMillis()
+
+    Option(membershipCache.get(key)).filter(_.expiresAt > now).map(_.result).getOrElse {
+      val result = lookupMembership(userEmail, groupId)
+      val ttl = if (result.isRight) cacheTtl else failureCacheTtl
+      membershipCache.put(key, CachedResult(result, now + ttl.toMillis))
+      result
+    }
+  }
+
+  private def lookupMembership(userEmail: String, groupId: String): Either[MembershipCheckError, Boolean] =
+    Try(fetchIsMember(userEmail, groupId)) match {
+      case Success(isMember) => Right(isMember)
+      case Failure(e) =>
+        logger.error(s"Failed to check whether $userEmail is in $groupId", e)
+        Left(MembershipCheckError(s"Failed to check whether $userEmail is in $groupId", e))
+    }
+
+  private def fetchIsMember(userEmail: String, groupId: String): Boolean =
+    directory
+      .members()
+      .hasMember(groupId, userEmail)
+      .execute()
+      .getIsMember
+      .booleanValue
 
 }
 

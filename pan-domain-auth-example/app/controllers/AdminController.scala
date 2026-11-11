@@ -31,6 +31,18 @@ class AdminController(
     Ok(req.user.toString)
   }
 
+  // Shows how to use the engineers group check, e.g. to decide whether to render a "you are in PROD" banner.
+  // This needs `engineersGroupId` (and the other Google properties) in the domain's settings file.
+  def showProdWarning: Action[AnyContent] = AuthAction { req =>
+    // isEngineer returns Either[MembershipCheckError, Boolean]: a Left means the lookup failed, i.e. "unknown".
+    // For a banner we treat unknown as "don't show"
+    val isEngineer = googleGroupChecker
+      .flatMap(_.isEngineer(req.user.email).toOption)
+      .contains(true)
+
+    Ok(if (isEngineer) "You are an engineer: show the PROD warning" else "Not an engineer: no PROD warning")
+  }
+
   // Required to allow the provider to redirect back to us so we can issue the new cookie
   // This route must be added to the provider whitelist
   def oauthCallback: Action[AnyContent] = Action.async { implicit request =>
