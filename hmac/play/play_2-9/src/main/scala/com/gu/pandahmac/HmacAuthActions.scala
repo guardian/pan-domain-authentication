@@ -20,22 +20,23 @@ trait HMACAuthActions extends AuthActions with HMACSecrets {
 
   private implicit val ec: ExecutionContext = controllerComponents.executionContext
 
-  private def authByKeyOrPanda[A](request: Request[A], block: RequestHandler[A], useApiAuth: Boolean): Future[Result] = {
-    val oHmac: Option[String] = request.headers.get(HMACHeaderNames.hmacKey)
-    val oDate: Option[String] = request.headers.get(HMACHeaderNames.dateKey)
-    val oServiceName: Option[String] = request.headers.get(HMACHeaderNames.serviceNameKey)
-    val uri = new URI(request.uri)
-
-    (oHmac, oDate) match {
-      case (Some(hmac), Some(date)) => {
-        if (validateHMACHeaders(date, hmac, uri)) {
-          val user = User(oServiceName.getOrElse("hmac-authed-service"), "", "", None)
-          block(new UserRequest(user, request))
-        } else {
-          Future.successful(Unauthorized)
-        }
-      }
-      case _ => if(useApiAuth) apiAuthByPanda(request, block) else authByPanda(request, block)
+  private def authByKeyOrPanda[A](request: Request[A], block: RequestHandler[A], useApiAuth: Boolean, hmacOnly: Boolean): Future[Result] = {
+    (for {
+      hmac <- request.headers.get(HMACHeaderNames.hmacKey)
+      date <- request.headers.get(HMACHeaderNames.dateKey)
+      serviceName = request.headers.get(
+        HMACHeaderNames.serviceNameKey
+      ) getOrElse "hmac-authed-service"
+      uri = new URI(request.uri)
+    } yield
+      if (validateHMACHeaders(date, hmac, uri))
+        block(new UserRequest(User(serviceName, "", "", None), request))
+      else
+        Future.successful[Result](Unauthorized)
+    ).getOrElse {
+      if (hmacOnly) Future.successful(Unauthorized)
+      else if (useApiAuth) apiAuthByPanda(request, block)
+      else authByPanda(request, block)
     }
   }
 
@@ -58,7 +59,7 @@ trait HMACAuthActions extends AuthActions with HMACSecrets {
     override protected def executionContext: ExecutionContext = HMACAuthActions.this.controllerComponents.executionContext
 
     override def invokeBlock[A](request: Request[A], block: RequestHandler[A]): Future[Result] = {
-      authByKeyOrPanda(request, block, useApiAuth = false)
+      authByKeyOrPanda(request, block, useApiAuth = false, hmacOnly = false)
     }
   }
 
@@ -68,6 +69,15 @@ trait HMACAuthActions extends AuthActions with HMACSecrets {
     override protected def executionContext: ExecutionContext = HMACAuthActions.this.controllerComponents.executionContext
 
     override def invokeBlock[A](request: Request[A], block: RequestHandler[A]): Future[Result] =
-      authByKeyOrPanda(request, block, useApiAuth = true)
+      authByKeyOrPanda(request, block, useApiAuth = true, hmacOnly = false)
+  }
+
+
+  object HMACOnlyAuthAction extends ActionBuilder[UserRequest, AnyContent] {
+    override def parser: BodyParser[AnyContent] = HMACAuthActions.this.controllerComponents.parsers.default
+    override protected def executionContext: ExecutionContext = HMACAuthActions.this.controllerComponents.executionContext
+
+    override def invokeBlock[A](request: Request[A], block: RequestHandler[A]): Future[Result] =
+      authByKeyOrPanda(request, block, useApiAuth = false, hmacOnly = true)
   }
 }
