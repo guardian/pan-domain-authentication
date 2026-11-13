@@ -47,8 +47,7 @@ trait HMACAuthActions extends AuthActions with HMACSecrets {
       block(new UserRequest(request.user, request))
     })
 
-  // New actions are defs, not objects: adding an object to a trait breaks binary compatibility
-  def HMACOnlyAuthAction: ActionBuilder[UserRequest, AnyContent] = new ActionBuilder[UserRequest, AnyContent] {
+  object HMACOnlyAuthAction extends ActionBuilder[UserRequest, AnyContent] {
     override def parser: BodyParser[AnyContent] = HMACAuthActions.this.controllerComponents.parsers.default
     override protected def executionContext: ExecutionContext = HMACAuthActions.this.controllerComponents.executionContext
 
@@ -57,7 +56,7 @@ trait HMACAuthActions extends AuthActions with HMACSecrets {
   }
 
   /* as per https://www.playframework.com/documentation/2.6.x/ScalaActionsComposition */
-  def HMACOrPandaAuthAction: ActionBuilder[UserRequest, AnyContent] = new ActionBuilder[UserRequest, AnyContent] {
+  object HMACOrPandaAuthAction extends ActionBuilder[UserRequest, AnyContent] {
     override def parser: BodyParser[AnyContent] = HMACAuthActions.this.controllerComponents.parsers.default
     override protected def executionContext: ExecutionContext = HMACAuthActions.this.controllerComponents.executionContext
 
@@ -65,7 +64,7 @@ trait HMACAuthActions extends AuthActions with HMACSecrets {
       authByKey(request, block).getOrElse(authByPanda(request, block))
   }
 
-  def HMACOrApiPandaAuthAction: ActionBuilder[UserRequest, AnyContent] = new ActionBuilder[UserRequest, AnyContent] {
+  object HMACOrApiPandaAuthAction extends ActionBuilder[UserRequest, AnyContent] {
     override def parser: BodyParser[AnyContent] = HMACAuthActions.this.controllerComponents.parsers.default
     override protected def executionContext: ExecutionContext = HMACAuthActions.this.controllerComponents.executionContext
 
