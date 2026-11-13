@@ -316,15 +316,19 @@ class MyController @Inject() (
 
   override def secretKeys = List("currentSecret") // You're likely to get your secret from configuration or a cloud service like AWS Secrets Manager
 
-  def myApiActionWithBody = APIHMACAuthAction.async(circe.json(2048)) { request => 
+  def myApiActionWithBody = HMACOrApiPandaAuthAction.async(circe.json(2048)) { request => 
     // ... do something with the request
   }
 
-  def myRegularAction = HMACAuthAction {}
+  def myRegularAction = HMACOrPandaAuthAction {}
 
-  def myRegularAsyncAction = HMACAuthAction.async {}
+  def myRegularAsyncAction = HMACOrPandaAuthAction.async {}
+
+  def myMachineOnlyAction = HMACOnlyAuthAction {}
 }
 ```
+
+`HMACAuthAction` and `APIHMACAuthAction` are deprecated in favour of `HMACOrPandaAuthAction` and `HMACOrApiPandaAuthAction` respectively, which behave identically but make the Panda fallback explicit.
 
 #### Setting up a machine client
 
